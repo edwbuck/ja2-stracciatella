@@ -34,102 +34,105 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
+#include <string_theory/string>
+
+
 extern void PrintDate( void );
 extern void PrintNumberOnTeam( void );
 extern void PrintBalance( void );
 
 
-#define			HELP_SCREEN_ACTIVE			0x00000001
+#define HELP_SCREEN_ACTIVE					0x00000001
 
 
 
 //The defualt size and placement of the screen
-#define			HELP_SCREEN_DEFUALT_LOC_X							155
-#define			HELP_SCREEN_DEFUALT_LOC_Y							105
+#define HELP_SCREEN_DEFUALT_LOC_X				155
+#define HELP_SCREEN_DEFUALT_LOC_Y				105
 
-#define			HELP_SCREEN_DEFUALT_LOC_WIDTH					HELP_SCREEN_SMALL_LOC_WIDTH + HELP_SCREEN_BUTTON_BORDER_WIDTH
-#define			HELP_SCREEN_DEFUALT_LOC_HEIGHT				292//300
+#define HELP_SCREEN_DEFUALT_LOC_WIDTH				HELP_SCREEN_SMALL_LOC_WIDTH + HELP_SCREEN_BUTTON_BORDER_WIDTH
+#define HELP_SCREEN_DEFUALT_LOC_HEIGHT				292//300
 
-#define			HELP_SCREEN_BUTTON_BORDER_WIDTH				92
-#define			HELP_SCREEN_SMALL_LOC_WIDTH						320
-#define			HELP_SCREEN_SMALL_LOC_HEIGHT					HELP_SCREEN_DEFUALT_LOC_HEIGHT //224
-
-
-
-#define			HELP_SCREEN_BTN_OFFSET_X							11
-#define			HELP_SCREEN_BTN_OFFSET_Y							12//50
-#define			HELP_SCREEN_BTN_FONT_ON_COLOR					73
-#define			HELP_SCREEN_BTN_FONT_OFF_COLOR				FONT_MCOLOR_WHITE
-
-#define			HELP_SCREEN_BTN_FONT_BACK_COLOR				50
-#define			HELP_SCREEN_BTN_FONT									FONT10ARIAL
-
-#define			HELP_SCREEN_BTN_WIDTH									77
-#define			HELP_SCREEN_BTN_HEIGHT								22
-#define			HELP_SCREEN_GAP_BN_BTNS								8
-
-#define			HELP_SCREEN_MARGIN_SIZE								10
-#define			HELP_SCREEN_TEXT_RIGHT_MARGIN_SPACE		36
-#define			HELP_SCREEN_TEXT_LEFT_MARGIN_WITH_BTN	( HELP_SCREEN_BUTTON_BORDER_WIDTH + 5 + HELP_SCREEN_MARGIN_SIZE )
-#define			HELP_SCREEN_TEXT_LEFT_MARGIN					( 5 + HELP_SCREEN_MARGIN_SIZE )
+#define HELP_SCREEN_BUTTON_BORDER_WIDTH			92
+#define HELP_SCREEN_SMALL_LOC_WIDTH				320
+#define HELP_SCREEN_SMALL_LOC_HEIGHT				HELP_SCREEN_DEFUALT_LOC_HEIGHT //224
 
 
-#define			HELP_SCREEN_TEXT_OFFSET_Y							48
-#define			HELP_SCREEN_GAP_BTN_LINES							2
 
-#define			HELP_SCREEN_TITLE_BODY_FONT						FONT12ARIAL
-#define			HELP_SCREEN_TITLE_BODY_COLOR					FONT_MCOLOR_WHITE//FONT_NEARBLACK
+#define HELP_SCREEN_BTN_OFFSET_X				11
+#define HELP_SCREEN_BTN_OFFSET_Y				12//50
+#define HELP_SCREEN_BTN_FONT_ON_COLOR				73
+#define HELP_SCREEN_BTN_FONT_OFF_COLOR				FONT_MCOLOR_WHITE
 
-#define			HELP_SCREEN_TEXT_BODY_FONT						FONT10ARIAL
-#define			HELP_SCREEN_TEXT_BODY_COLOR						FONT_MCOLOR_WHITE//FONT_NEARBLACK
-#define			HELP_SCREEN_TEXT_BACKGROUND						0//NO_SHADOW//FONT_MCOLOR_WHITE
+#define HELP_SCREEN_BTN_FONT_BACK_COLOR			50
+#define HELP_SCREEN_BTN_FONT					FONT10ARIAL
 
-#define			HELP_SCREEN_TITLE_OFFSET_Y						7
-#define			HELP_SCREEN_HELP_REMINDER_Y						HELP_SCREEN_TITLE_OFFSET_Y + 15
+#define HELP_SCREEN_BTN_WIDTH					77
+#define HELP_SCREEN_BTN_HEIGHT					22
+#define HELP_SCREEN_GAP_BN_BTNS				8
 
-#define			HELP_SCREEN_NUM_BTNS									8
+#define HELP_SCREEN_MARGIN_SIZE				10
+#define HELP_SCREEN_TEXT_RIGHT_MARGIN_SPACE			36
+#define HELP_SCREEN_TEXT_LEFT_MARGIN_WITH_BTN			( HELP_SCREEN_BUTTON_BORDER_WIDTH + 5 + HELP_SCREEN_MARGIN_SIZE )
+#define HELP_SCREEN_TEXT_LEFT_MARGIN				( 5 + HELP_SCREEN_MARGIN_SIZE )
 
 
-#define			HELP_SCREEN_SHOW_HELP_AGAIN_REGION_OFFSET_X		4
-#define			HELP_SCREEN_SHOW_HELP_AGAIN_REGION_OFFSET_Y		18
-#define			HELP_SCREEN_SHOW_HELP_AGAIN_REGION_TEXT_OFFSET_X	25 + HELP_SCREEN_SHOW_HELP_AGAIN_REGION_OFFSET_X
-#define			HELP_SCREEN_SHOW_HELP_AGAIN_REGION_TEXT_OFFSET_Y	( HELP_SCREEN_SHOW_HELP_AGAIN_REGION_OFFSET_Y )
+#define HELP_SCREEN_TEXT_OFFSET_Y				48
+#define HELP_SCREEN_GAP_BTN_LINES				2
 
-#define			HELP_SCREEN_EXIT_BTN_OFFSET_X									291
-#define			HELP_SCREEN_EXIT_BTN_LOC_Y										9
+#define HELP_SCREEN_TITLE_BODY_FONT				FONT12ARIAL
+#define HELP_SCREEN_TITLE_BODY_COLOR				FONT_MCOLOR_WHITE//FONT_NEARBLACK
 
-#define			HELP_SCREEN_
+#define HELP_SCREEN_TEXT_BODY_FONT				FONT10ARIAL
+#define HELP_SCREEN_TEXT_BODY_COLOR				FONT_MCOLOR_WHITE//FONT_NEARBLACK
+#define HELP_SCREEN_TEXT_BACKGROUND				0//NO_SHADOW//FONT_MCOLOR_WHITE
+
+#define HELP_SCREEN_TITLE_OFFSET_Y				7
+#define HELP_SCREEN_HELP_REMINDER_Y				HELP_SCREEN_TITLE_OFFSET_Y + 15
+
+#define HELP_SCREEN_NUM_BTNS					8
+
+
+#define HELP_SCREEN_SHOW_HELP_AGAIN_REGION_OFFSET_X		4
+#define HELP_SCREEN_SHOW_HELP_AGAIN_REGION_OFFSET_Y		18
+#define HELP_SCREEN_SHOW_HELP_AGAIN_REGION_TEXT_OFFSET_X	25 + HELP_SCREEN_SHOW_HELP_AGAIN_REGION_OFFSET_X
+#define HELP_SCREEN_SHOW_HELP_AGAIN_REGION_TEXT_OFFSET_Y	( HELP_SCREEN_SHOW_HELP_AGAIN_REGION_OFFSET_Y )
+
+#define HELP_SCREEN_EXIT_BTN_OFFSET_X				291
+#define HELP_SCREEN_EXIT_BTN_LOC_Y				9
+
+#define HELP_SCREEN_
 
 
 //the type of help screen
-#define HLP_SCRN_DEFAULT_TYPE		9
-#define HLP_SCRN_BUTTON_BORDER	8
+#define HLP_SCRN_DEFAULT_TYPE					9
+#define HLP_SCRN_BUTTON_BORDER					8
 
 
 
 //this is the size of the text buffer where everything will be blitted.
 // 2 ( bytest for char ) * width of buffer * height of 1 line * # of text lines
-//#define	HLP_SCRN__NUMBER_BYTES_IN_TEXT_BUFFER						( 2 * HLP_SCRN__WIDTH_OF_TEXT_BUFFER * HLP_SCRN__HEIGHT_OF_1_LINE_IN_BUFFER * HLP_SCRN__MAX_NUMBER_OF_LINES_IN_BUFFER )
-#define	HLP_SCRN__WIDTH_OF_TEXT_BUFFER									280
-#define	HLP_SCRN__MAX_NUMBER_OF_LINES_IN_BUFFER					170//100
-#define	HLP_SCRN__HEIGHT_OF_1_LINE_IN_BUFFER						( GetFontHeight( HELP_SCREEN_TEXT_BODY_FONT ) + HELP_SCREEN_GAP_BTN_LINES )
-#define	HLP_SCRN__MAX_NUMBER_PIXELS_DISPLAYED_IN_TEXT_BUFFER		HELP_SCREEN_DEFUALT_LOC_HEIGHT
-#define	HLP_SCRN__HEIGHT_OF_TEXT_BUFFER									( HLP_SCRN__HEIGHT_OF_1_LINE_IN_BUFFER * HLP_SCRN__MAX_NUMBER_OF_LINES_IN_BUFFER )
+//#define HLP_SCRN__NUMBER_BYTES_IN_TEXT_BUFFER		( 2 * HLP_SCRN__WIDTH_OF_TEXT_BUFFER * HLP_SCRN__HEIGHT_OF_1_LINE_IN_BUFFER * HLP_SCRN__MAX_NUMBER_OF_LINES_IN_BUFFER )
+#define HLP_SCRN__WIDTH_OF_TEXT_BUFFER				280
+#define HLP_SCRN__MAX_NUMBER_OF_LINES_IN_BUFFER		170//100
+#define HLP_SCRN__HEIGHT_OF_1_LINE_IN_BUFFER			( GetFontHeight( HELP_SCREEN_TEXT_BODY_FONT ) + HELP_SCREEN_GAP_BTN_LINES )
+#define HLP_SCRN__MAX_NUMBER_PIXELS_DISPLAYED_IN_TEXT_BUFFER	HELP_SCREEN_DEFUALT_LOC_HEIGHT
+#define HLP_SCRN__HEIGHT_OF_TEXT_BUFFER			( HLP_SCRN__HEIGHT_OF_1_LINE_IN_BUFFER * HLP_SCRN__MAX_NUMBER_OF_LINES_IN_BUFFER )
 
-#define	HLP_SCRN__MAX_NUMBER_DISPLAYED_LINES_IN_BUFFER		( HLP_SCRN__HEIGHT_OF_TEXT_AREA / HLP_SCRN__HEIGHT_OF_1_LINE_IN_BUFFER )
+#define HLP_SCRN__MAX_NUMBER_DISPLAYED_LINES_IN_BUFFER		( HLP_SCRN__HEIGHT_OF_TEXT_AREA / HLP_SCRN__HEIGHT_OF_1_LINE_IN_BUFFER )
 
-#define	HLP_SCRN__HEIGHT_OF_TEXT_AREA											228
+#define HLP_SCRN__HEIGHT_OF_TEXT_AREA				228
 
-#define	HLP_SCRN__HEIGHT_OF_SCROLL_AREA									182
-#define HLP_SCRN__WIDTH_OF_SCROLL_AREA									20
-#define HLP_SCRN__SCROLL_POSX														292
-#define HLP_SCRN__SCROLL_POSY														( gHelpScreen.usScreenLocY + 63 )
+#define HLP_SCRN__HEIGHT_OF_SCROLL_AREA			182
+#define HLP_SCRN__WIDTH_OF_SCROLL_AREA				20
+#define HLP_SCRN__SCROLL_POSX					292
+#define HLP_SCRN__SCROLL_POSY					( gHelpScreen.usScreenLocY + 63 )
 
-#define	HLP_SCRN__SCROLL_UP_ARROW_X											292
-#define	HLP_SCRN__SCROLL_UP_ARROW_Y											43
+#define HLP_SCRN__SCROLL_UP_ARROW_X				292
+#define HLP_SCRN__SCROLL_UP_ARROW_Y				43
 
-#define	HLP_SCRN__SCROLL_DWN_ARROW_X										HLP_SCRN__SCROLL_UP_ARROW_X
-#define	HLP_SCRN__SCROLL_DWN_ARROW_Y										HLP_SCRN__SCROLL_UP_ARROW_Y + 202
+#define HLP_SCRN__SCROLL_DWN_ARROW_X				HLP_SCRN__SCROLL_UP_ARROW_X
+#define HLP_SCRN__SCROLL_DWN_ARROW_Y				HLP_SCRN__SCROLL_UP_ARROW_Y + 202
 
 
 
@@ -313,7 +316,7 @@ static GUIButtonRef giHelpScreenScrollArrows[2];
 void InitHelpScreenSystem()
 {
 	//set some values
-	memset( &gHelpScreen, 0, sizeof( gHelpScreen ) );
+	gHelpScreen = HELP_SCREEN_STRUCT{};
 
 	//set it up so we can enter the screen
 	gfHelpScreenEntry = TRUE;
@@ -742,13 +745,13 @@ static void DrawHelpScreenBackGround(void)
 	//if there are buttons, blit the button border
 	if( gHelpScreen.bNumberOfButtons != 0 )
 	{
-	  BltVideoObject(FRAME_BUFFER, guiHelpScreenBackGround, HLP_SCRN_BUTTON_BORDER, usPosX, gHelpScreen.usScreenLocY);
+		BltVideoObject(FRAME_BUFFER, guiHelpScreenBackGround, HLP_SCRN_BUTTON_BORDER, usPosX, gHelpScreen.usScreenLocY);
 		usPosX += HELP_SCREEN_BUTTON_BORDER_WIDTH;
 	}
 
-  BltVideoObject(FRAME_BUFFER, guiHelpScreenBackGround, HLP_SCRN_DEFAULT_TYPE, usPosX, gHelpScreen.usScreenLocY);
+	BltVideoObject(FRAME_BUFFER, guiHelpScreenBackGround, HLP_SCRN_DEFAULT_TYPE, usPosX, gHelpScreen.usScreenLocY);
 
-  InvalidateRegion( gHelpScreen.usScreenLocX, gHelpScreen.usScreenLocY, gHelpScreen.usScreenLocX+gHelpScreen.usScreenWidth, gHelpScreen.usScreenLocY + gHelpScreen.usScreenHeight );
+	InvalidateRegion( gHelpScreen.usScreenLocX, gHelpScreen.usScreenLocY, gHelpScreen.usScreenLocX+gHelpScreen.usScreenWidth, gHelpScreen.usScreenLocY + gHelpScreen.usScreenHeight );
 }
 
 
@@ -819,8 +822,8 @@ static void SetSizeAndPropertiesOfHelpScreen(void)
 			break;
 
 		default:
-				SLOGE(DEBUG_TAG_ASSERTS, "Error in help screen.");
-        break;
+			SLOGA("Error in help screen.");
+			break;
 	}
 
 	//if there are buttons
@@ -832,7 +835,7 @@ static void SetSizeAndPropertiesOfHelpScreen(void)
 
 
 static void BtnHelpScreenBtnsCallback(GUI_BUTTON* btn, INT32 reason);
-static void GetHelpScreenText(UINT32 uiRecordToGet, wchar_t* pText);
+static ST::string GetHelpScreenText(UINT32 uiRecordToGet);
 
 
 static void CreateHelpScreenButtons(void)
@@ -852,16 +855,16 @@ static void CreateHelpScreenButtons(void)
 		for( i=0; i< gHelpScreen.bNumberOfButtons; i++ )
 		{
 			//get the text for the button
-			wchar_t sText[HELPSCREEN_RECORD_SIZE];
-			GetHelpScreenText(gHelpScreenBtnTextRecordNum[gHelpScreen.bCurrentHelpScreen][i], sText);
+			ST::string sText = GetHelpScreenText(gHelpScreenBtnTextRecordNum[gHelpScreen.bCurrentHelpScreen][i]);
 
 			giHelpScreenButtonsImage[i] = UseLoadedButtonImage( giExitBtnImage, -1,1,5,3,7 );
 
-			guiHelpScreenBtns[i] = CreateIconAndTextButton( giHelpScreenButtonsImage[i], sText, HELP_SCREEN_BTN_FONT,
-															 HELP_SCREEN_BTN_FONT_ON_COLOR, DEFAULT_SHADOW,
-															 HELP_SCREEN_BTN_FONT_OFF_COLOR, DEFAULT_SHADOW,
-															 usPosX, usPosY, MSYS_PRIORITY_HIGHEST,
-															 BtnHelpScreenBtnsCallback);
+			guiHelpScreenBtns[i] = CreateIconAndTextButton( giHelpScreenButtonsImage[i], sText,
+									HELP_SCREEN_BTN_FONT,
+									HELP_SCREEN_BTN_FONT_ON_COLOR, DEFAULT_SHADOW,
+									HELP_SCREEN_BTN_FONT_OFF_COLOR, DEFAULT_SHADOW,
+									usPosX, usPosY, MSYS_PRIORITY_HIGHEST,
+									BtnHelpScreenBtnsCallback);
 
 			guiHelpScreenBtns[i]->SetCursor(gHelpScreen.usCursor);
 			guiHelpScreenBtns[i]->SetUserData(i);
@@ -975,8 +978,8 @@ static void HelpScreenSpecialExitCode(void)
 			break;
 
 		default:
-				SLOGE(DEBUG_TAG_ASSERTS, "Error in help screen.");
-        break;
+			SLOGA("Error in help screen.");
+			break;
 	}
 }
 
@@ -1015,8 +1018,8 @@ static void SpecialHandlerCode(void)
 			break;
 
 		default:
-				SLOGE(DEBUG_TAG_ASSERTS, "Error in help screen: SpecialHandlerCode().");
-        break;
+			SLOGA("Error in help screen: SpecialHandlerCode().");
+			break;
 	}
 }
 
@@ -1064,7 +1067,7 @@ static UINT16 RenderSpecificHelpScreen(void)
 
 		default:
 			SetFontDestBuffer(FRAME_BUFFER);
-			SLOGE(DEBUG_TAG_ASSERTS, "Error in help screen: RenderSpecificHelpScreen().");
+			SLOGA("Error in help screen: RenderSpecificHelpScreen().");
 			break;
 	}
 
@@ -1111,8 +1114,8 @@ static void DisplayCurrentScreenTitleAndFooter(void)
 		case HELP_SCREEN_LOAD_GAME:                  break;
 
 		default:
-			SLOGE(DEBUG_TAG_ASSERTS, "Error in help screen: DisplayCurrentScreenTitleAndFooter()." );
-      break;
+			SLOGA("Error in help screen: DisplayCurrentScreenTitleAndFooter()." );
+			break;
 	}
 
 //	GetHelpScreenTextPositions( NULL, NULL, &usWidth );
@@ -1122,12 +1125,12 @@ static void DisplayCurrentScreenTitleAndFooter(void)
 	else
 		usWidth = gHelpScreen.usScreenWidth - HELP_SCREEN_TEXT_LEFT_MARGIN - HELP_SCREEN_TEXT_RIGHT_MARGIN_SPACE;
 
-	wchar_t zText[HELPSCREEN_RECORD_SIZE];
+	ST::string zText;
 
 	//if this screen has a valid title
 	if( iStartLoc != -1 )
 	{
-		GetHelpScreenText(iStartLoc, zText);
+		zText = GetHelpScreenText(iStartLoc);
 
 		SetFontShadow( NO_SHADOW );
 
@@ -1138,7 +1141,7 @@ static void DisplayCurrentScreenTitleAndFooter(void)
 	}
 
 	//Display the '( press H to get help... )'
-	GetHelpScreenText(HLP_TXT_CONSTANT_SUBTITLE, zText);
+	zText = GetHelpScreenText(HLP_TXT_CONSTANT_SUBTITLE);
 
 	usPosX = gHelpScreen.usLeftMarginPosX;
 
@@ -1149,7 +1152,7 @@ static void DisplayCurrentScreenTitleAndFooter(void)
 	if( !gHelpScreen.fForceHelpScreenToComeUp )
 	{
 		//calc location for the ' [ x ] Dont display again...'
-		GetHelpScreenText(HLP_TXT_CONSTANT_FOOTER, zText);
+		zText = GetHelpScreenText(HLP_TXT_CONSTANT_FOOTER);
 
 		usPosX = gHelpScreen.usLeftMarginPosX + HELP_SCREEN_SHOW_HELP_AGAIN_REGION_TEXT_OFFSET_X;
 
@@ -1229,9 +1232,9 @@ static void ChangeToHelpScreenSubPage(INT8 bNewPage)
 }
 
 
-static void GetHelpScreenText(const UINT32 uiRecordToGet, wchar_t* const pText)
+static ST::string GetHelpScreenText(UINT32 uiRecordToGet)
 {
-	GCM->loadEncryptedString(BINARYDATADIR "/help.edt", pText, HELPSCREEN_RECORD_SIZE * uiRecordToGet, HELPSCREEN_RECORD_SIZE);
+	return GCM->loadEncryptedString(BINARYDATADIR "/help.edt", HELPSCREEN_RECORD_SIZE * uiRecordToGet, HELPSCREEN_RECORD_SIZE);
 }
 
 
@@ -1242,8 +1245,7 @@ static UINT16 GetAndDisplayHelpScreenText(UINT32 uiRecord, UINT16 usPosX, UINT16
 
 	SetFontShadow( NO_SHADOW );
 
-	wchar_t zText[HELPSCREEN_RECORD_SIZE];
-	GetHelpScreenText( uiRecord, zText );
+	ST::string zText = GetHelpScreenText(uiRecord);
 
 	//Display the text
 	usNumVertPixels = IanDisplayWrappedString(usPosX, usPosY, usWidth, HELP_SCREEN_GAP_BTN_LINES, HELP_SCREEN_TEXT_BODY_FONT, HELP_SCREEN_TEXT_BODY_COLOR, zText, HELP_SCREEN_TEXT_BACKGROUND, 0);
@@ -1816,7 +1818,7 @@ HelpScreenID HelpScreenDetermineWhichMapScreenHelpToShow()
 		fShowMapInventoryPool ? HELP_SCREEN_MAPSCREEN_SECTOR_INVENTORY :
 		!AnyMercsHired()      ? HELP_SCREEN_MAPSCREEN_NO_ONE_HIRED     :
 		DidGameJustStart()    ? HELP_SCREEN_MAPSCREEN_NOT_IN_ARULCO    :
-		                        HELP_SCREEN_MAPSCREEN;
+					HELP_SCREEN_MAPSCREEN;
 }
 
 
@@ -1897,7 +1899,7 @@ static void ChangeTopLineInTextBufferByAmount(INT32 const delta)
 	if (new_top > max_top) new_top = max_top;
 	if (new_top < 0)       new_top = 0;
 
-	if (new_top == top) return;
+	if (static_cast<UINT32>(new_top) == top) return;
 
 	top                   = new_top;
 	hlp.ubHelpScreenDirty = HLP_SCRN_DRTY_LVL_REFRESH_TEXT;
@@ -1980,7 +1982,7 @@ static void CreateScrollAreaButtons(void)
 
 		//Create a mouse region 'mask' the entrire screen
 	MSYS_DefineRegion( &gHelpScreenScrollArea, usPosX, (UINT16)iPosY, (UINT16)(usPosX+usWidth), (UINT16)(iPosY+HLP_SCRN__HEIGHT_OF_SCROLL_AREA), MSYS_PRIORITY_HIGHEST,
-							 gHelpScreen.usCursor, SelectHelpScrollAreaMovementCallBack, SelectHelpScrollAreaCallBack );
+				gHelpScreen.usCursor, SelectHelpScrollAreaMovementCallBack, SelectHelpScrollAreaCallBack );
 
 	guiHelpScreenScrollArrowImage[0] = LoadButtonImage(INTERFACEDIR "/helpscreen.sti", 14, 10, 11, 12, 13);
 	guiHelpScreenScrollArrowImage[ 1 ] = UseLoadedButtonImage( guiHelpScreenScrollArrowImage[ 0 ] ,19,15,16,17,18 );

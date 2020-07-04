@@ -1,4 +1,3 @@
-#include "UTF8String.h"
 #include "Types.h"
 #include "Input.h"
 #include "MemMan.h"
@@ -8,11 +7,14 @@
 #include "Local.h"
 #include "UILayout.h"
 
+#include <string_theory/string>
+
+#include <bitset>
+
 
 // The gfKeyState table is used to track which of the keys is up or down at any one time. This is used while polling
-// the interface.
-
-BOOLEAN gfKeyState[SDL_SCANCODE_TO_KEYCODE(SDL_NUM_SCANCODES)]; // TRUE = Pressed, FALSE = Not Pressed
+// the interface.  true = pressed, false = not pressed.
+static std::bitset<2 * SDL_NUM_SCANCODES> gfKeyState;
 static BOOLEAN fCursorWasClipped = FALSE;
 static SGPRect gCursorClipRect;
 
@@ -52,7 +54,7 @@ static void QueueMouseEvent(UINT16 ubInputEvent)
 }
 
 
-static void QueueKeyEvent(UINT16 ubInputEvent, SDL_Keycode Key, SDL_Keymod Mod, wchar_t Char)
+static void QueueKeyEvent(UINT16 ubInputEvent, SDL_Keycode Key, SDL_Keymod Mod, ST::utf32_buffer codepoints)
 {
 	// Can we queue up one more event, if not, the event is lost forever
 	if (gusQueueCount == lengthof(gEventQueue)) return;
@@ -64,7 +66,7 @@ static void QueueKeyEvent(UINT16 ubInputEvent, SDL_Keycode Key, SDL_Keymod Mod, 
 	gEventQueue[gusTailIndex].usKeyState = ModifierState;
 	gEventQueue[gusTailIndex].usEvent = ubInputEvent;
 	gEventQueue[gusTailIndex].usParam = Key;
-	gEventQueue[gusTailIndex].Char    = Char;
+	gEventQueue[gusTailIndex].codepoints = std::move(codepoints);
 
 	gusQueueCount++;
 
@@ -212,16 +214,31 @@ right_button:
 
 void MouseWheelScroll(const SDL_MouseWheelEvent* WheelEv)
 {
-    if (WheelEv->y > 0)
-    {
-    	QueueMouseEvent(MOUSE_WHEEL_UP);
-    }
-    else
-    {
-        QueueMouseEvent(MOUSE_WHEEL_DOWN);
-    }
+	if (WheelEv->y > 0)
+	{
+		QueueMouseEvent(MOUSE_WHEEL_UP);
+	}
+	else
+	{
+		QueueMouseEvent(MOUSE_WHEEL_DOWN);
+	}
 }
 
+
+// Remap SDL keycodes with bit 30 set to the range 512..1023
+// Necessary to be able to use the keycode as an index for the gfKeyState bitset.
+static SDL_Keycode RemapKeycode(SDL_Keycode const key)
+{
+	return (key & SDLK_SCANCODE_MASK)
+		? (key & ~SDLK_SCANCODE_MASK) + SDL_NUM_SCANCODES
+		: key;
+}
+
+
+bool _KeyDown(SDL_Keycode const keycode)
+{
+	return gfKeyState[RemapKeycode(keycode)];
+}
 
 
 static void KeyChange(SDL_Keysym const* const key_sym, bool const pressed)
@@ -257,12 +274,12 @@ static void KeyChange(SDL_Keysym const* const key_sym, bool const pressed)
 		case SDLK_KP_ENTER:    key = SDLK_RETURN;                       break;
 
 		default:
-			if (key >= lengthof(gfKeyState)) return;
+			if ((key & ~SDLK_SCANCODE_MASK) >= SDL_NUM_SCANCODES) return;
 			break;
 	}
 
 	UINT     event_type;
-	BOOLEAN& key_state = gfKeyState[key];
+	bool key_state = _KeyDown(key);
 	if (pressed)
 	{
 		event_type = key_state ? KEY_REPEAT : KEY_DOWN;
@@ -272,9 +289,9 @@ static void KeyChange(SDL_Keysym const* const key_sym, bool const pressed)
 		if (!key_state) return;
 		event_type = KEY_UP;
 	}
-	key_state = pressed;
+	gfKeyState[RemapKeycode(key)] = pressed;
 
-	QueueKeyEvent(event_type, key, mod, '\0');
+	QueueKeyEvent(event_type, key, mod, ST::null);
 }
 
 
@@ -284,17 +301,17 @@ void KeyDown(const SDL_Keysym* KeySym)
 	{
 		case SDLK_LSHIFT:
 		case SDLK_RSHIFT:
-			_KeyDown(SHIFT) = TRUE;
+			gfKeyState.set(SHIFT);
 			break;
 
 		case SDLK_LCTRL:
 		case SDLK_RCTRL:
-			_KeyDown(CTRL) = TRUE;
+			gfKeyState.set(CTRL);
 			break;
 
 		case SDLK_LALT:
 		case SDLK_RALT:
-			_KeyDown(ALT) = TRUE;
+			gfKeyState.set(ALT);
 			break;
 
 		case SDLK_PRINTSCREEN:
@@ -314,17 +331,17 @@ void KeyUp(const SDL_Keysym* KeySym)
 	{
 		case SDLK_LSHIFT:
 		case SDLK_RSHIFT:
-			_KeyDown(SHIFT) = FALSE;
+			gfKeyState.reset(SHIFT);
 			break;
 
 		case SDLK_LCTRL:
 		case SDLK_RCTRL:
-			_KeyDown(CTRL) = FALSE;
+			gfKeyState.reset(CTRL);
 			break;
 
 		case SDLK_LALT:
 		case SDLK_RALT:
-			_KeyDown(ALT) = FALSE;
+			gfKeyState.reset(ALT);
 			break;
 
 		case SDLK_PRINTSCREEN:
@@ -334,7 +351,7 @@ void KeyUp(const SDL_Keysym* KeySym)
 		case SDLK_SCROLLLOCK:
 			SDL_SetWindowGrab
 			(
-			    GAME_WINDOW,
+				GAME_WINDOW,
 				SDL_GetWindowGrab(GAME_WINDOW) == SDL_FALSE ?
 					SDL_TRUE : SDL_FALSE
 			);
@@ -355,8 +372,19 @@ void KeyUp(const SDL_Keysym* KeySym)
 }
 
 void TextInput(const SDL_TextInputEvent* TextEv) {
-	UTF8String utf8String = UTF8String(TextEv->text);
-	QueueKeyEvent(TEXT_INPUT, SDLK_UNKNOWN, KMOD_NONE, utf8String.getUTF16()[0]);
+	try {
+		QueueKeyEvent(TEXT_INPUT, SDLK_UNKNOWN, KMOD_NONE, ST::string(TextEv->text).to_utf32());
+	}
+	catch (const ST::unicode_error&)
+	{
+		// ignore invalid inputs
+		static bool warn = true;
+		if (warn)
+		{
+			SLOGW("Received invalid utf-8 character.");
+			warn = false;
+		}
+	}
 }
 
 
@@ -456,7 +484,7 @@ void DequeueAllKeyBoardEvents(void)
 	//Deque all the events waiting in the SGP queue
 	InputAtom InputEvent;
 	while (DequeueEvent(&InputEvent))
-  {
+	{
 		//dont do anything
 	}
 #endif

@@ -45,7 +45,7 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 #include "WeaponModels.h"
-#include "slog/slog.h"
+#include "Logger.h"
 
 #define NUM_NPC_QUOTE_RECORDS  50
 #define NUM_CIVQUOTE_SECTORS   20
@@ -124,37 +124,37 @@ enum StandardQuoteIDs
 
 struct NPCQuoteInfo
 {
-  UINT32  ubIdentifier;
+	UINT32  ubIdentifier;
 
-  UINT16  fFlags;
+	UINT16  fFlags;
 
-  // conditions
-  union
-  {
-    INT16 sRequiredItem;      // item NPC must have to say quote
-    INT16 sRequiredGridno;    // location for NPC req'd to say quote
-  };
-  UINT16  usFactMustBeTrue;   // ...before saying quote
-  UINT16  usFactMustBeFalse;  // ...before saying quote
-  UINT8   ubQuest;            // quest must be current to say quote
-  UINT8   ubFirstDay;         // first day quote can be said
-  UINT8   ubLastDay;          // last day quote can be said
-  UINT8   ubApproachRequired; // must use this approach to generate quote
-  UINT8   ubOpinionRequired;  // opinion needed for this quote
+	// conditions
+	union
+	{
+		INT16 sRequiredItem;      // item NPC must have to say quote
+		INT16 sRequiredGridno;    // location for NPC req'd to say quote
+	};
+	UINT16  usFactMustBeTrue;   // ...before saying quote
+	UINT16  usFactMustBeFalse;  // ...before saying quote
+	UINT8   ubQuest;            // quest must be current to say quote
+	UINT8   ubFirstDay;         // first day quote can be said
+	UINT8   ubLastDay;          // last day quote can be said
+	UINT8   ubApproachRequired; // must use this approach to generate quote
+	UINT8   ubOpinionRequired;  // opinion needed for this quote
 
-  // quote to say (if any)
-  UINT8   ubQuoteNum;         // this is the quote to say
-  UINT8   ubNumQuotes;        // total # of quotes to say
+	// quote to say (if any)
+	UINT8   ubQuoteNum;         // this is the quote to say
+	UINT8   ubNumQuotes;        // total # of quotes to say
 
-  // actions
-  UINT8   ubStartQuest;
-  UINT8   ubEndQuest;
-  UINT8   ubTriggerNPC;
-  UINT8   ubTriggerNPCRec;
-  UINT16  usSetFactTrue;
-  UINT16  usGiftItem;         // item NPC gives to merc after saying quote
-  UINT16  usGoToGridno;
-  INT16   sActionData;        // special action value
+	// actions
+	UINT8   ubStartQuest;
+	UINT8   ubEndQuest;
+	UINT8   ubTriggerNPC;
+	UINT8   ubTriggerNPCRec;
+	UINT16  usSetFactTrue;
+	UINT16  usGiftItem;         // item NPC gives to merc after saying quote
+	UINT16  usGoToGridno;
+	INT16   sActionData;        // special action value
 };
 
 static NPCQuoteInfo* gpNPCQuoteInfoArray[NUM_PROFILES];
@@ -178,15 +178,15 @@ static NPCQuoteInfo* ExtractNPCQuoteInfoArrayFromFile(HWFILE const f)
 		BYTE data[32];
 		FileRead(f, data, sizeof(data));
 
-		BYTE const* d = data;
-    if(isRussianVersion())
-    {
-      EXTR_U32( d, i->ubIdentifier);
-    }
-    else
-    {
-      i->ubIdentifier = 0;
-    }
+		DataReader d{data};
+		if(isRussianVersion())
+		{
+			EXTR_U32( d, i->ubIdentifier);
+		}
+		else
+		{
+			i->ubIdentifier = 0;
+		}
 		EXTR_U16( d, i->fFlags)
 		EXTR_I16( d, i->sRequiredItem)
 		EXTR_U16( d, i->usFactMustBeTrue)
@@ -207,11 +207,11 @@ static NPCQuoteInfo* ExtractNPCQuoteInfoArrayFromFile(HWFILE const f)
 		EXTR_U16( d, i->usGiftItem)
 		EXTR_U16( d, i->usGoToGridno)
 		EXTR_I16( d, i->sActionData)
-    if(!isRussianVersion())
-    {
-      EXTR_SKIP(d, 4);
-    }
-		Assert(d == endof(data));
+		if(!isRussianVersion())
+		{
+			EXTR_SKIP(d, 4);
+		}
+		Assert(d.getConsumed() == lengthof(data));
 	}
 	return buf.Release();
 }
@@ -221,7 +221,7 @@ static void ConditionalExtractNPCQuoteInfoArrayFromFile(HWFILE const f, NPCQuote
 {
 	UINT8 present;
 	FileRead(f, &present, sizeof(present));
-	FreeNull(q);
+	FreeNullArray(q);
 	if (!present) return;
 	q = ExtractNPCQuoteInfoArrayFromFile(f);
 }
@@ -242,11 +242,11 @@ static void ConditionalInjectNPCQuoteInfoArrayIntoFile(HWFILE const f, NPCQuoteI
 	for (NPCQuoteInfo const* i = q; i != q + NUM_NPC_QUOTE_RECORDS; ++i)
 	{
 		BYTE  data[32];
-		BYTE* d = data;
-    if(isRussianVersion())
-    {
-      INJ_U32( d, i->ubIdentifier);
-    }
+		DataWriter d{data};
+		if(isRussianVersion())
+		{
+			INJ_U32( d, i->ubIdentifier);
+		}
 		INJ_U16( d, i->fFlags)
 		INJ_I16( d, i->sRequiredItem)
 		INJ_U16( d, i->usFactMustBeTrue)
@@ -267,11 +267,11 @@ static void ConditionalInjectNPCQuoteInfoArrayIntoFile(HWFILE const f, NPCQuoteI
 		INJ_U16( d, i->usGiftItem)
 		INJ_U16( d, i->usGoToGridno)
 		INJ_I16( d, i->sActionData)
-    if(!isRussianVersion())
-    {
-      INJ_SKIP(d, 4);
-    }
-		Assert(d == endof(data));
+		if(!isRussianVersion())
+		{
+			INJ_SKIP(d, 4);
+		}
+		Assert(d.getConsumed() == lengthof(data));
 		FileWrite(f, data, sizeof(data));
 	}
 }
@@ -328,7 +328,7 @@ static void RevertToOriginalQuoteFile(UINT8 ubNPC)
 {
 	if ( gpBackupNPCQuoteInfoArray[ ubNPC ] && gpNPCQuoteInfoArray[ubNPC] )
 	{
-		MemFree( gpNPCQuoteInfoArray[ubNPC] );
+		delete[] gpNPCQuoteInfoArray[ubNPC];
 		gpNPCQuoteInfoArray[ubNPC] = gpBackupNPCQuoteInfoArray[ubNPC];
 		gpBackupNPCQuoteInfoArray[ubNPC] = NULL;
 	}
@@ -380,7 +380,7 @@ static NPCQuoteInfo* EnsureQuoteFileLoaded(UINT8 const ubNPC)
 		{
 			if (!gfTriedToLoadQuoteInfoArray[ubNPC]) // don't report the error a second time
 			{
-				SLOGE(DEBUG_TAG_NPC, "NPC needs NPC file: %d.", ubNPC );
+				SLOGE("NPC needs NPC file: %d.", ubNPC );
 				gfTriedToLoadQuoteInfoArray[ubNPC] = TRUE;
 			}
 			// error message at this point!
@@ -393,8 +393,8 @@ static NPCQuoteInfo* EnsureQuoteFileLoaded(UINT8 const ubNPC)
 
 bool ReloadQuoteFile(UINT8 const ubNPC)
 {
-	FreeNull(gpNPCQuoteInfoArray[ubNPC]);
-	FreeNull(gpBackupNPCQuoteInfoArray[ubNPC]);
+	FreeNullArray(gpNPCQuoteInfoArray[ubNPC]);
+	FreeNullArray(gpBackupNPCQuoteInfoArray[ubNPC]);
 	return EnsureQuoteFileLoaded(ubNPC);
 }
 
@@ -403,7 +403,7 @@ static bool ReloadQuoteFileIfLoaded(UINT8 const ubNPC)
 {
 	NPCQuoteInfo*& q = gpNPCQuoteInfoArray[ubNPC];
 	if (!q) return TRUE;
-	FreeNull(q);
+	FreeNullArray(q);
 	return EnsureQuoteFileLoaded(ubNPC);
 }
 
@@ -419,8 +419,8 @@ static void RefreshNPCScriptRecord(UINT8 const ubNPC, UINT8 const record)
 		}
 		for (UINT8 i = FIRST_RPC; i != FIRST_NPC; ++i)
 		{
-			if (!(GetProfile(ubNPC).ubMiscFlags & PROFILE_MISC_FLAG_RECRUITED)) continue;
-			if (!gpBackupNPCQuoteInfoArray[ubNPC]) continue;
+			if (!(GetProfile(i).ubMiscFlags & PROFILE_MISC_FLAG_RECRUITED)) continue;
+			if (!gpBackupNPCQuoteInfoArray[i]) continue;
 			RefreshNPCScriptRecord(i, record);
 		}
 		return;
@@ -477,7 +477,7 @@ try
 {
 	NPCQuoteInfo*& q = gpCivQuoteInfoArray[idx];
 	if (!q) return true;
-	FreeNull(q);
+	FreeNullArray(q);
 	q = LoadCivQuoteFile(idx);
 	return true;
 }
@@ -486,9 +486,9 @@ catch (...) { return false; }
 
 void ShutdownNPCQuotes()
 {
-	FOR_EACH(NPCQuoteInfo*, i, gpNPCQuoteInfoArray)       FreeNull(*i);
-	FOR_EACH(NPCQuoteInfo*, i, gpBackupNPCQuoteInfoArray) FreeNull(*i);
-	FOR_EACH(NPCQuoteInfo*, i, gpCivQuoteInfoArray)       FreeNull(*i);
+	FOR_EACH(NPCQuoteInfo*, i, gpNPCQuoteInfoArray)       FreeNullArray(*i);
+	FOR_EACH(NPCQuoteInfo*, i, gpBackupNPCQuoteInfoArray) FreeNullArray(*i);
+	FOR_EACH(NPCQuoteInfo*, i, gpCivQuoteInfoArray)       FreeNullArray(*i);
 }
 
 
@@ -503,7 +503,7 @@ void ReloadAllQuoteFiles(void)
 	for ( ubProfile = FIRST_RPC; ubProfile < NUM_PROFILES; ubProfile++ )
 	{
 		// zap backup if any
-		FreeNull(gpBackupNPCQuoteInfoArray[ubProfile]);
+		FreeNullArray(gpBackupNPCQuoteInfoArray[ubProfile]);
 		ReloadQuoteFileIfLoaded( ubProfile );
 	}
 	// reload all civ quote files
@@ -956,7 +956,7 @@ check_give_money:
 							p.iBalance          += (INT32)o->uiMoneyAmount;
 							p.uiTotalCostToDate += o->uiMoneyAmount;
 							if (p.iBalance > 0) p.iBalance = 0;
-							ScreenMsg(FONT_YELLOW, MSG_INTERFACE, TacticalStr[BALANCE_OWED_STR], p.zNickname, -p.iBalance);
+							ScreenMsg(FONT_YELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[BALANCE_OWED_STR], p.zNickname, -p.iBalance));
 						}
 						else if (!CheckFact(FACT_VINCE_EXPECTING_MONEY, ubNPC) &&
 								q.sActionData != NPC_ACTION_DONT_ACCEPT_ITEM)
@@ -1006,7 +1006,7 @@ check_give_money:
 						p.iBalance          += (INT32)o->uiMoneyAmount;
 						p.uiTotalCostToDate += o->uiMoneyAmount;
 						if (p.iBalance > 0) p.iBalance = 0;
-						ScreenMsg(FONT_YELLOW, MSG_INTERFACE, TacticalStr[BALANCE_OWED_STR], p.zNickname, -p.iBalance);
+						ScreenMsg(FONT_YELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[BALANCE_OWED_STR], p.zNickname, -p.iBalance));
 					}
 				}
 				break;
@@ -1055,15 +1055,14 @@ static UINT8 HandleNPCBeingGivenMoneyByPlayer(UINT8 const ubNPC, UINT32 const ui
 				}
 				else
 				{
-					wchar_t sTempString[ 100 ];
-					swprintf(sTempString, lengthof(sTempString), L"$%ld", iCost - uiMoneyAmount - giHospitalTempBalance);
+					ST::string sTempString = ST::format("${}", iCost - uiMoneyAmount - giHospitalTempBalance);
 
 					// not enough cash
 					ScreenMsg( FONT_MCOLOR_LTYELLOW,
 						MSG_INTERFACE,
-						g_langRes->Message[ STR_NEED_TO_GIVE_MONEY ],
+						st_format_printf(g_langRes->Message[ STR_NEED_TO_GIVE_MONEY ],
 						gMercProfiles[ ubNPC ].zNickname,
-						sTempString );
+						sTempString) );
 					quote_id = 27;
 					giHospitalTempBalance += uiMoneyAmount;
 				}
@@ -1143,16 +1142,16 @@ static UINT8 NPCConsiderQuote(UINT8 const ubNPC, UINT8 const ubMerc, Approach co
 
 	if (ubApproach != NPC_INITIATING_CONV && ubMerc != NO_PROFILE)
 	{
-		SLOGD(DEBUG_TAG_QUESTS, "New Approach for NPC ID: %d '%ls' against Merc: %d '%ls'\n\
+		SLOGD("New Approach for NPC ID: %d '%s' against Merc: %d '%s'\n\
 														\tTesting Record #: %d",
-					ubNPC, GetProfile(ubNPC).zNickname, ubMerc, GetProfile(ubMerc).zNickname, ubQuoteNum);
+					ubNPC, GetProfile(ubNPC).zNickname.c_str(), ubMerc, GetProfile(ubMerc).zNickname.c_str(), ubQuoteNum);
 	}
 
 	if (CHECK_FLAG( pNPCQuoteInfo->fFlags, QUOTE_FLAG_SAID ))
 	{
 		if (ubApproach != NPC_INITIATING_CONV)
 		{
-			SLOGD(DEBUG_TAG_QUESTS, "Quote Already Said, leaving");
+			SLOGD("Quote Already Said, leaving");
 		}
 		// skip quotes already said
 		return( FALSE );
@@ -1161,14 +1160,6 @@ static UINT8 NPCConsiderQuote(UINT8 const ubNPC, UINT8 const ubMerc, Approach co
 	// if the quote is quest-specific, is the player on that quest?
 	if (pNPCQuoteInfo->ubQuest != NO_QUEST)
 	{
-		if (ubApproach != NPC_INITIATING_CONV)
-		{
-			SLOGD(DEBUG_TAG_QUESTS, "Quest(%d:'%ls') Must be in Progress, status is %d. %s",
-						pNPCQuoteInfo->ubQuest, QuestDescText[ pNPCQuoteInfo->ubQuest ],
-						gubQuest[pNPCQuoteInfo->ubQuest],
-						(gubQuest[pNPCQuoteInfo->ubQuest] != QUESTINPROGRESS) ? "False, return" : "True" );
-		}
-
 		if (pNPCQuoteInfo->ubQuest > QUEST_DONE_NUM)
 		{
 			if (gubQuest[pNPCQuoteInfo->ubQuest - QUEST_DONE_NUM] != QUESTDONE)
@@ -1198,8 +1189,8 @@ static UINT8 NPCConsiderQuote(UINT8 const ubNPC, UINT8 const ubMerc, Approach co
 		fTrue = CheckFact((Fact)pNPCQuoteInfo->usFactMustBeTrue, ubNPC);
 		if (ubApproach != NPC_INITIATING_CONV)
 		{
-			SLOGD(DEBUG_TAG_QUESTS, "Fact (%d:'%ls') Must be True, status is %s",
-						pNPCQuoteInfo->usFactMustBeTrue, FactDescText[pNPCQuoteInfo->usFactMustBeTrue],
+			SLOGD("Fact (%d:'%s') Must be True, status is %s",
+						pNPCQuoteInfo->usFactMustBeTrue, FactDescText[pNPCQuoteInfo->usFactMustBeTrue].c_str(),
 						fTrue ? "True" : "False, returning");
 		}
 		if (!fTrue) return FALSE;
@@ -1210,8 +1201,8 @@ static UINT8 NPCConsiderQuote(UINT8 const ubNPC, UINT8 const ubMerc, Approach co
 		fTrue = CheckFact((Fact)pNPCQuoteInfo->usFactMustBeFalse, ubNPC);
 		if (ubApproach != NPC_INITIATING_CONV)
 		{
-			SLOGD(DEBUG_TAG_QUESTS, "Fact(%d:'%ls') Must be False status is  %s",
-						pNPCQuoteInfo->usFactMustBeFalse, FactDescText[pNPCQuoteInfo->usFactMustBeFalse],
+			SLOGD("Fact(%d:'%s') Must be False status is  %s",
+						pNPCQuoteInfo->usFactMustBeFalse, FactDescText[pNPCQuoteInfo->usFactMustBeFalse].c_str(),
 						(fTrue == TRUE) ? "True, return" : "FALSE" );
 		}
 		if (fTrue)	return( FALSE );
@@ -1224,7 +1215,7 @@ static UINT8 NPCConsiderQuote(UINT8 const ubNPC, UINT8 const ubMerc, Approach co
 	{
 		if (ubApproach != NPC_INITIATING_CONV)
 		{
-			SLOGD(DEBUG_TAG_QUESTS, "Approach Taken(%d) must equal required Approach(%d) = %s",
+			SLOGD("Approach Taken(%d) must equal required Approach(%d) = %s",
 						ubApproach, pNPCQuoteInfo->ubApproachRequired,
 						(ubApproach != pNPCQuoteInfo->ubApproachRequired) ? "TRUE, return" : "FALSE" );
 		}
@@ -1254,11 +1245,11 @@ static UINT8 NPCConsiderQuote(UINT8 const ubNPC, UINT8 const ubMerc, Approach co
 	{
 		if (ubApproach != NPC_INITIATING_CONV)
 		{
-			SLOGD(DEBUG_TAG_QUESTS, "Time constraints. Current Day(%d) must <= Day last spoken too (%d) : %s",
+			SLOGD("Time constraints. Current Day(%d) must <= Day last spoken too (%d) : %s",
 						uiDay, pNPCProfile->ubLastDateSpokenTo,
 						(uiDay <= pNPCProfile->ubLastDateSpokenTo) ? "TRUE, return" : "FALSE" );
 		}
-		
+
 		if (uiDay <= pNPCProfile->ubLastDateSpokenTo)
 		{
 			// too early!
@@ -1269,7 +1260,7 @@ static UINT8 NPCConsiderQuote(UINT8 const ubNPC, UINT8 const ubMerc, Approach co
 	{
 		if (ubApproach != NPC_INITIATING_CONV)
 		{
-			SLOGD(DEBUG_TAG_QUESTS, "Current Day(%d) is before Required first day(%d) = %s",
+			SLOGD("Current Day(%d) is before Required first day(%d) = %s",
 						uiDay, pNPCQuoteInfo->ubFirstDay,
 						(uiDay < pNPCQuoteInfo->ubFirstDay) ? "False, returning" : "True" );
 		}
@@ -1281,7 +1272,7 @@ static UINT8 NPCConsiderQuote(UINT8 const ubNPC, UINT8 const ubMerc, Approach co
 	{
 		if (ubApproach != NPC_INITIATING_CONV)
 		{
-			SLOGD(DEBUG_TAG_QUESTS, "Current Day(%d) is after Required first day(%d) = %s",
+			SLOGD("Current Day(%d) is after Required first day(%d) = %s",
 						uiDay, pNPCQuoteInfo->ubFirstDay,
 						(uiDay > pNPCQuoteInfo->ubLastDay) ? "TRUE, returning" : "FALSE" );
 		}
@@ -1294,7 +1285,7 @@ static UINT8 NPCConsiderQuote(UINT8 const ubNPC, UINT8 const ubMerc, Approach co
 	{
 		if (ubApproach != NPC_INITIATING_CONV)
 		{
-			SLOGD(DEBUG_TAG_QUESTS, "Opinion Required.  Talk Desire (%d), Opinion Required(%d) : %s",
+			SLOGD("Opinion Required.  Talk Desire (%d), Opinion Required(%d) : %s",
 						ubTalkDesire, pNPCQuoteInfo->ubOpinionRequired,
 						(ubTalkDesire < pNPCQuoteInfo->ubOpinionRequired) ? "False, return" : "False, continue" );
 		}
@@ -1307,7 +1298,7 @@ static UINT8 NPCConsiderQuote(UINT8 const ubNPC, UINT8 const ubMerc, Approach co
 
 	if (ubApproach != NPC_INITIATING_CONV)
 	{
-		SLOGD(DEBUG_TAG_QUESTS, "Return the quote opinion value! = TRUE");
+		SLOGD("Return the quote opinion value! = TRUE");
 	}
 	// Return the quote opinion value!
 	return( TRUE );
@@ -1379,9 +1370,9 @@ void ResetOncePerConvoRecordsForAllNPCsInLoadedSector( void )
 	for ( ubLoop = FIRST_RPC; ubLoop < NUM_PROFILES; ubLoop++ )
 	{
 		if ( gMercProfiles[ ubLoop ].sSectorX == gWorldSectorX &&
-				 gMercProfiles[ ubLoop ].sSectorY == gWorldSectorY &&
-				 gMercProfiles[ ubLoop ].bSectorZ == gbWorldSectorZ &&
-				 gpNPCQuoteInfoArray[ ubLoop ] != NULL )
+				gMercProfiles[ ubLoop ].sSectorY == gWorldSectorY &&
+				gMercProfiles[ ubLoop ].bSectorZ == gbWorldSectorZ &&
+				gpNPCQuoteInfoArray[ ubLoop ] != NULL )
 		{
 			ResetOncePerConvoRecordsForNPC( ubLoop );
 		}
@@ -1619,7 +1610,7 @@ void ConverseFull(UINT8 const ubNPC, UINT8 const ubMerc, Approach bApproach, UIN
 					break;
 				case TRIGGER_NPC:
 					// if triggering, pass in the approach data as the record to consider
-					SLOGD(DEBUG_TAG_AI, "Handling trigger %ls/%d at %ld", gMercProfiles[ubNPC].zNickname, approach_record, GetJA2Clock());
+					SLOGD(ST::format("Handling trigger {}/{} at {}", gMercProfiles[ubNPC].zNickname.c_str(), approach_record, GetJA2Clock()));
 					NPCConsiderTalking(ubNPC, ubMerc, bApproach, approach_record, pNPCQuoteInfoArray, &pQuotePtr, &ubRecordNum);
 					break;
 				default:
@@ -2190,7 +2181,7 @@ void TriggerNPCRecord(UINT8 const ubTriggerNPC, UINT8 const record)
 	}
 	else
 	{ // don't do anything
-		SLOGW(DEBUG_TAG_AI, "trigger of %d, record %d cannot proceed, possible error", ubTriggerNPC, record);
+		SLOGW("trigger of %d, record %d cannot proceed, possible error", ubTriggerNPC, record);
 	}
 }
 
@@ -2210,7 +2201,7 @@ void TriggerNPCRecordImmediately(UINT8 const ubTriggerNPC, UINT8 const record)
 	}
 	else
 	{ // don't do anything
-		SLOGW(DEBUG_TAG_AI, "trigger of %d, record %d cannot proceed, possible error", ubTriggerNPC, record);
+		SLOGW("trigger of %d, record %d cannot proceed, possible error", ubTriggerNPC, record);
 	}
 }
 
@@ -2346,8 +2337,6 @@ static void TriggerClosestMercWhoCanSeeNPC(UINT8 ubNPC, NPCQuoteInfo* pQuotePtr)
 
 BOOLEAN TriggerNPCWithIHateYouQuote( UINT8 ubTriggerNPC )
 {
-	// Check if we have a quote to trigger...
-	NPCQuoteInfo	*pQuotePtr;
 	UINT8					ubLoop;
 
 	NPCQuoteInfo* const pNPCQuoteInfoArray = EnsureQuoteFileLoaded(ubTriggerNPC);
@@ -2355,12 +2344,9 @@ BOOLEAN TriggerNPCWithIHateYouQuote( UINT8 ubTriggerNPC )
 
 	for ( ubLoop = 0; ubLoop < NUM_NPC_QUOTE_RECORDS; ubLoop++ )
 	{
-		pQuotePtr = &(pNPCQuoteInfoArray[ubLoop]);
 		if ( NPCConsiderQuote( ubTriggerNPC, 0, APPROACH_DECLARATION_OF_HOSTILITY, ubLoop, 0, pNPCQuoteInfoArray ) )
 		{
 			// trigger this quote!
-			// reset approach required value so that we can trigger it
-			//pQuotePtr->ubApproachRequired = TRIGGER_NPC;
 			NPCTriggerNPC(ubTriggerNPC, ubLoop, APPROACH_DECLARATION_OF_HOSTILITY, true);
 			gMercProfiles[ ubTriggerNPC ].ubMiscFlags |= PROFILE_MISC_FLAG_SAID_HOSTILE_QUOTE;
 			return( TRUE );
@@ -2686,6 +2672,12 @@ void HandleVictoryInNPCSector(INT16 const x, INT16 const y, INT16 const z)
 	switch (SECTOR(x, y))
 	{
 		case SEC_F10:
+			FOR_EACH_IN_TEAM(s, CIV_TEAM)
+			{
+				// hillbilies are still alive?..leave
+				if (s->ubCivilianGroup == HICKS_CIV_GROUP && s->bLife > 0) return;
+			}
+
 			// we won over the hillbillies
 			// set fact they are dead
 			if (!CheckFact(FACT_HILLBILLIES_KILLED, KEITH))
@@ -2771,7 +2763,7 @@ BOOLEAN RecordHasDialogue(UINT8 const ubNPC, UINT8 const ubRecord)
 
 static INT8 FindCivQuoteFileIndex(INT16 const x, INT16 const y, INT16 const z)
 {
-  if (z > 0) return MINERS_CIV_QUOTE_INDEX;
+	if (z > 0) return MINERS_CIV_QUOTE_INDEX;
 
 	for (UINT8 i = 0; i != NUM_CIVQUOTE_SECTORS; ++i)
 	{

@@ -30,80 +30,83 @@
 #include "Debug.h"
 #include "Font_Control.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
 
-#define		MERC_TEXT_FONT									FONT12ARIAL
-#define		MERC_TEXT_COLOR									FONT_MCOLOR_WHITE
 
-#define		MERC_VIDEO_TITLE_FONT						FONT10ARIAL
-#define		MERC_VIDEO_TITLE_COLOR					FONT_MCOLOR_LTYELLOW
+#define MERC_TEXT_FONT			FONT12ARIAL
+#define MERC_TEXT_COLOR			FONT_MCOLOR_WHITE
 
-#define		MERC_BACKGROUND_WIDTH						125
-#define		MERC_BACKGROUND_HEIGHT					100
+#define MERC_VIDEO_TITLE_FONT		FONT10ARIAL
+#define MERC_VIDEO_TITLE_COLOR		FONT_MCOLOR_LTYELLOW
 
-#define		MERC_TITLE_X										LAPTOP_SCREEN_UL_X + 135
-#define		MERC_TITLE_Y										LAPTOP_SCREEN_WEB_UL_Y + 20
+#define MERC_BACKGROUND_WIDTH		125
+#define MERC_BACKGROUND_HEIGHT		100
 
-#define		MERC_PORTRAIT_X									LAPTOP_SCREEN_UL_X + 198
-#define		MERC_PORTRAIT_Y									LAPTOP_SCREEN_WEB_UL_Y + 96
-#define		MERC_PORTRAIT_TEXT_X						MERC_PORTRAIT_X
-#define		MERC_PORTRAIT_TEXT_Y						MERC_PORTRAIT_Y + 109
-#define		MERC_PORTRAIT_TEXT_WIDTH				115
+#define MERC_TITLE_X			LAPTOP_SCREEN_UL_X + 135
+#define MERC_TITLE_Y			LAPTOP_SCREEN_WEB_UL_Y + 20
 
-#define		MERC_ACCOUNT_BOX_X							LAPTOP_SCREEN_UL_X + 138
-#define		MERC_ACCOUNT_BOX_Y							LAPTOP_SCREEN_WEB_UL_Y + 251
+#define MERC_PORTRAIT_X			LAPTOP_SCREEN_UL_X + 198
+#define MERC_PORTRAIT_Y			LAPTOP_SCREEN_WEB_UL_Y + 96
+#define MERC_PORTRAIT_TEXT_X		MERC_PORTRAIT_X
+#define MERC_PORTRAIT_TEXT_Y		MERC_PORTRAIT_Y + 109
+#define MERC_PORTRAIT_TEXT_WIDTH	115
 
-#define		MERC_ACCOUNT_BOX_TEXT_X					MERC_ACCOUNT_BOX_X
-#define		MERC_ACCOUNT_BOX_TEXT_Y					MERC_ACCOUNT_BOX_Y + 20
-#define		MERC_ACCOUNT_BOX_TEXT_WIDTH			110
+#define MERC_ACCOUNT_BOX_X		LAPTOP_SCREEN_UL_X + 138
+#define MERC_ACCOUNT_BOX_Y		LAPTOP_SCREEN_WEB_UL_Y + 251
 
-#define		MERC_ACCOUNT_ARROW_X						MERC_ACCOUNT_BOX_X + 125
-#define		MERC_ACCOUNT_ARROW_Y						MERC_ACCOUNT_BOX_Y + 18
+#define MERC_ACCOUNT_BOX_TEXT_X		MERC_ACCOUNT_BOX_X
+#define MERC_ACCOUNT_BOX_TEXT_Y		MERC_ACCOUNT_BOX_Y + 20
+#define MERC_ACCOUNT_BOX_TEXT_WIDTH	110
 
-#define		MERC_ACCOUNT_BUTTON_X						MERC_ACCOUNT_BOX_X + 133
-#define		MERC_ACCOUNT_BUTTON_Y						MERC_ACCOUNT_BOX_Y + 8
+#define MERC_ACCOUNT_ARROW_X		MERC_ACCOUNT_BOX_X + 125
+#define MERC_ACCOUNT_ARROW_Y		MERC_ACCOUNT_BOX_Y + 18
 
-#define		MERC_FILE_BOX_X									MERC_ACCOUNT_BOX_X
-#define		MERC_FILE_BOX_Y									LAPTOP_SCREEN_WEB_UL_Y + 321
+#define MERC_ACCOUNT_BUTTON_X		MERC_ACCOUNT_BOX_X + 133
+#define MERC_ACCOUNT_BUTTON_Y		MERC_ACCOUNT_BOX_Y + 8
 
-#define		MERC_FILE_BOX_TEXT_X						MERC_FILE_BOX_X
-#define		MERC_FILE_BOX_TEXT_Y						MERC_FILE_BOX_Y + 20
-#define		MERC_FILE_BOX_TEXT_WIDTH				MERC_ACCOUNT_BOX_TEXT_WIDTH
+#define MERC_FILE_BOX_X			MERC_ACCOUNT_BOX_X
+#define MERC_FILE_BOX_Y			LAPTOP_SCREEN_WEB_UL_Y + 321
 
-#define		MERC_FILE_ARROW_X								MERC_FILE_BOX_X + 125
-#define		MERC_FILE_ARROW_Y								MERC_FILE_BOX_Y + 18
+#define MERC_FILE_BOX_TEXT_X		MERC_FILE_BOX_X
+#define MERC_FILE_BOX_TEXT_Y		MERC_FILE_BOX_Y + 20
+#define MERC_FILE_BOX_TEXT_WIDTH	MERC_ACCOUNT_BOX_TEXT_WIDTH
 
-#define		MERC_FILE_BUTTON_X							MERC_ACCOUNT_BUTTON_X
-#define		MERC_FILE_BUTTON_Y							MERC_FILE_BOX_Y + 8
+#define MERC_FILE_ARROW_X		MERC_FILE_BOX_X + 125
+#define MERC_FILE_ARROW_Y		MERC_FILE_BOX_Y + 18
+
+#define MERC_FILE_BUTTON_X		MERC_ACCOUNT_BUTTON_X
+#define MERC_FILE_BUTTON_Y		MERC_FILE_BOX_Y + 8
 
 
 
 // Video Conference Defines
-#define		MERC_VIDEO_BACKGROUND_X					MERC_PORTRAIT_X
-#define		MERC_VIDEO_BACKGROUND_Y					MERC_PORTRAIT_Y
-#define		MERC_VIDEO_BACKGROUND_WIDTH			116
-#define		MERC_VIDEO_BACKGROUND_HEIGHT		108
+#define MERC_VIDEO_BACKGROUND_X		MERC_PORTRAIT_X
+#define MERC_VIDEO_BACKGROUND_Y		MERC_PORTRAIT_Y
+#define MERC_VIDEO_BACKGROUND_WIDTH	116
+#define MERC_VIDEO_BACKGROUND_HEIGHT	108
 
-#define		MERC_VIDEO_FACE_X								(UINT16)(MERC_VIDEO_BACKGROUND_X + 10)
-#define		MERC_VIDEO_FACE_Y								(UINT16)(MERC_VIDEO_BACKGROUND_Y + 17)
-#define		MERC_VIDEO_FACE_WIDTH						96
-#define		MERC_VIDEO_FACE_HEIGHT					86
-#define		MERC_X_TO_CLOSE_VIDEO_X					MERC_VIDEO_BACKGROUND_X + 104
-#define		MERC_X_TO_CLOSE_VIDEO_Y					MERC_VIDEO_BACKGROUND_Y + 3
-#define		MERC_X_VIDEO_TITLE_X						MERC_VIDEO_BACKGROUND_X + 5
-#define		MERC_X_VIDEO_TITLE_Y						MERC_VIDEO_BACKGROUND_Y + 3
+#define MERC_VIDEO_FACE_X		(UINT16)(MERC_VIDEO_BACKGROUND_X + 10)
+#define MERC_VIDEO_FACE_Y		(UINT16)(MERC_VIDEO_BACKGROUND_Y + 17)
+#define MERC_VIDEO_FACE_WIDTH		96
+#define MERC_VIDEO_FACE_HEIGHT		86
+#define MERC_X_TO_CLOSE_VIDEO_X		MERC_VIDEO_BACKGROUND_X + 104
+#define MERC_X_TO_CLOSE_VIDEO_Y		MERC_VIDEO_BACKGROUND_Y + 3
+#define MERC_X_VIDEO_TITLE_X		MERC_VIDEO_BACKGROUND_X + 5
+#define MERC_X_VIDEO_TITLE_Y		MERC_VIDEO_BACKGROUND_Y + 3
 
-#define		MERC_INTRO_TIME									1000
-#define		MERC_EXIT_TIME									500
+#define MERC_INTRO_TIME			1000
+#define MERC_EXIT_TIME			500
 
-#define		MERC_TEXT_BOX_POS_Y							(STD_SCREEN_Y + 255)
+#define MERC_TEXT_BOX_POS_Y		(STD_SCREEN_Y + 255)
 
-#define		SPECK_IDLE_CHAT_DELAY						10000
+#define SPECK_IDLE_CHAT_DELAY		10000
 
-#define		MERC_NUMBER_OF_RANDOM_QUOTES		14
+#define MERC_NUMBER_OF_RANDOM_QUOTES	14
 
 
-#define		MERC_FIRST_MERC									BIFF
-#define		MERC_LAST_MERC									BUBBA
+#define MERC_FIRST_MERC			BIFF
+#define MERC_LAST_MERC			BUBBA
 
 
 enum
@@ -118,9 +121,9 @@ enum
 
 struct CONTITION_FOR_MERC_AVAILABLE
 {
-	UINT16	usMoneyPaid;
-	UINT16	usDay;
-	UINT8		ubMercArrayID;
+	UINT16 usMoneyPaid;
+	UINT16 usDay;
+	UINT8  ubMercArrayID;
 };
 
 static CONTITION_FOR_MERC_AVAILABLE const gConditionsForMercAvailability[NUM_MERC_ARRIVALS] =
@@ -166,7 +169,7 @@ UINT8			gubCurMercIndex;
 
 static MercPopUpBox* g_merc_popup_box;
 
-static wchar_t gsSpeckDialogueTextPopUp[900];
+static ST::string gsSpeckDialogueTextPopUp;
 static UINT16  gusSpeckDialogueX;
 static UINT16  gusSpeckDialogueActualWidth;
 
@@ -203,27 +206,27 @@ static BOOLEAN gfFirstTimeIntoMERCSiteSinceEnteringLaptop = FALSE;
 //used for the random quotes to try to balance the ones that are said
 struct NUMBER_TIMES_QUOTE_SAID
 {
-	UINT8		ubQuoteID;
-	UINT32	uiNumberOfTimesQuoteSaid;
+	UINT8  ubQuoteID;
+	UINT32 uiNumberOfTimesQuoteSaid;
 };
 
 static NUMBER_TIMES_QUOTE_SAID gNumberOfTimesQuoteSaid[MERC_NUMBER_OF_RANDOM_QUOTES] =
 {
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_BIFF, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_HAYWIRE, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_GASKET, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_RAZOR, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_FLO, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_GUMPY, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_LARRY, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_COUGER, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_NUMB, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_BUBBA, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_BIFF, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_HAYWIRE, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_GASKET, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_RAZOR, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_FLO, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_GUMPY, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_LARRY, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_COUGER, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_NUMB, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_SPECK_SELLS_BUBBA, 0 },
 
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_AIM_SLANDER_1, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_AIM_SLANDER_2, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_AIM_SLANDER_3, 0 },
-		{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_AIM_SLANDER_4, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_AIM_SLANDER_1, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_AIM_SLANDER_2, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_AIM_SLANDER_3, 0 },
+	{ SPECK_QUOTE_PLAYER_NOT_DOING_ANYTHING_AIM_SLANDER_4, 0 },
 };
 
 
@@ -251,8 +254,8 @@ static MOUSE_REGION gMercSiteSubTitleMouseRegion;
 
 void GameInitMercs()
 {
-//	for(i=0; i<NUMBER_OF_MERCS; i++)
-//		gubMercArray[ i ] = i+BIFF;
+	//for(i=0; i<NUMBER_OF_MERCS; i++)
+	//	gubMercArray[ i ] = i+BIFF;
 
 	//can now be out of order
 	gubMercArray[ 0 ] = BIFF;
@@ -276,12 +279,11 @@ void GameInitMercs()
 
 	gusMercVideoSpeckSpeech = 0;
 
-/*
+	/*
 	for( i=0; i<MERC_NUMBER_OF_RANDOM_QUOTES; i++ )
 	{
 		gNumberOfTimesQuoteSaid[i] = 0;
-	}
-*/
+	}*/
 }
 
 
@@ -365,7 +367,7 @@ void EnterMercs()
 
 
 	GetSpeckConditionalOpening( TRUE );
-//	gubArrivedFromMercSubSite = MERC_CAME_FROM_OTHER_PAGE;
+	//gubArrivedFromMercSubSite = MERC_CAME_FROM_OTHER_PAGE;
 
 	//if Speck should start talking
 	if( ShouldSpeckSayAQuote() )
@@ -413,13 +415,12 @@ void ExitMercs()
 
 	DeleteVideoSurface(guiMercVideoFaceBackground);
 
-/*
+	/*
 	//Set that we have been here before
 	if( LaptopSaveInfo.ubPlayerBeenToMercSiteStatus == MERC_SITE_FIRST_VISIT )
 		LaptopSaveInfo.ubPlayerBeenToMercSiteStatus = MERC_SITE_SECOND_VISIT;
 	else
-		LaptopSaveInfo.ubPlayerBeenToMercSiteStatus = MERC_SITE_THIRD_OR_MORE_VISITS;
-*/
+		LaptopSaveInfo.ubPlayerBeenToMercSiteStatus = MERC_SITE_THIRD_OR_MORE_VISITS;*/
 
 	gfJustEnteredMercSite = TRUE;
 	gusMercVideoSpeckSpeech = MERC_VIDEO_SPECK_SPEECH_NOT_TALKING;
@@ -468,7 +469,7 @@ void HandleMercs()
 			InitMercVideoFace();
 			gubCurrentMercVideoMode = MERC_VIDEO_INIT_VIDEO_MODE;
 
-//			gfMercSiteScreenIsReDrawn = TRUE;
+			//gfMercSiteScreenIsReDrawn = TRUE;
 		}
 	}
 
@@ -527,7 +528,7 @@ void RenderMercs()
 		RenderMercPopUpBox(g_merc_popup_box, gusSpeckDialogueX, MERC_TEXT_BOX_POS_Y, FRAME_BUFFER);
 	}
 
-  MarkButtonsDirty( );
+	MarkButtonsDirty( );
 	RenderWWWProgramTitleBar( );
 
 	//if the page is redrawn, and we are in video conferencing, redraw the VC backgrund graphic
@@ -535,7 +536,7 @@ void RenderMercs()
 
 	guiAccountBoxButton->uiFlags &= ~BUTTON_FORCE_UNDIRTY;
 
-  InvalidateRegion(LAPTOP_SCREEN_UL_X,LAPTOP_SCREEN_WEB_UL_Y,LAPTOP_SCREEN_LR_X,LAPTOP_SCREEN_WEB_LR_Y);
+	InvalidateRegion(LAPTOP_SCREEN_UL_X,LAPTOP_SCREEN_WEB_UL_Y,LAPTOP_SCREEN_LR_X,LAPTOP_SCREEN_WEB_LR_Y);
 }
 
 
@@ -591,7 +592,7 @@ static BOOLEAN ShouldTheMercSiteServerGoDown(void);
 
 void DailyUpdateOfMercSite( UINT16 usDate)
 {
-	INT32		iNumDays;
+	INT32 iNumDays;
 
 	//if its the first day, leave
 	if( usDate == 1 )
@@ -663,9 +664,9 @@ void DailyUpdateOfMercSite( UINT16 usDate)
 		//Set the fact the site has gone down
 		LaptopSaveInfo.fMercSiteHasGoneDownYet = TRUE;
 
-//No lnger removing the bookmark, leave it up, and the user will go to the broken link page
+		//No lnger removing the bookmark, leave it up, and the user will go to the broken link page
 		//Remove the book mark
-//		RemoveBookMark( MERC_BOOKMARK );
+		//RemoveBookMark( MERC_BOOKMARK );
 
 		//Get the site up the next day at 6:00 pm
 		uiTimeInMinutes = GetMidnightOfFutureDayInMinutes( 1 ) + 18 * 60;
@@ -710,7 +711,7 @@ UINT8 GetMercIDFromMERCArray(UINT8 ubMercID)
 	//else its an error
 	else
 	{
-		SLOGE(DEBUG_TAG_ASSERTS, "GetMercIDFromMercArray: invalid MercID");
+		SLOGA("GetMercIDFromMercArray: invalid MercID");
 		return( TRUE );
 	}
 }
@@ -755,7 +756,7 @@ static BOOLEAN StartSpeckTalking(UINT16 usQuoteNum)
 static BOOLEAN HandleSpeckTalking(BOOLEAN fReset)
 {
 	static BOOLEAN fWasTheMercTalking=FALSE;
-	BOOLEAN		fIsTheMercTalking;
+	BOOLEAN        fIsTheMercTalking;
 
 	if( fReset )
 	{
@@ -831,7 +832,7 @@ static void BtnXToCloseMercVideoButtonCallback(GUI_BUTTON *btn, INT32 reason)
 	if (reason & MSYS_CALLBACK_REASON_LBUTTON_UP)
 	{
 		//Stop speck from talking
-//		ShutupaYoFace(g_video_speck_face);
+		//ShutupaYoFace(g_video_speck_face);
 		StopSpeckFromTalking();
 
 		//make sure we are done the intro speech
@@ -885,13 +886,14 @@ static void HandleTalkingSpeck(void)
 			if( DisplayMercVideoIntro( MERC_INTRO_TIME ) )
 			{
 				//NULL out the string
-				gsSpeckDialogueTextPopUp[0] = '\0';
+				gsSpeckDialogueTextPopUp = ST::null;
 
 				//Start speck talking
-				if( gusMercVideoSpeckSpeech != MERC_VIDEO_SPECK_SPEECH_NOT_TALKING || 	gusMercVideoSpeckSpeech != MERC_VIDEO_SPECK_HAS_TO_TALK_BUT_QUOTE_NOT_CHOSEN_YET )
-					StartSpeckTalking( gusMercVideoSpeckSpeech );
+				if( !StartSpeckTalking( gusMercVideoSpeckSpeech ) )
+				{
+					gusMercVideoSpeckSpeech = MERC_VIDEO_SPECK_SPEECH_NOT_TALKING;
+				}
 
-				gusMercVideoSpeckSpeech = MERC_VIDEO_SPECK_SPEECH_NOT_TALKING;
 				gubCurrentMercVideoMode = MERC_VIDEO_VIDEO_MODE;
 			}
 			break;
@@ -900,7 +902,7 @@ static void HandleTalkingSpeck(void)
 		case MERC_VIDEO_VIDEO_MODE:
 
 			//Make sure the accounts button does not overwrite the dialog text
-//			guiAccountBoxButton->uiFlags |= BUTTON_FORCE_UNDIRTY;
+			//guiAccountBoxButton->uiFlags |= BUTTON_FORCE_UNDIRTY;
 			//def:
 
 			if( (gfJustEnteredMercSite && gubArrivedFromMercSubSite != MERC_CAME_FROM_OTHER_PAGE) || gfFirstTimeIntoMERCSiteSinceEnteringLaptop )
@@ -935,10 +937,10 @@ static void HandleTalkingSpeck(void)
 				}
 
 
-				if( gsSpeckDialogueTextPopUp[0] != L'\0' )
+				if (!gsSpeckDialogueTextPopUp.empty())
 				{
-//					guiAccountBoxButton->Draw();
-//					guiAccountBoxButton->uiFlags |= BUTTON_FORCE_UNDIRTY;
+					//guiAccountBoxButton->Draw();
+					//guiAccountBoxButton->uiFlags |= BUTTON_FORCE_UNDIRTY;
 
 					if (g_merc_popup_box)
 					{
@@ -985,7 +987,7 @@ static void HandleTalkingSpeck(void)
 static void MercSiteSubTitleRegionCallBack(MOUSE_REGION* pRegion, INT32 iReason);
 
 
-void DisplayTextForSpeckVideoPopUp(const wchar_t* const pString)
+void DisplayTextForSpeckVideoPopUp(const ST::string& str)
 {
 	UINT16	usActualHeight;
 
@@ -994,7 +996,7 @@ void DisplayTextForSpeckVideoPopUp(const wchar_t* const pString)
 		return;
 
 	//add the "" around the speech.
-	swprintf( gsSpeckDialogueTextPopUp, lengthof(gsSpeckDialogueTextPopUp), L"\"%ls\"", pString );
+	gsSpeckDialogueTextPopUp = ST::format("\"{}\"", str);
 
 	gfDisplaySpeckTextBox = TRUE;
 
@@ -1023,8 +1025,10 @@ void DisplayTextForSpeckVideoPopUp(const wchar_t* const pString)
 	//check to make sure the region is not already initialized
 	if( !( gMercSiteSubTitleMouseRegion.uiFlags & MSYS_REGION_EXISTS ) )
 	{
-		MSYS_DefineRegion( &gMercSiteSubTitleMouseRegion, gusSpeckDialogueX, MERC_TEXT_BOX_POS_Y, (INT16)(gusSpeckDialogueX + gusSpeckDialogueActualWidth), (INT16)(MERC_TEXT_BOX_POS_Y + usActualHeight), MSYS_PRIORITY_HIGH,
-									 CURSOR_LAPTOP_SCREEN, MSYS_NO_CALLBACK, MercSiteSubTitleRegionCallBack );
+		MSYS_DefineRegion(&gMercSiteSubTitleMouseRegion, gusSpeckDialogueX, MERC_TEXT_BOX_POS_Y,
+					(INT16)(gusSpeckDialogueX + gusSpeckDialogueActualWidth),
+					(INT16)(MERC_TEXT_BOX_POS_Y + usActualHeight), MSYS_PRIORITY_HIGH,
+					CURSOR_LAPTOP_SCREEN, MSYS_NO_CALLBACK, MercSiteSubTitleRegionCallBack);
 	}
 }
 
@@ -1094,15 +1098,14 @@ static BOOLEAN GetSpeckConditionalOpening(BOOLEAN fJustEnteredScreen)
 			StartSpeckTalking( SPECK_QUOTE_ALTERNATE_OPENING_9_FIRST_VISIT_SINCE_SERVER_WENT_DOWN );
 			fCanUseIdleTag = TRUE;
 		}
-/*
+		/*
 		//else if new mercs are available
 		else if( LaptopSaveInfo.fNewMercsAvailableAtMercSite )
 		{
 			LaptopSaveInfo.fNewMercsAvailableAtMercSite = FALSE;
 
 			StartSpeckTalking( SPECK_QUOTE_ALTERNATE_OPENING_11_NEW_MERCS_AVAILABLE );
-		}
-*/
+		}*/
 		//else if lots of MERC mercs are DEAD, and speck can say the quote ( dont want him to continously say it )
 		else if( CountNumberOfMercMercsWhoAreDead() >= 2 && LaptopSaveInfo.ubSpeckCanSayPlayersLostQuote )
 		{
@@ -1185,7 +1188,7 @@ static BOOLEAN GetSpeckConditionalOpening(BOOLEAN fJustEnteredScreen)
 						StartSpeckTalking( SPECK_QUOTE_ALTERNATE_OPENING_TAG_ON_AFTER_OTHER_TAGS_4 );
 						break;
 					default:
-						SLOGE(DEBUG_TAG_ASSERTS, "GetSpeckConditionalOpening: Problem with random");
+						SLOGA("GetSpeckConditionalOpening: Problem with random");
 				}
 			}
 		}
@@ -1223,7 +1226,7 @@ static BOOLEAN GetSpeckConditionalOpening(BOOLEAN fJustEnteredScreen)
 		}
 
 		//loop through all the mercs and see if any are dead and the quote is not said
-		for(ubCnt=MERC_FIRST_MERC ; ubCnt<MERC_LAST_MERC; ubCnt++ )
+		for(ubCnt=MERC_FIRST_MERC ; ubCnt<=MERC_LAST_MERC; ubCnt++ )
 		{
 			MERCPROFILESTRUCT& p = GetProfile(ubCnt);
 			if (!IsMercDead(p)) continue;
@@ -1410,8 +1413,8 @@ static void HandlePlayerHiringMerc(UINT8 ubHiredMercID)
 	gusMercVideoSpeckSpeech = MERC_VIDEO_SPECK_SPEECH_NOT_TALKING;
 
 	//if the players is in good finacial standing
-//DEF: 3/19/99: Dont know why this was done
-//	if( LaptopSaveInfo.iCurrentBalance >= 2000 )
+	//DEF: 3/19/99: Dont know why this was done
+	//if( LaptopSaveInfo.iCurrentBalance >= 2000 )
 	{
 		//determine which quote to say based on the merc that was hired
 		switch( ubHiredMercID )
@@ -1499,7 +1502,7 @@ static BOOLEAN ShouldSpeckStartTalkingDueToActionOnSubPage(void)
 			StartSpeckTalking( SPECK_QUOTE_GENERIC_THANKS_FOR_HIRING_MERCS_2 );
 
 		gfJustHiredAMercMerc = FALSE;
-//				gfDoneIntroSpeech = TRUE;
+		//gfDoneIntroSpeech = TRUE;
 
 		return( TRUE );
 	}
@@ -1525,7 +1528,7 @@ static BOOLEAN ShouldSpeckSayAQuote(void)
 		gusMercVideoSpeckSpeech = MERC_VIDEO_SPECK_HAS_TO_TALK_BUT_QUOTE_NOT_CHOSEN_YET;
 		return( TRUE );
 
-/*
+		/*
 		//if the merc has something to say
 		if( gusMercVideoSpeckSpeech != MERC_VIDEO_SPECK_SPEECH_NOT_TALKING )
 			return( TRUE );
@@ -1533,26 +1536,24 @@ static BOOLEAN ShouldSpeckSayAQuote(void)
 		{
 			gusMercVideoSpeckSpeech = MERC_VIDEO_SPECK_HAS_TO_TALK_BUT_QUOTE_NOT_CHOSEN_YET;
 			return( TRUE );
-		}
-*/
+		}*/
 	}
 
 	//If it is the first time into the merc site
 	if( gfFirstTimeIntoMERCSiteSinceEnteringLaptop )
 	{
-//		gfFirstTimeIntoMERCSiteSinceEnteringLaptop = FALSE;
+		//gfFirstTimeIntoMERCSiteSinceEnteringLaptop = FALSE;
 		gusMercVideoSpeckSpeech = MERC_VIDEO_SPECK_HAS_TO_TALK_BUT_QUOTE_NOT_CHOSEN_YET;
 		return( TRUE );
 	}
 
-/*
+	/*
 	//if we are entering from anywhere except a sub page
 	if( gubArrivedFromMercSubSite == MERC_CAME_FROM_OTHER_PAGE )
 	{
 		GetSpeckConditionalOpening( FALSE );
 		return( TRUE );
-	}
-*/
+	}*/
 	return( FALSE );
 }
 
@@ -1817,7 +1818,7 @@ static void ShouldAnyNewMercMercBecomeAvailable(void)
 	BOOLEAN fNewMercAreAvailable = FALSE;
 
 	//for bubba
-//	if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == GUMPY )
+	//if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == GUMPY )
 	{
 		if( CanMercBeAvailableYet( MERC_ARRIVES_BUBBA ) )
 		{
@@ -1826,8 +1827,8 @@ static void ShouldAnyNewMercMercBecomeAvailable(void)
 	}
 
 	//for Larry
-//	if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == LARRY_NORMAL ||
-//		GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == LARRY_DRUNK )
+	//if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == LARRY_NORMAL ||
+	//	GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == LARRY_DRUNK )
 	{
 		if( CanMercBeAvailableYet( MERC_ARRIVES_LARRY ) )
 		{
@@ -1836,7 +1837,7 @@ static void ShouldAnyNewMercMercBecomeAvailable(void)
 	}
 
 	//for Numb
-//	if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == NUMB )
+	//if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == NUMB )
 	{
 		if( CanMercBeAvailableYet( MERC_ARRIVES_NUMB ) )
 		{
@@ -1845,7 +1846,7 @@ static void ShouldAnyNewMercMercBecomeAvailable(void)
 	}
 
 	//for COUGAR
-//	if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == COUGAR )
+	//if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == COUGAR )
 	{
 		if( CanMercBeAvailableYet( MERC_ARRIVES_COUGAR ) )
 		{
@@ -1887,7 +1888,7 @@ static BOOLEAN CanMercBeAvailableYet(UINT8 ubMercToCheck)
 void NewMercsAvailableAtMercSiteCallBack( )
 {
 	BOOLEAN fSendEmail=FALSE;
-//	if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == BUBBA )
+	//if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == BUBBA )
 	{
 		if( CanMercBeAvailableYet( MERC_ARRIVES_BUBBA ) )
 		{
@@ -1898,8 +1899,8 @@ void NewMercsAvailableAtMercSiteCallBack( )
 	}
 
 	//for Larry
-//	if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == LARRY_NORMAL ||
-//			GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == LARRY_DRUNK )
+	//if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == LARRY_NORMAL ||
+	//		GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == LARRY_DRUNK )
 	{
 		if( CanMercBeAvailableYet( MERC_ARRIVES_LARRY ) )
 		{
@@ -1910,7 +1911,7 @@ void NewMercsAvailableAtMercSiteCallBack( )
 	}
 
 	//for Numb
-//	if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == NUMB )
+	//if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == NUMB )
 	{
 		if( CanMercBeAvailableYet( MERC_ARRIVES_NUMB ) )
 		{
@@ -1921,7 +1922,7 @@ void NewMercsAvailableAtMercSiteCallBack( )
 	}
 
 	//for COUGAR
-//	if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == COUGAR )
+	//if( GetMercIDFromMERCArray( LaptopSaveInfo.gubLastMercIndex ) == COUGAR )
 	{
 		if( CanMercBeAvailableYet( MERC_ARRIVES_COUGAR ) )
 		{

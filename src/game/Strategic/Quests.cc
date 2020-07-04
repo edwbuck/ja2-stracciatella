@@ -1,35 +1,42 @@
-#include "Font_Control.h"
-#include "MapScreen.h"
-#include "Message.h"
 #include "Quests.h"
+
+#include "Arms_Dealer_Init.h"
+#include "Assignments.h"
+#include "BobbyRMailOrder.h"
+#include "Boxing.h"
+#include "Campaign.h"
+#include "Campaign_Types.h"
+#include "ContentManager.h"
+#include "FactParamsModel.h"
+#include "FileMan.h"
+#include "Font_Control.h"
+#include "GameInstance.h"
+#include "GameSettings.h"
 #include "Game_Clock.h"
-#include "StrategicMap.h"
-#include "Soldier_Profile.h"
-#include "LaptopSave.h"
 #include "Handle_Items.h"
-#include "Overhead.h"
+#include "History.h"
 #include "Interface_Dialogue.h"
 #include "Isometric_Utils.h"
-#include "Render_Fun.h"
-#include "History.h"
+#include "Items.h"
+#include "LaptopSave.h"
+#include "MapScreen.h"
 #include "Map_Screen_Helicopter.h"
-#include "Strategic_Mines.h"
-#include "Boxing.h"
-#include "Campaign_Types.h"
-#include "Strategic_Town_Loyalty.h"
+#include "Message.h"
+#include "Overhead.h"
 #include "Queen_Command.h"
-#include "Campaign.h"
-#include "GameSettings.h"
-#include "Arms_Dealer_Init.h"
 #include "Random.h"
-#include "Assignments.h"
+#include "Render_Fun.h"
+#include "ShippingDestinationModel.h"
+#include "Soldier_Profile.h"
+#include "StrategicMap.h"
+#include "Strategic_Event_Handler.h"
+#include "Strategic_Mines.h"
+#include "Strategic_Town_Loyalty.h"
 #include "Tactical_Save.h"
 #include "Town_Militia.h"
-#include "Strategic_Event_Handler.h"
-#include "FileMan.h"
-#include "Items.h"
-#include "BobbyRMailOrder.h"
 
+#include <algorithm>
+#include <iterator>
 
 #define TESTQUESTS
 
@@ -64,11 +71,12 @@ void SetFactFalse(Fact const usFact)
 
 static bool CheckForNewShipment(void)
 {
-	if (gWorldSectorX  != BOBBYR_SHIPPING_DEST_SECTOR_X) return false;
-	if (gWorldSectorY  != BOBBYR_SHIPPING_DEST_SECTOR_Y) return false;
-	if (gbWorldSectorZ != BOBBYR_SHIPPING_DEST_SECTOR_Z) return false;
+	auto shippingDest = GCM->getPrimaryShippingDestination();
+	if (gWorldSectorX  != shippingDest->deliverySectorX) return false;
+	if (gWorldSectorY  != shippingDest->deliverySectorY) return false;
+	if (gbWorldSectorZ != shippingDest->deliverySectorZ) return false;
 
-	ITEM_POOL const* const ip = GetItemPool(BOBBYR_SHIPPING_DEST_GRIDNO, 0);
+	ITEM_POOL const* const ip = GetItemPool(shippingDest->deliverySectorGridNo, 0);
 	return ip && !IsItemPoolVisible(ip);
 }
 
@@ -490,7 +498,7 @@ static bool InTownSectorWithTrainingLoyalty(UINT8 const sector)
 BOOLEAN CheckFact(Fact const usFact, UINT8 const ubProfileID)
 {
 	INT8 bTown = -1;
-
+	auto factParams = GCM->getFactParams(usFact);
 
 	switch( usFact )
 	{
@@ -623,7 +631,7 @@ BOOLEAN CheckFact(Fact const usFact, UINT8 const ubProfileID)
 			break;
 			*/
 		case FACT_SPIKE_AT_DOOR:
-			gubFact[FACT_SPIKE_AT_DOOR] = CheckNPCAt(SPIKE, 9817);
+			gubFact[FACT_SPIKE_AT_DOOR] = CheckNPCAt(SPIKE, factParams->getGridNo(9817));
 			break;
 		case FACT_WOUNDED_MERCS_NEARBY:
 			gubFact[usFact] = (NumWoundedMercsNearby( ubProfileID ) > 0);
@@ -635,7 +643,7 @@ BOOLEAN CheckFact(Fact const usFact, UINT8 const ubProfileID)
 			gubFact[usFact] = (NumWoundedMercsNearby( ubProfileID ) > 1);
 			break;
 		case FACT_HANS_AT_SPOT:
-			gubFact[usFact] = CheckNPCAt(HANS, 13523);
+			gubFact[usFact] = CheckNPCAt(HANS, factParams->getGridNo(13523));
 			break;
 		case FACT_MULTIPLE_MERCS_CLOSE:
 			gubFact[usFact] = ( NumMercsNear( ubProfileID, 3 ) > 1 );
@@ -808,7 +816,7 @@ BOOLEAN CheckFact(Fact const usFact, UINT8 const ubProfileID)
 			{
 				// if Skyrider, ignore low loyalty until he has monologues, and wait at least a day since the latest monologue to avoid a hot/cold attitude
 				if ( ( ubProfileID == SKYRIDER ) &&
-						 ( ( guiHelicopterSkyriderTalkState == 0 ) || ( ( GetWorldTotalMin() - guiTimeOfLastSkyriderMonologue ) < ( 24 * 60 ) ) ) )
+					( ( guiHelicopterSkyriderTalkState == 0 ) || ( ( GetWorldTotalMin() - guiTimeOfLastSkyriderMonologue ) < ( 24 * 60 ) ) ) )
 				{
 					gubFact[usFact] = FALSE;
 				}
@@ -1098,7 +1106,7 @@ BOOLEAN CheckFact(Fact const usFact, UINT8 const ubProfileID)
 
 void StartQuest( UINT8 ubQuest, INT16 sSectorX, INT16 sSectorY )
 {
-  InternalStartQuest( ubQuest, sSectorX, sSectorY, TRUE );
+	InternalStartQuest( ubQuest, sSectorX, sSectorY, TRUE );
 }
 
 
@@ -1108,10 +1116,10 @@ void InternalStartQuest( UINT8 ubQuest, INT16 sSectorX, INT16 sSectorY, BOOLEAN 
 	{
 		gubQuest[ubQuest] = QUESTINPROGRESS;
 
-    if ( fUpdateHistory )
-    {
+		if ( fUpdateHistory )
+		{
 			AddHistoryToPlayersLog(HISTORY_QUEST_STARTED, ubQuest, GetWorldTotalMin(), sSectorX, sSectorY);
-    }
+		}
 	}
 	else
 	{
@@ -1121,7 +1129,7 @@ void InternalStartQuest( UINT8 ubQuest, INT16 sSectorX, INT16 sSectorY, BOOLEAN 
 
 void EndQuest( UINT8 ubQuest, INT16 sSectorX, INT16 sSectorY )
 {
-  InternalEndQuest( ubQuest, sSectorX, sSectorY, TRUE );
+	InternalEndQuest( ubQuest, sSectorX, sSectorY, TRUE );
 }
 
 void InternalEndQuest( UINT8 ubQuest, INT16 sSectorX, INT16 sSectorY, BOOLEAN fUpdateHistory )
@@ -1130,10 +1138,10 @@ void InternalEndQuest( UINT8 ubQuest, INT16 sSectorX, INT16 sSectorY, BOOLEAN fU
 	{
 		gubQuest[ubQuest] = QUESTDONE;
 
-    if ( fUpdateHistory )
-    {
+		if ( fUpdateHistory )
+		{
 			AddHistoryToPlayersLog(HISTORY_QUEST_FINISHED, ubQuest, GetWorldTotalMin(), sSectorX, sSectorY);
-    }
+		}
 	}
 	else
 	{
@@ -1152,8 +1160,8 @@ void InternalEndQuest( UINT8 ubQuest, INT16 sSectorX, INT16 sSectorY, BOOLEAN fU
 
 void InitQuestEngine()
 {
-	memset(gubQuest, 0, sizeof(gubQuest));
-	memset(gubFact,  0, sizeof(gubFact));
+	std::fill(std::begin(gubQuest), std::end(gubQuest), 0);
+	std::fill(std::begin(gubFact), std::end(gubFact), 0);
 
 	// semi-hack to make the letter quest start right away
 	CheckForQuests( 1 );
@@ -1179,9 +1187,9 @@ void CheckForQuests( UINT32 uiDay )
 {
 	// This function gets called at 8:00 AM time of the day
 
-	SLOGD(DEBUG_TAG_QUESTS, "Checking For Quests, Day %d", uiDay );
+	SLOGD("Checking For Quests, Day %d", uiDay );
 
-  // -------------------------------------------------------------------------------
+	// -------------------------------------------------------------------------------
 	// QUEST 0 : DELIVER LETTER
 	// -------------------------------------------------------------------------------
 	// The game always starts with DELIVER LETTER quest, so turn it on if it hasn't
@@ -1190,7 +1198,7 @@ void CheckForQuests( UINT32 uiDay )
 	{
 		AddHistoryToPlayersLog(HISTORY_ACCEPTED_ASSIGNMENT_FROM_ENRICO, 0, GetWorldTotalMin(), -1, -1);
 		StartQuest( QUEST_DELIVER_LETTER, -1, -1 );
-		SLOGD(DEBUG_TAG_QUESTS, "Started DELIVER LETTER quest");
+		SLOGD("Started DELIVER LETTER quest");
 	}
 
 	// This quest gets turned OFF through conversation with Miguel - when user hands

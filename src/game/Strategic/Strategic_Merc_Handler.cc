@@ -40,9 +40,12 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 #include "WeaponModels.h"
-#include "slog/slog.h"
+#include "Logger.h"
 
-#define		NUM_DAYS_TILL_UNPAID_RPC_QUITS				3
+#include <string_theory/string>
+
+
+#define NUM_DAYS_TILL_UNPAID_RPC_QUITS 3
 
 
 void StrategicHandlePlayerTeamMercDeath(SOLDIERTYPE& s)
@@ -68,7 +71,7 @@ void StrategicHandlePlayerTeamMercDeath(SOLDIERTYPE& s)
 
 	if (guiCurrentScreen != GAME_SCREEN)
 	{
-		ScreenMsg(FONT_RED, MSG_INTERFACE, pMercDeadString, s.name);
+		ScreenMsg(FONT_RED, MSG_INTERFACE, st_format_printf(pMercDeadString, s.name));
 	}
 
 	/* Robot and EPCs don't count against death rate - the mercs back home don't
@@ -84,26 +87,29 @@ void StrategicHandlePlayerTeamMercDeath(SOLDIERTYPE& s)
 	s.bBreath        = 0;
 	s.fMercAsleep    = FALSE; // Not asleep, dead
 
-	MERCPROFILESTRUCT& p = GetProfile(s.ubProfile);
-	p.bMercStatus = MERC_IS_DEAD;
-
-	if (s.usLifeInsurance)
+	if (s.ubProfile != NO_PROFILE)
 	{
-		if (guiCurrentScreen != AUTORESOLVE_SCREEN)
-		{ // Check whether this was obviously a suspicious death
-			if (now >= s.uiStartTimeOfInsuranceContract && now - s.uiStartTimeOfInsuranceContract < 60)
-			{ // Killed within an hour of being insured
-				p.ubSuspiciousDeath = VERY_SUSPICIOUS_DEATH;
-			}
-			else if (s.attacker->bTeam == OUR_TEAM || !gTacticalStatus.fEnemyInSector)
-			{ /* Killed by someone on our team or while there weren't any opponents
-				 * around, cause insurance company to suspect fraud and investigate this
-				 * claim */
-				p.ubSuspiciousDeath = SUSPICIOUS_DEATH;
-			}
-		}
+		MERCPROFILESTRUCT& p = GetProfile(s.ubProfile);
+		p.bMercStatus = MERC_IS_DEAD;
 
-		AddLifeInsurancePayout(&s);
+		if (s.usLifeInsurance)
+		{
+			if (guiCurrentScreen != AUTORESOLVE_SCREEN)
+			{ // Check whether this was obviously a suspicious death
+				if (now >= s.uiStartTimeOfInsuranceContract && now - s.uiStartTimeOfInsuranceContract < 60)
+				{ // Killed within an hour of being insured
+					p.ubSuspiciousDeath = VERY_SUSPICIOUS_DEATH;
+				}
+				else if (s.attacker->bTeam == OUR_TEAM || !gTacticalStatus.fEnemyInSector)
+				{ /* Killed by someone on our team or while there weren't any opponents
+					* around, cause insurance company to suspect fraud and investigate this
+					* claim */
+					p.ubSuspiciousDeath = SUSPICIOUS_DEATH;
+				}
+			}
+
+			AddLifeInsurancePayout(&s);
+		}
 	}
 
 	/* Robot and EPCs don't penalize morale - merc don't care about fighting
@@ -131,7 +137,7 @@ void MercDailyUpdate()
 	// if its the first day, leave
 	if (GetWorldDay() == 1) return;
 
-	SLOGD(DEBUG_TAG_SOLDIER, "%ls - Doing MercDailyUpdate", WORLDTIMESTR);
+	SLOGD("%s - Doing MercDailyUpdate", WORLDTIMESTR.c_str());
 
 	/* if the death rate is very low (this is independent of mercs' personal
 	 * deathrate tolerances) */
@@ -143,9 +149,9 @@ void MercDailyUpdate()
 
 	/* add an event so the merc will say the departing warning (2 hours prior to
 	 * leaving).  Do so for all time slots they will depart from */
-	AddSameDayStrategicEvent(EVENT_MERC_ABOUT_TO_LEAVE, MERC_ARRIVE_TIME_SLOT_1 - 2 * 60,	0);
-	AddSameDayStrategicEvent(EVENT_MERC_ABOUT_TO_LEAVE, MERC_ARRIVE_TIME_SLOT_2 - 2 * 60,	0);
-	AddSameDayStrategicEvent(EVENT_MERC_ABOUT_TO_LEAVE, MERC_ARRIVE_TIME_SLOT_3 - 2 * 60,	0);
+	AddSameDayStrategicEvent(EVENT_MERC_ABOUT_TO_LEAVE, MERC_ARRIVE_TIME_SLOT_1 - 2 * 60, 0);
+	AddSameDayStrategicEvent(EVENT_MERC_ABOUT_TO_LEAVE, MERC_ARRIVE_TIME_SLOT_2 - 2 * 60, 0);
+	AddSameDayStrategicEvent(EVENT_MERC_ABOUT_TO_LEAVE, MERC_ARRIVE_TIME_SLOT_3 - 2 * 60, 0);
 
 	AddSameDayStrategicEvent(EVENT_BEGIN_CONTRACT_RENEWAL_SEQUENCE, MERC_ARRIVE_TIME_SLOT_1, 0);
 	AddSameDayStrategicEvent(EVENT_BEGIN_CONTRACT_RENEWAL_SEQUENCE, MERC_ARRIVE_TIME_SLOT_2, 0);
@@ -166,8 +172,8 @@ void MercDailyUpdate()
 			// ATE; Reset found something nice flag...
 			s->usQuoteSaidFlags &= ~SOLDIER_QUOTE_SAID_FOUND_SOMETHING_NICE;
 
-      // ATE: Decrement tolerance value...
-      if (--s->bCorpseQuoteTolerance < 0) s->bCorpseQuoteTolerance = 0;
+			// ATE: Decrement tolerance value...
+			if (--s->bCorpseQuoteTolerance < 0) s->bCorpseQuoteTolerance = 0;
 
 			MERCPROFILESTRUCT& p = GetProfile(s->ubProfile);
 
@@ -205,8 +211,8 @@ void MercDailyUpdate()
 				++s->iTotalContractLength;
 
 				// The player owes the salary
-				INT16	const sSalary          = p.sSalary;
-				INT32	      iMoneyOwedToMerc = sSalary;
+				INT16 const sSalary    = p.sSalary;
+				INT32 iMoneyOwedToMerc = sSalary;
 
 				//if the player owes the npc money, the balance field will be negative
 				if (p.iBalance < 0) iMoneyOwedToMerc += -p.iBalance;
@@ -226,9 +232,8 @@ void MercDailyUpdate()
 					else
 					{
 						// Display a screen msg indicating that the npc was NOT paid
-						wchar_t zMoney[128];
-						SPrintMoney(zMoney, sSalary);
-						ScreenMsg(FONT_MCOLOR_WHITE, MSG_INTERFACE, pMessageStrings[MSG_CANT_AFFORD_TO_PAY_NPC_DAILY_SALARY_MSG], p.zNickname, zMoney);
+						ST::string zMoney = SPrintMoney(sSalary);
+						ScreenMsg(FONT_MCOLOR_WHITE, MSG_INTERFACE, st_format_printf(pMessageStrings[MSG_CANT_AFFORD_TO_PAY_NPC_DAILY_SALARY_MSG], p.zNickname, zMoney));
 
 						/* if the merc hasnt been paid for NUM_DAYS_TILL_UNPAID_RPC_QUITS
 						 * days, the merc will quit */
@@ -426,9 +431,9 @@ void RPCWhineAboutNoPay(SOLDIERTYPE& s)
 // OK loop through and check!
 BOOLEAN SoldierHasWorseEquipmentThanUsedTo( SOLDIERTYPE *pSoldier )
 {
-	UINT16	usItem;
-	INT8		bBestArmour = -1;
-	INT8		bBestGun = -1;
+	UINT16 usItem;
+	INT8   bBestArmour = -1;
+	INT8   bBestGun = -1;
 
 	CFOR_EACH_SOLDIER_INV_SLOT(i, *pSoldier)
 	{
@@ -461,7 +466,7 @@ BOOLEAN SoldierHasWorseEquipmentThanUsedTo( SOLDIERTYPE *pSoldier )
 	// this of course assumes default morale is 50
 	if ( bBestGun != -1 )
 	{
-		bBestGun		= (bBestGun		 * (50 + pSoldier->bMorale)) / 100;
+		bBestGun = (bBestGun  * (50 + pSoldier->bMorale)) / 100;
 	}
 	if ( bBestArmour != -1 )
 	{
@@ -469,8 +474,8 @@ BOOLEAN SoldierHasWorseEquipmentThanUsedTo( SOLDIERTYPE *pSoldier )
 	}
 
 	// OK, check values!
-	if ( 	(bBestGun != -1 && bBestGun < ( gMercProfiles[ pSoldier->ubProfile ].bMainGunAttractiveness / 2 )) ||
-				(bBestArmour != -1 && bBestArmour < ( gMercProfiles[ pSoldier->ubProfile ].bArmourAttractiveness / 2 )) )
+	if ((bBestGun != -1 && bBestGun < ( gMercProfiles[ pSoldier->ubProfile ].bMainGunAttractiveness / 2 )) ||
+		(bBestArmour != -1 && bBestArmour < ( gMercProfiles[ pSoldier->ubProfile ].bArmourAttractiveness / 2 )) )
 	{
 		// Pipe up!
 		return( TRUE );
@@ -501,8 +506,8 @@ void MercComplainAboutEquipment( UINT8 ubProfile )
 	if ( pSoldier != NULL )
 	{
 		if (!pSoldier->fMercAsleep          &&
-				pSoldier->bLife       >= OKLIFE &&
-				pSoldier->bAssignment <  ON_DUTY)
+			pSoldier->bLife       >= OKLIFE &&
+			pSoldier->bAssignment <  ON_DUTY)
 		{
 			//ATE: Double check that this problem still exists!
 			if ( SoldierHasWorseEquipmentThanUsedTo( pSoldier ) )
@@ -572,10 +577,9 @@ void UpdateBuddyAndHatedCounters(void)
 										hated_count = 1;
 									}
 									else if (hated_count > 0 && (
-											hated_count == p.bHatedTime[i] / 2 || (
-												hated_count < p.bHatedTime[i] / 2 &&
-												hated_count % TIME_BETWEEN_HATED_COMPLAINTS == 0
-											)))
+										hated_count == p.bHatedTime[i] / 2 || (
+										hated_count < p.bHatedTime[i] / 2 &&
+										hated_count % TIME_BETWEEN_HATED_COMPLAINTS == 0)))
 									{ // Complain!
 										UINT16 const quote = i == 0 ?
 											QUOTE_HATED_MERC_ONE : QUOTE_HATED_MERC_TWO;
@@ -657,12 +661,11 @@ void UpdateBuddyAndHatedCounters(void)
 										p.bMercOpinion[ubOtherProfileID] = HATED_OPINION;
 
 										if (s->ubWhatKindOfMercAmI == MERC_TYPE__MERC || (
-												s->ubWhatKindOfMercAmI == MERC_TYPE__NPC && (
-													s->ubProfile == DEVIN ||
-													s->ubProfile == SLAY  ||
-													s->ubProfile == IGGY  ||
-													s->ubProfile == CONRAD
-												)))
+											s->ubWhatKindOfMercAmI == MERC_TYPE__NPC && (
+											s->ubProfile == DEVIN ||
+											s->ubProfile == SLAY  ||
+											s->ubProfile == IGGY  ||
+											s->ubProfile == CONRAD)))
 										{ // Leave now! (handle equipment too)
 											TacticalCharacterDialogue(s, QUOTE_MERC_QUIT_LEARN_TO_HATE);
 											MakeCharacterDialogueEventContractEnding(*s, false);
@@ -740,7 +743,7 @@ void HourlyCamouflageUpdate()
 				s.bCamo = 0;
 				if (s.bInSector) CreateSoldierPalettes(s);
 
-				ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, g_langRes->Message[STR_CAMO_WORN_OFF], s.name);
+				ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(g_langRes->Message[STR_CAMO_WORN_OFF], s.name));
 				DirtyMercPanelInterface(&s, DIRTYLEVEL2);
 			}
 			else

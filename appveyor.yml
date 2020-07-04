@@ -1,10 +1,28 @@
+# validator: https://ci.appveyor.com/tools/validate-yaml
+
 version: "{build}"
 
-platform:
-  - Win32
-  - x64
+environment:
+  SFTP_USER:
+    secure: "uBUgFeI9sHRv0IiMPpA9rg=="
+  SFTP_PASSWORD:
+    secure: "gXqhlT/yjiLd/jTpvg4kcZtBRCZ8RnoOJ3zRTSF5voA="
+  GITHUB_ACCESS_TOKEN:
+    secure: "fcDy5AgkBH9bKqdsbwv9piWbN6ksoUKk+iky/DQmk3YG3UNl68BegfkYUzSF3rJ7"
+  matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      CI_TARGET: msys2-mingw32
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CMAKE_GENERATOR_NAME: Visual Studio 14 2015
+      RUST_TARGET: i686-pc-windows-msvc
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CMAKE_GENERATOR_NAME: Visual Studio 15 2017 Win64
+      RUST_TARGET: x86_64-pc-windows-msvc
 
-configuration: Debug
+branches:
+  only:
+    - master
+    - nightly
 
 matrix:
   fast_finish: true
@@ -12,10 +30,41 @@ matrix:
 clone_folder: c:\projects\ja2-stracciatella
 clone_depth: 1
 
+skip_commits:
+  # appveyor only searches for tags in the first line by default
+  message: /\[ci skip\]/
+
+for:
+  -
+    matrix:
+      only:
+        - CI_TARGET: msys2-mingw32
+
+    init:
+      - cmd: rem init override
+    install:
+      - cmd: rem install override
+    before_build:
+      - cmd: rem before_build override
+    build_script:
+      - cmd: |
+          rem update msys2 runtime
+          rem FIXME upgrades disabled until there is a fix for https://github.com/msys2/MSYS2-packages/issues/1141
+          rem C:\msys64\msys2_shell.cmd -defterm -no-start -c "pacman -Syu --noconfirm --needed"
+      - cmd: |
+          rem build, package, test, publish in msys2
+          C:\msys64\msys2_shell.cmd -defterm -no-start -mingw32 -here -c "bash .github/scripts/ci-setup.sh"
+          C:\msys64\msys2_shell.cmd -defterm -no-start -mingw32 -here -c "bash .github/scripts/ci-build.sh"
+          C:\msys64\msys2_shell.cmd -defterm -no-start -mingw32 -here -c "bash .github/scripts/ci-publish.sh"
+    test_script:
+      - cmd: rem test_script override
+    after_test:
+      - cmd: rem after_test override
+
 init:
-  - cmd: cmake --version
-  - cmd: msbuild /version
   - ps: $env:PUBLISH_BINARY = "false";
+  - ps: $env:BUILD_TYPE = "Debug";
+
   - ps: >
         if (Test-Path Env:\APPVEYOR_PULL_REQUEST_NUMBER) {
           $env:PUBLISH_BINARY = "true";
@@ -24,56 +73,71 @@ init:
         }
         true;
   - ps: >
-        if (Test-Path Env:\NIGHTLY_VERSION) {
+        if ("$env:APPVEYOR_REPO_BRANCH" -eq "nightly") {
+          $env:BUILD_TYPE = "Release";
           $env:PUBLISH_BINARY = "true";
           $env:PUBLISH_DIR = "nightlies";
-          $env:VERSION_TAG = "${env:NIGHTLY_VERSION}";
+          $env:VERSION_TAG = "$(Get-Date -UFormat "%Y%m%d")";
         }
         true;
-  - cmd: echo %APPVEYOR_PULL_REQUEST_NUMBER%
-  - cmd: echo %NIGHTLY_VERSION%
-  - cmd: echo %PUBLISH_BINARY%
-  - cmd: echo %PUBLISH_DIR%
-  - cmd: echo %VERSION_TAG%
+  - ps: >
+        if ("$env:APPVEYOR_REPO_TAG" -eq "true") {
+          $env:BUILD_TYPE = "Release";
+          $env:PUBLISH_BINARY = "true";
+          $env:PUBLISH_DIR = "releases";
+          $env:VERSION_TAG = "";
+        }
+        true;
+
+  - ps: $env:BUILD_SWITCHES = "-DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DVERSION_TAG=%VERSION_TAG% -DCPACK_GENERATOR=ZIP;NSIS -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchain-msvc.cmake"
+  - ps: >
+        if ("$env:BUILD_TYPE" -eq "Release") {
+          $env:BUILD_SWITCHES = "${env:BUILD_SWITCHES} -DWITH_EDITOR_SLF=ON";
+        }
+        true;
+
+  - cmd: echo "%CMAKE_GENERATOR_NAME%"
+
+  - cmd: echo "%PUBLISH_BINARY%"
+  - cmd: echo "%PUBLISH_DIR%"
+  - cmd: echo "%BUILD_SWITCHES%"
 
 install:
-  - cmd: if "%platform%"=="Win32" set RUST_TOOLCHAIN=stable-i686-pc-windows-msvc
-  - cmd: if "%platform%"=="x64"   set RUST_TOOLCHAIN=stable-x86_64-pc-windows-msvc
+  - ps: $rustVersion = Get-Content .\rust-toolchain -Raw
+  - ps: $env:RUSTUP_TOOLCHAIN = "${rustVersion}-${env:RUST_TARGET}";
+
   - cmd: curl -sSf -o rustup-init.exe https://win.rustup.rs/
-  - cmd: rustup-init.exe -y --default-toolchain %RUST_TOOLCHAIN%
+  - cmd: rustup-init.exe -y --default-toolchain %RUSTUP_TOOLCHAIN%
   - cmd: set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
+
+  - cmd: echo "%RUSTUP_TOOLCHAIN%"
   - cmd: rustc -V
   - cmd: cargo -V
+  - cmd: cmake --version
 
 before_build:
   - cmd: mkdir ci-build
   - cmd: cd ci-build
-  - cmd: if "%platform%"=="Win32" set CMAKE_GENERATOR_NAME=Visual Studio 14 2015
-  - cmd: if "%platform%"=="x64"   set CMAKE_GENERATOR_NAME=Visual Studio 14 2015 Win64
-  - cmd: cmake -G "%CMAKE_GENERATOR_NAME%" cmake -DCMAKE_BUILD_TYPE="%configuration%" -DVERSION_TAG="%VERSION_TAG%" -DCMAKE_TOOLCHAIN_FILE=./cmake/toolchain-msvc.cmake -DCPACK_GENERATOR=ZIP ..
+  - cmd: cmake -G "%CMAKE_GENERATOR_NAME%" cmake %BUILD_SWITCHES% ..
 
-on_failure:
-  - cmd: dir c:\build
-  - cmd: dir c:\build\%configuration%
-
-build:
-  project: ci-build\ja2-stracciatella.sln
+build_script:
+  - ps: cmake --build c:\projects\ja2-stracciatella\ci-build --target ALL_BUILD --config ${env:BUILD_TYPE}
 
 test_script:
-  - cmd: cmake --build c:\projects\ja2-stracciatella\ci-build --target rust-unit-tests
-  - cmd: cd %configuration%
+  - cmd: cmake --build . --target cargo-test
+  - cmd: cd %BUILD_TYPE%
   - cmd: ja2.exe -unittests
+  - cmd: ja2-launcher.exe -help
 
 after_test:
-  - ps: if ("$env:PUBLISH_BINARY" -eq "true") { iex "cmake --build c:\projects\ja2-stracciatella\ci-build --target package" }
+  - ps: cmake --build c:\projects\ja2-stracciatella\ci-build --target package
   - ps: >
           if ("$env:PUBLISH_BINARY" -eq "true" -and (Test-Path Env:\SFTP_PASSWORD)) {
-            $binary_path = Get-ChildItem c:\projects\ja2-stracciatella\ci-build\ja2-stracciatella_*.zip;
-            iex "curl.exe --ftp-create-dirs -T ${binary_path} --ftp-ssl -u ${env:SFTP_USER}:${env:SFTP_PASSWORD} ftp://www61.your-server.de/${env:PUBLISH_DIR}/"
+            $binary_paths = Get-ChildItem c:\projects\ja2-stracciatella\ci-build\ja2-stracciatella_*;
+            foreach ($file in $binary_paths) {
+              iex "curl.exe --retry 3 --ftp-create-dirs -T ${file} --ftp-ssl -u ${env:SFTP_USER}:${env:SFTP_PASSWORD} ftp://www61.your-server.de/${env:PUBLISH_DIR}/"
+            }
           }
 
-environment:
-  SFTP_USER:
-    secure: "uBUgFeI9sHRv0IiMPpA9rg=="
-  SFTP_PASSWORD:
-    secure: "gXqhlT/yjiLd/jTpvg4kcZtBRCZ8RnoOJ3zRTSF5voA="
+artifacts:
+  - path: ci-build\ja2-stracciatella_*

@@ -6,6 +6,9 @@
 
 #include "MercProfile.h"
 
+#include <string_theory/string>
+
+
 // An enumeration for dialog quotes
 enum DialogQuoteIDs
 {
@@ -116,7 +119,7 @@ enum DialogQuoteIDs
 	QUOTE_REPUTATION_REFUSAL,
 	QUOTE_DEATH_RATE_REFUSAL, //= 99,
 	QUOTE_LAME_REFUSAL, //= 82,
-	QUOTE_WONT_RENEW_CONTRACT_LAME_REFUSAL,			// ARM: now unused
+	QUOTE_WONT_RENEW_CONTRACT_LAME_REFUSAL, // ARM: now unused
 	QUOTE_ANSWERING_MACHINE_MSG,
 	QUOTE_DEPARTING_COMMENT_CONTRACT_NOT_RENEWED_OR_48_OR_MORE,
 	QUOTE_HATE_MERC_1_ON_TEAM,// = 100,
@@ -215,7 +218,7 @@ void HandleDialogueEnd(FACETYPE&);
 void DialogueAdvanceSpeech(void);
 
 BOOLEAN DialogueQueueIsEmpty(void);
-BOOLEAN DialogueQueueIsEmptyOrSomebodyTalkingNow(void);
+BOOLEAN DialogueQueueIsEmptyAndNobodyIsTalking(void);
 
 
 // set up and shutdown static external NPC faces
@@ -227,7 +230,7 @@ void SayQuoteFromAnyBodyInSector(UINT16 quote_id);
 void SayQuoteFromAnyBodyInThisSector(INT16 x, INT16 y, INT8 z, UINT16 quote_id);
 void SayQuoteFromNearbyMercInSector(GridNo, INT8 distance, UINT16 quote_id);
 void SayQuote58FromNearbyMercInSector(GridNo, INT8 distance, UINT16 quote_id, INT8 sex);
-UINT32 FindDelayForString(const wchar_t* sString);
+UINT32 FindDelayForString(const ST::string& str);
 void BeginLoggingForBleedMeToos( BOOLEAN fStart );
 
 void UnSetEngagedInConvFromPCAction( SOLDIERTYPE *pSoldier );

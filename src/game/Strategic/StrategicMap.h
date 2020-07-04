@@ -4,6 +4,8 @@
 
 #include "JA2Types.h"
 
+#include <string_theory/string>
+
 
 //The maximum size for any team strategically speaking.  For example, we can't have more than 20 enemies, militia, or creatures at a time.
 #define MAX_STRATEGIC_TEAM_SIZE	20
@@ -41,11 +43,6 @@ static inline void SetWorldSectorInvalid()
 
 #define NUMBER_OF_SAMS 4
 
-
-extern INT16 const pSamList[NUMBER_OF_SAMS];
-extern INT16 pSamGridNoAList[ NUMBER_OF_SAMS ];
-extern INT16 pSamGridNoBList[ NUMBER_OF_SAMS ];
-
 extern BOOLEAN fFoundOrta;
 extern BOOLEAN fSamSiteFound[ NUMBER_OF_SAMS ];
 
@@ -57,20 +54,20 @@ extern	BOOLEAN		gfUseAlternateMap;
 
 
 // FUNCTIONS FOR DERTERMINING GOOD SECTOR EXIT DATA
-#define			CHECK_DIR_X_DELTA							( WORLD_TILE_X * 4 )
-#define			CHECK_DIR_Y_DELTA							( WORLD_TILE_Y * 10 )
+#define CHECK_DIR_X_DELTA			( WORLD_TILE_X * 4 )
+#define CHECK_DIR_Y_DELTA			( WORLD_TILE_Y * 10 )
 
-#define MAP_WORLD_X 18
-#define MAP_WORLD_Y 18
+#define MAP_WORLD_X				18
+#define MAP_WORLD_Y				18
 
 // get index into aray
-#define		CALCULATE_STRATEGIC_INDEX( x, y )			( x + ( y * MAP_WORLD_X ) )
-#define   GET_X_FROM_STRATEGIC_INDEX( i )				( i % MAP_WORLD_X )
-#define   GET_Y_FROM_STRATEGIC_INDEX( i )				( i / MAP_WORLD_X )
+#define CALCULATE_STRATEGIC_INDEX( x, y )	( x + ( y * MAP_WORLD_X ) )
+#define GET_X_FROM_STRATEGIC_INDEX( i )		( i % MAP_WORLD_X )
+#define GET_Y_FROM_STRATEGIC_INDEX( i )		( i / MAP_WORLD_X )
 
 // macros to convert between the 2 different sector numbering systems
-#define		SECTOR_INFO_TO_STRATEGIC_INDEX( i )		( CALCULATE_STRATEGIC_INDEX ( SECTORX( i ), SECTORY( i ) ) )
-#define		STRATEGIC_INDEX_TO_SECTOR_INFO( i )		( SECTOR(  GET_X_FROM_STRATEGIC_INDEX( i ), GET_Y_FROM_STRATEGIC_INDEX( i ) ) )
+#define SECTOR_INFO_TO_STRATEGIC_INDEX( i )	( CALCULATE_STRATEGIC_INDEX ( SECTORX( i ), SECTORY( i ) ) )
+#define STRATEGIC_INDEX_TO_SECTOR_INFO( i )	( SECTOR(  GET_X_FROM_STRATEGIC_INDEX( i ), GET_Y_FROM_STRATEGIC_INDEX( i ) ) )
 
 
 // grab the town id value
@@ -82,10 +79,10 @@ void UpdateMercsInSector();
 void UpdateMercInSector(SOLDIERTYPE&, INT16 sSectorX, INT16 sSectorY, INT8 bSectorZ);
 
 // get short sector name without town name
-void GetShortSectorString(INT16 sMapX, INT16 sMapY, wchar_t* sString, size_t Length);
+ST::string GetShortSectorString(INT16 sMapX, INT16 sMapY);
 
 // Return a string like 'A9: Omerta'
-void GetSectorIDString(INT16 x, INT16 y, INT8 z, wchar_t* buf, size_t length, BOOLEAN detailed);
+ST::string GetSectorIDString(INT16 x, INT16 y, INT8 z, BOOLEAN detailed);
 
 void GetMapFileName(INT16 x, INT16 y, INT8 z, char* buf, BOOLEAN add_alternate_map_letter);
 

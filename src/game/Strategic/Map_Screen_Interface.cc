@@ -68,7 +68,15 @@
 #include "EMail.h"
 #include "Items.h"
 #include "UILayout.h"
+#include "GameInstance.h"
+#include "ContentManager.h"
+#include "ShippingDestinationModel.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <algorithm>
+#include <iterator>
 
 // number of LINKED LISTS for sets of leave items (each slot holds an unlimited # of items)
 #define NUM_LEAVE_LIST_SLOTS 20
@@ -118,7 +126,7 @@ INT32 iUpdateBoxWaitingList[ MAX_CHARACTER_COUNT ];
 
 struct FASTHELPREGION
 {
-	wchar_t FastHelpText[256];
+	ST::string FastHelpText;
 	INT32 iX;
 	INT32 iY;
 	INT32 iW;
@@ -134,7 +142,7 @@ static MOUSE_REGION gMapScreenHelpTextMask;
 
 static BOOLEAN fScreenMaskForMoveCreated = FALSE;
 
-static wchar_t gsCustomErrorString[128];
+static ST::string gsCustomErrorString;
 
 BOOLEAN fShowUpdateBox = FALSE;
 static BOOLEAN fInterfaceFastHelpTextActive = FALSE;
@@ -263,7 +271,7 @@ BOOLEAN gfAtLeastOneMercWasHired = FALSE;
 void InitalizeVehicleAndCharacterList( void )
 {
 	// will init the vehicle and character lists to zero
-	memset(&gCharactersList, 0, sizeof( gCharactersList ));
+	std::fill(std::begin(gCharactersList), std::end(gCharactersList), MapScreenCharacterSt{});
 }
 
 
@@ -470,7 +478,7 @@ void DeselectSelectedListMercsWhoCantMoveWithThisGuy(const SOLDIERTYPE* const pS
 
 			// if either is between sectors, they must be in the same movement group
 			if ( ( pSoldier->fBetweenSectors || pSoldier2->fBetweenSectors ) &&
-					 ( pSoldier->ubGroupID != pSoldier2->ubGroupID ) )
+				( pSoldier->ubGroupID != pSoldier2->ubGroupID ) )
 			{
 				ResetEntryForSelectedList( ( INT8 )iCounter );
 			}
@@ -703,7 +711,7 @@ BOOLEAN CharacterIsGettingPathPlotted(INT16 const sCharNumber)
 
 	// if the highlighted line character is also selected
 	if ( ( ( giDestHighLine != -1 ) && IsEntryInSelectedListSet ( ( INT8 ) giDestHighLine ) ) ||
-			 ( ( bSelectedDestChar != -1 ) && IsEntryInSelectedListSet ( bSelectedDestChar ) ) )
+		( ( bSelectedDestChar != -1 ) && IsEntryInSelectedListSet ( bSelectedDestChar ) ) )
 	{
 		// then ALL selected lines will be affected
 		if( IsEntryInSelectedListSet( ( INT8 ) sCharNumber ) )
@@ -809,21 +817,21 @@ void EnableTeamInfoPanels( void )
 }
 
 
-void DoMapMessageBoxWithRect(MessageBoxStyleID const ubStyle, wchar_t const* const zString, ScreenID const uiExitScreen, MessageBoxFlags const usFlags, MSGBOX_CALLBACK const ReturnCallback, SGPBox const* const centering_rect)
+void DoMapMessageBoxWithRect(MessageBoxStyleID ubStyle, const ST::string& str, ScreenID uiExitScreen, MessageBoxFlags usFlags, MSGBOX_CALLBACK ReturnCallback, const SGPBox* centering_rect)
 {	// reset the highlighted line
 	giHighLine = -1;
-	DoMessageBox(ubStyle, zString, uiExitScreen, usFlags, ReturnCallback, centering_rect);
+	DoMessageBox(ubStyle, str, uiExitScreen, usFlags, ReturnCallback, centering_rect);
 }
 
 
-void DoMapMessageBox(MessageBoxStyleID const ubStyle, wchar_t const* const zString, ScreenID const uiExitScreen, MessageBoxFlags const usFlags, MSGBOX_CALLBACK const ReturnCallback)
+void DoMapMessageBox(MessageBoxStyleID ubStyle, const ST::string& str, ScreenID uiExitScreen, MessageBoxFlags usFlags, MSGBOX_CALLBACK ReturnCallback)
 {
 	// reset the highlighted line
 	giHighLine = -1;
 
 	// do message box and return
 	SGPBox const centering_rect = { 0, 0, SCREEN_WIDTH, INV_INTERFACE_START_Y };
-	DoMessageBox(ubStyle, zString, uiExitScreen, usFlags, ReturnCallback, &centering_rect);
+	DoMessageBox(ubStyle, str, uiExitScreen, usFlags, ReturnCallback, &centering_rect);
 }
 
 
@@ -959,7 +967,7 @@ void HandleDisplayOfSelectedMercArrows()
 }
 
 
-wchar_t const* GetMoraleString(SOLDIERTYPE const& s)
+ST::string GetMoraleString(SOLDIERTYPE const& s)
 {
 	return
 		s.uiStatusFlags & SOLDIER_DEAD ? pMoralStrings[5] :
@@ -1043,24 +1051,24 @@ void HandleMercLeavingEquipment(SOLDIERTYPE& s, bool const in_drassen)
 static void FreeLeaveListSlot(UINT32 uiSlotIndex);
 
 
-static void HandleEquipmentLeft(UINT32 const slot_idx, UINT const sector, GridNo const grid)
+static void HandleEquipmentLeft(UINT32 const slot_idx, INT const sector, GridNo const grid)
 {
 	Assert(slot_idx < NUM_LEAVE_LIST_SLOTS);
 
 	if (MERC_LEAVE_ITEM* i = gpLeaveListHead[slot_idx])
 	{
-		wchar_t sString[128];
-		wchar_t const* const town = g_towns_locative[GetTownIdForSector(sector)];
+		ST::string sString;
+		ST::string town = GCM->getTownLocative(GetTownIdForSector(sector));
 		int            const x    = SECTORX(sector);
 		char           const y    = SECTORY(sector) - 1 + 'A';
 		ProfileID      const id   = guiLeaveListOwnerProfileId[slot_idx];
 		if (id != NO_PROFILE)
 		{
-			swprintf(sString, lengthof(sString), str_left_equipment, GetProfile(id).zNickname, town, y, x);
+			sString = st_format_printf(str_left_equipment, GetProfile(id).zNickname, town, y, x);
 		}
 		else
 		{
-			swprintf(sString, lengthof(sString), L"A departing merc has left their equipment in %ls (%c%d).", town, y, x);
+			sString = ST::format("A departing merc has left their equipment in {} ({c}{}).", town, y, x);
 		}
 		ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, sString);
 
@@ -1090,7 +1098,8 @@ void HandleEquipmentLeftInOmerta(const UINT32 uiSlotIndex)
 
 void HandleEquipmentLeftInDrassen(const UINT32 uiSlotIndex)
 {
-	HandleEquipmentLeft(uiSlotIndex, BOBBYR_SHIPPING_DEST_SECTOR, 10433);
+	auto primaryAirport = GCM->getPrimaryShippingDestination();
+	HandleEquipmentLeft(uiSlotIndex, primaryAirport->getDeliverySector(), 10433);
 }
 
 
@@ -1128,7 +1137,7 @@ void AddItemToLeaveIndex(const OBJECTTYPE* const o, const UINT32 uiSlotIndex)
 
 	if (o == NULL) return;
 
-	MERC_LEAVE_ITEM* const mli = MALLOC(MERC_LEAVE_ITEM);
+	MERC_LEAVE_ITEM* const mli = new MERC_LEAVE_ITEM{};
 	mli->o     = *o;
 	mli->pNext = NULL;
 
@@ -1152,7 +1161,7 @@ static void FreeLeaveListSlot(UINT32 uiSlotIndex)
 	while( pCurrent )
 	{
 		pTemp = pCurrent->pNext;
-		MemFree( pCurrent );
+		delete pCurrent;
 		pCurrent = pTemp;
 	}
 
@@ -1196,15 +1205,15 @@ static INT32 SetUpDropItemListForMerc(SOLDIERTYPE& s)
 		SetUpMercAboutToLeaveEquipment(s.ubProfile, slot);
 	}
 
-  /* ATE: Added this to drop keyring keys - the 2nd last paramter says to add it
-   * to a leave list; the gridno, level and visiblity are ignored */
+	/* ATE: Added this to drop keyring keys - the 2nd last paramter says to add it
+	 * to a leave list; the gridno, level and visiblity are ignored */
 	DropKeysInKeyRing(s, NOWHERE, 0, VISIBILITY_0, true, slot, false);
 
 	// Zero out profiles
 	MERCPROFILESTRUCT& p = GetProfile(s.ubProfile);
-	memset(p.bInvStatus, 0, sizeof(p.bInvStatus));
-	memset(p.bInvNumber, 0, sizeof(p.bInvNumber));
-	memset(p.inv,        0, sizeof(p.inv));
+	std::fill(std::begin(p.bInvStatus), std::end(p.bInvStatus), 0);
+	std::fill(std::begin(p.bInvNumber), std::end(p.bInvNumber), 0);
+	std::fill(std::begin(p.inv), std::end(p.inv), 0);
 
 	return slot;
 }
@@ -1225,7 +1234,7 @@ void HandleGroupAboutToArrive( void )
 {
 	// reblit map to change the color of the "people in motion" marker
 	fMapPanelDirty = TRUE;
-	
+
 	DoDeadIsDeadSaveIfNecessary();
 
 	// ARM - commented out - don't see why this is needed
@@ -1256,15 +1265,15 @@ void UpdateCharRegionHelpText(void)
 	SOLDIERTYPE const* const s = GetSelectedInfoChar();
 
 	// health/energy/morale
-	wchar_t status[128];
+	ST::string status;
 	if (!s || s->bLife == 0)
 	{
-		status[0] = L'\0';
+		status = ST::null;
 	}
 	else if (s->bAssignment == ASSIGNMENT_POW)
 	{
 		// POW - stats unknown
-		swprintf(status, lengthof(status), L"%ls: ??, %ls: ??, %ls: ??",
+		status = ST::format("{}: ??, {}: ??, {}: ??",
 			pMapScreenStatusStrings[0],
 			pMapScreenStatusStrings[1],
 			pMapScreenStatusStrings[2]
@@ -1273,14 +1282,14 @@ void UpdateCharRegionHelpText(void)
 	else if (AM_A_ROBOT(s))
 	{
 		// robot (condition only)
-		swprintf(status, lengthof(status), L"%ls: %d/%d",
+		status = ST::format("{}: {}/{}",
 			pMapScreenStatusStrings[3], s->bLife, s->bLifeMax
 		);
 	}
 	else if (s->uiStatusFlags & SOLDIER_VEHICLE)
 	{
 		// vehicle (condition/fuel)
-		swprintf(status, lengthof(status), L"%ls: %d/%d, %ls: %d/%d",
+		status = ST::format("{}: {}/{}, {}: {}/{}",
 			pMapScreenStatusStrings[3], s->bLife,   s->bLifeMax,
 			pMapScreenStatusStrings[4], s->bBreath, s->bBreathMax
 		);
@@ -1288,8 +1297,8 @@ void UpdateCharRegionHelpText(void)
 	else
 	{
 		// person (health/energy/morale)
-		wchar_t const* const morale = GetMoraleString(*s);
-		swprintf(status, lengthof(status), L"%ls: %d/%d, %ls: %d/%d, %ls: %ls",
+		ST::string morale = GetMoraleString(*s);
+		status = ST::format("{}: {}/{}, {}: {}/{}, {}: {}",
 			pMapScreenStatusStrings[0], s->bLife,   s->bLifeMax,
 			pMapScreenStatusStrings[1], s->bBreath, s->bBreathMax,
 			pMapScreenStatusStrings[2], morale
@@ -1450,7 +1459,7 @@ static bool ValidSelectableCharForNextOrPrev(SOLDIERTYPE const& s)
 	bool const holding_item = gpItemPointer || fMapInventoryItem;
 	return
 		/* If showing merc inventory or holding an item, then the new guy must have
-		 * accessible inventory */
+			* accessible inventory */
 		((!holding_item && !fShowInventoryFlag) || MapCharacterHasAccessibleInventory(s)) &&
 		(!holding_item || MapscreenCanPassItemToChar(&s));
 }
@@ -1474,8 +1483,8 @@ BOOLEAN MapscreenCanPassItemToChar(const SOLDIERTYPE* const pNewSoldier)
 	{
 		// disallow passing items to anyone not in that sector
 		if ( pNewSoldier->sSectorX != sSelMapX ||
-				 pNewSoldier->sSectorY != sSelMapY ||
-				 pNewSoldier->bSectorZ != ( INT8 )( iCurrentMapSectorZ ) )
+			pNewSoldier->sSectorY != sSelMapY ||
+			pNewSoldier->bSectorZ != ( INT8 )( iCurrentMapSectorZ ) )
 		{
 			return( FALSE );
 		}
@@ -1511,8 +1520,8 @@ BOOLEAN MapscreenCanPassItemToChar(const SOLDIERTYPE* const pNewSoldier)
 	{
 		// disallow passing items to a merc not in the same sector
 		if ( pNewSoldier->sSectorX != pOldSoldier->sSectorX ||
-				 pNewSoldier->sSectorY != pOldSoldier->sSectorY ||
-				 pNewSoldier->bSectorZ != pOldSoldier->bSectorZ )
+			pNewSoldier->sSectorY != pOldSoldier->sSectorY ||
+			pNewSoldier->bSectorZ != pOldSoldier->bSectorZ )
 		{
 			return( FALSE );
 		}
@@ -1691,13 +1700,13 @@ void ShutDownUserDefineHelpTextRegions( void )
 }
 
 
-void SetUpFastHelpRegion(INT32 x, INT32 y, INT32 width, const wchar_t* text)
+void SetUpFastHelpRegion(INT32 x, INT32 y, INT32 width, const ST::string& str)
 {
 	FASTHELPREGION* fhr = &pFastHelpMapScreenList[0];
 	fhr->iX = x;
 	fhr->iY = y;
 	fhr->iW = width;
-	wcslcpy(fhr->FastHelpText, text, lengthof(fhr->FastHelpText));
+	fhr->FastHelpText = str;
 	giSizeOfInterfaceFastHelpTextList = 1;
 }
 
@@ -1777,12 +1786,7 @@ static void DisplayFastHelpRegions(FASTHELPREGION* pRegion, INT32 iSize)
 // show one region
 static void DisplayUserDefineHelpTextRegions(FASTHELPREGION* pRegion)
 {
-	UINT16 usFillColor;
 	INT32 iX,iY,iW,iH;
-
-	// grab the color for the background region
-	usFillColor = Get16BPPColor(FROMRGB(250, 240, 188));
-
 
 	iX = pRegion->iX;
 	iY = pRegion->iY;
@@ -1820,10 +1824,6 @@ static void DisplayUserDefineHelpTextRegions(FASTHELPREGION* pRegion)
 	}
 	FRAME_BUFFER->ShadowRect(iX + 2, iY + 2, iX + iW - 3, iY + iH - 3);
 	FRAME_BUFFER->ShadowRect(iX + 2, iY + 2, iX + iW - 3, iY + iH - 3);
-
-	// fillt he video surface areas
-	//ColorFillVideoSurfaceArea(FRAME_BUFFER, iX, iY, (iX + iW), (iY + iH), 0);
-	//ColorFillVideoSurfaceArea(FRAME_BUFFER, (iX + 1), (iY + 1), (iX + iW - 1), (iY + iH - 1), usFillColor);
 
 	iH = DisplayWrappedString(iX + 10, iY + 6, pRegion->iW, 0, FONT10ARIAL, FONT_BEIGE, pRegion->FastHelpText, FONT_NEARBLACK, MARK_DIRTY);
 
@@ -1959,7 +1959,7 @@ static void SelectSquadForMovement(INT32 const squad_no)
 			SOLDIERTYPE& s = **k;
 			if (!s.bActive) continue;
 			/* Is he able and allowed to move? Report only the first reason for
-			 * failure encountered */
+				* failure encountered */
 			if (CanMoveBoxSoldierMoveStrategically(&s, first_failure))
 			{
 				SelectSoldierForMovement(s);
@@ -2045,7 +2045,7 @@ static void SelectVehicleForMovement(INT32 const vehicle_id, BOOLEAN const and_a
 		}
 
 		/* Vehicle itself can only move if at least one passenger can move and is
-		 * moving */
+			* moving */
 		if (has_driver) fVehicleIsMoving[i] = TRUE;
 		break;
 	}
@@ -2234,7 +2234,7 @@ void CreateDestroyMovementBox( INT16 sSectorX, INT16 sSectorY, INT16 sSectorZ )
 		CreatePopUpBoxForMovementBox( );
 		BuildMouseRegionsForMoveBox( );
 		CreateScreenMaskForMoveBox( );
-  	fMapPanelDirty = TRUE;
+		fMapPanelDirty = TRUE;
 	}
 	else if (!fShowMapScreenMovementList && fCreated)
 	{
@@ -2245,7 +2245,7 @@ void CreateDestroyMovementBox( INT16 sSectorX, INT16 sSectorY, INT16 sSectorZ )
 		RemoveBox( ghMoveBox );
 		ghMoveBox = NO_POPUP_BOX;
 		RemoveScreenMaskForMoveBox( );
-  	fMapPanelDirty = TRUE;
+		fMapPanelDirty = TRUE;
 		fMapScreenBottomDirty = TRUE;		// really long move boxes can overlap bottom panel
 	}
 
@@ -2298,7 +2298,7 @@ static void AddStringsToMoveBox(PopUpBox*);
 
 static void CreatePopUpBoxForMovementBox(void)
 {
-  SGPPoint const MovePosition = { (UINT16)(STD_SCREEN_X + 450), (UINT16)(STD_SCREEN_Y + 100) };
+	SGPPoint const MovePosition = { (UINT16)(STD_SCREEN_X + 450), (UINT16)(STD_SCREEN_Y + 100) };
 
 	// create the pop up box and mouse regions for movement list
 	PopUpBox* const box = CreatePopUpBox(MovePosition, POPUP_BOX_FLAG_RESIZE, FRAME_BUFFER, guiPOPUPBORDERS, guiPOPUPTEX, 6, 6, 4, 4, 2);
@@ -2341,27 +2341,26 @@ static BOOLEAN AllOtherSoldiersInListAreSelected(void);
 static void AddStringsToMoveBox(PopUpBox* const box)
 {
 	INT32 iCount = 0, iCountB = 0;
-	wchar_t sString[ 128 ], sStringB[ 128 ];
 	BOOLEAN fFirstOne = TRUE;
 
 	// clear all the strings out of the box
 	RemoveAllBoxStrings(box);
 
 	// add title
-	GetShortSectorString( sSelMapX, sSelMapY, sStringB, lengthof(sStringB));
-	swprintf(sString, lengthof(sString), pMovementMenuStrings[0], sStringB);
+	ST::string sStringB = GetShortSectorString(sSelMapX, sSelMapY);
+	ST::string sString = st_format_printf(pMovementMenuStrings[0], sStringB);
 	AddMonoString(box, sString);
 
 
 	// blank line
-	AddMonoString(box, L"");
+	AddMonoString(box, ST::null);
 
 
 	// add squads
 	for( iCount = 0; iCount < giNumberOfSquadsInSectorMoving; iCount++ )
 	{
 		// add this squad, now add all the grunts in it
-		swprintf(sString, lengthof(sString), fSquadIsMoving[iCount] ? L"*%ls*" : L"%ls", pSquadMenuStrings[iSquadMovingList[iCount]]);
+		sString = ST::format(fSquadIsMoving[iCount] ? "*{}*" : "{}", pSquadMenuStrings[iSquadMovingList[iCount]]);
 		AddMonoString(box, sString);
 
 		// now add all the grunts in it
@@ -2372,11 +2371,11 @@ static void AddStringsToMoveBox(PopUpBox* const box)
 				// add mercs in squads
 				if (IsSoldierSelectedForMovement(*pSoldierMovingList[iCountB]))
 				{
-					swprintf( sString, lengthof(sString), L"   *%ls*", pSoldierMovingList[ iCountB ]->name );
+					sString = ST::format("   *{}*", pSoldierMovingList[ iCountB ]->name);
 				}
 				else
 				{
-					swprintf( sString, lengthof(sString), L"   %ls", pSoldierMovingList[ iCountB ]->name );
+					sString = ST::format("   {}", pSoldierMovingList[ iCountB ]->name);
 				}
 				AddMonoString(box, sString);
 			}
@@ -2388,7 +2387,7 @@ static void AddStringsToMoveBox(PopUpBox* const box)
 	for( iCount = 0; iCount < giNumberOfVehiclesInSectorMoving; iCount++ )
 	{
 		// add this vehicle
-		swprintf(sString, lengthof(sString), fVehicleIsMoving[iCount] ? L"*%ls*" : L"%ls", pVehicleStrings[pVehicleList[iVehicleMovingList[iCount]].ubVehicleType]);
+		sString = ST::format(fVehicleIsMoving[iCount] ? "*{}*" : "{}", pVehicleStrings[pVehicleList[iVehicleMovingList[iCount]].ubVehicleType]);
 		AddMonoString(box, sString);
 
 		// now add all the grunts in it
@@ -2399,11 +2398,11 @@ static void AddStringsToMoveBox(PopUpBox* const box)
 				// add mercs in vehicles
 				if (IsSoldierSelectedForMovement(*pSoldierMovingList[iCountB]))
 				{
-					swprintf( sString, lengthof(sString), L"   *%ls*", pSoldierMovingList[ iCountB ]->name );
+					sString = ST::format("   *{}*", pSoldierMovingList[ iCountB ]->name);
 				}
 				else
 				{
-					swprintf( sString, lengthof(sString), L"   %ls", pSoldierMovingList[ iCountB ]->name );
+					sString = ST::format("   {}", pSoldierMovingList[ iCountB ]->name);
 				}
 				AddMonoString(box, sString);
 			}
@@ -2422,21 +2421,21 @@ static void AddStringsToMoveBox(PopUpBox* const box)
 			if ( fFirstOne )
 			{
 				// add OTHER header line
-				swprintf(sString, lengthof(sString), AllOtherSoldiersInListAreSelected() ? L"*%ls*" : L"%ls", pMovementMenuStrings[3]);
+				sString = ST::format(AllOtherSoldiersInListAreSelected() ? "*{}*" : "{}", pMovementMenuStrings[3]);
 				AddMonoString(box, sString);
 
 				fFirstOne = FALSE;
 			}
 
 			// add OTHER soldiers (not on duty nor in a vehicle)
-			swprintf(sString, lengthof(sString), IsSoldierSelectedForMovement(*pSoldierMovingList[iCount]) ? L"  *%ls ( %ls )*" : L"  %ls ( %ls )", pSoldierMovingList[iCount]->name, pAssignmentStrings[pSoldierMovingList[iCount]->bAssignment]);
+			sString = ST::format(IsSoldierSelectedForMovement(*pSoldierMovingList[iCount]) ? "  *{} ( {} )*" : "  {} ( {} )", pSoldierMovingList[iCount]->name, pAssignmentStrings[pSoldierMovingList[iCount]->bAssignment]);
 			AddMonoString(box, sString);
 		}
 	}
 
 
 	// blank line
-	AddMonoString(box, L"");
+	AddMonoString(box, ST::null);
 
 
 	if ( IsAnythingSelectedForMoving() )
@@ -2447,7 +2446,7 @@ static void AddStringsToMoveBox(PopUpBox* const box)
 	else
 	{
 		// blank line
-		AddMonoString(box, L"");
+		AddMonoString(box, ST::null);
 	}
 
 	// add cancel line
@@ -2575,7 +2574,7 @@ static void MoveMenuMvtCallback(MOUSE_REGION* pRegion, INT32 iReason)
 	if (iReason & MSYS_CALLBACK_REASON_GAIN_MOUSE )
 	{
 		// highlight string
-	  HighLightBoxLine( ghMoveBox, iValue );
+		HighLightBoxLine( ghMoveBox, iValue );
 	}
 	else if (iReason & MSYS_CALLBACK_REASON_LOST_MOUSE )
 	{
@@ -2600,7 +2599,7 @@ static void MoveMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 	iMoveBoxLine = MSYS_GetRegionUserData( pRegion, 0 );
 	iRegionType  = MSYS_GetRegionUserData( pRegion, 1 );
 	iListIndex   = MSYS_GetRegionUserData( pRegion, 2 );
-	iClickTime	 = GetJA2Clock();
+	iClickTime   = GetJA2Clock();
 
 	if( ( iReason & MSYS_CALLBACK_REASON_LBUTTON_UP )  )
 	{
@@ -2752,7 +2751,7 @@ static void MoveMenuBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 			}
 			else
 			{
-				SLOGE(DEBUG_TAG_ASSERTS, "MoveMenuBtnCallback: Invalid regionType %d, moveBoxLine %d", iRegionType, iMoveBoxLine);
+				SLOGA("MoveMenuBtnCallback: Invalid regionType %d, moveBoxLine %d", iRegionType, iMoveBoxLine);
 				return;
 			}
 
@@ -2887,7 +2886,7 @@ static void HandleMoveoutOfSectorMovementTroops(void)
 			{
 				if ( !AddCharacterToSquad( pSoldier, ( INT8 )( iSquadNumber ) ) )
 				{
-					SLOGE(DEBUG_TAG_ASSERTS, "HandleMoveoutOfSectorMovementTroops: AddCharacterToSquad %d failed, iCounter %d", iSquadNumber, iCounter);
+					SLOGA("HandleMoveoutOfSectorMovementTroops: AddCharacterToSquad %d failed, iCounter %d", iSquadNumber, iCounter);
 					// toggle whether he's going or not to try and recover somewhat gracefully
 					fSoldierIsMoving[ iCounter ] = !fSoldierIsMoving[ iCounter ];
 				}
@@ -3279,7 +3278,7 @@ void DisplaySoldierUpdateBox( )
 
 	//InterruptTime();
 	PauseGame( );
-	LockPauseState(LOCK_PAUSE_04);
+	LockPauseState(LOCK_PAUSE_DISPLAY_SOLDIER_UPDATE);
 
 	PauseDialogueQueue( );
 
@@ -3452,7 +3451,7 @@ void DisplaySoldierUpdateBox( )
 }
 
 
-static void MakeButton(UINT idx, INT16 x, INT16 y, GUI_CALLBACK click, const wchar_t* text, const wchar_t* help_text)
+static void MakeButton(UINT idx, INT16 x, INT16 y, GUI_CALLBACK click, const ST::string& text, const ST::string& help_text)
 {
 	GUIButtonRef const btn = QuickCreateButtonImg(INTERFACEDIR "/group_confirm_tactical.sti", 7, 8, x, y, MSYS_PRIORITY_HIGHEST - 1, click);
 	guiUpdatePanelButtons[idx] = btn;
@@ -3517,7 +3516,7 @@ void CreateDestroyTheUpdateBox( void )
 
 		// lock it paused
 		PauseGame();
-		LockPauseState(LOCK_PAUSE_05);
+		LockPauseState(LOCK_PAUSE_CREATE_SOLDIER_UPDATE);
 
 		// display the box
 		DisplaySoldierUpdateBox( );
@@ -3599,7 +3598,7 @@ static void RenderSoldierSmallFaceForUpdatePanel(INT32 iIndex, INT32 iX, INT32 i
 static void ContinueUpdateButtonCallback(GUI_BUTTON *btn, INT32 reason)
 {
 	if (reason & MSYS_CALLBACK_REASON_LBUTTON_UP)
-  {
+	{
 		EndUpdateBox(TRUE); // restart time compression
 	}
 }
@@ -3608,7 +3607,7 @@ static void ContinueUpdateButtonCallback(GUI_BUTTON *btn, INT32 reason)
 static void StopUpdateButtonCallback(GUI_BUTTON *btn, INT32 reason)
 {
 	if (reason & MSYS_CALLBACK_REASON_LBUTTON_UP)
-  {
+	{
 		EndUpdateBox(FALSE); // stop time compression
 	}
 }
@@ -3664,18 +3663,18 @@ void UpdateHelpTextForMapScreenMercIcons()
 	const SOLDIERTYPE* const s = GetSelectedInfoChar();
 
 	// if merc is an AIM merc
-	wchar_t const* const contract = s && s->ubWhatKindOfMercAmI == MERC_TYPE__AIM_MERC ?
-		zMarksMapScreenText[21] : L"";
+	ST::string contract = s && s->ubWhatKindOfMercAmI == MERC_TYPE__AIM_MERC ?
+		zMarksMapScreenText[21] : ST::null;
 	gContractIconRegion.SetFastHelpText(contract);
 
 	// if merc has life insurance
-	wchar_t const* const insurance = s && s->usLifeInsurance > 0 ?
-		zMarksMapScreenText[3] : L"";
+	ST::string insurance = s && s->usLifeInsurance > 0 ?
+		zMarksMapScreenText[3] : ST::null;
 	gInsuranceIconRegion.SetFastHelpText(insurance);
 
 	// if merc has a medical deposit
-	wchar_t const* const medical = s && s->usMedicalDeposit > 0 ?
-		zMarksMapScreenText[12] : L"";
+	ST::string medical = s && s->usMedicalDeposit > 0 ?
+		zMarksMapScreenText[12] : ST::null;
 	gDepositIconRegion.SetFastHelpText(medical);
 }
 
@@ -3687,13 +3686,13 @@ void CreateDestroyInsuranceMouseRegionForMercs( BOOLEAN fCreate )
 	if (!fCreated && fCreate)
 	{
 		MSYS_DefineRegion( &gContractIconRegion, CHAR_ICON_X, CHAR_ICON_CONTRACT_Y, CHAR_ICON_X + CHAR_ICON_WIDTH, CHAR_ICON_CONTRACT_Y + CHAR_ICON_HEIGHT,
-						 MSYS_PRIORITY_HIGH - 1, MSYS_NO_CURSOR, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK );
+					MSYS_PRIORITY_HIGH - 1, MSYS_NO_CURSOR, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK );
 
 		MSYS_DefineRegion( &gInsuranceIconRegion, CHAR_ICON_X, CHAR_ICON_CONTRACT_Y + CHAR_ICON_SPACING, CHAR_ICON_X + CHAR_ICON_WIDTH, CHAR_ICON_CONTRACT_Y + CHAR_ICON_SPACING + CHAR_ICON_HEIGHT,
-						 MSYS_PRIORITY_HIGH - 1, MSYS_NO_CURSOR, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK );
+					MSYS_PRIORITY_HIGH - 1, MSYS_NO_CURSOR, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK );
 
 		MSYS_DefineRegion( &gDepositIconRegion, CHAR_ICON_X, CHAR_ICON_CONTRACT_Y + ( 2 * CHAR_ICON_SPACING ), CHAR_ICON_X + CHAR_ICON_WIDTH, CHAR_ICON_CONTRACT_Y + ( 2 * CHAR_ICON_SPACING ) + CHAR_ICON_HEIGHT,
-						 MSYS_PRIORITY_HIGH - 1, MSYS_NO_CURSOR, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK );
+					MSYS_PRIORITY_HIGH - 1, MSYS_NO_CURSOR, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK );
 
 		fCreated = TRUE;
 	}
@@ -3759,13 +3758,12 @@ void NotifyPlayerWhenEnemyTakesControlOfImportantSector(INT16 const x, INT16 con
 	// There is nothing important to player below ground
 	if (z != 0) return;
 
-	wchar_t sector_desc[128];
-	GetSectorIDString(x, y, z, sector_desc, lengthof(sector_desc), TRUE);
+	ST::string sector_desc = GetSectorIDString(x, y, z, TRUE);
 
-	wchar_t buf[256];
+	ST::string buf;
 	if (IsThisSectorASAMSector(x, y, z))
 	{
-		swprintf(buf, lengthof(buf), pMapErrorString[15], sector_desc);
+		buf = st_format_printf(pMapErrorString[15], sector_desc);
 	}
 	else
 	{
@@ -3777,9 +3775,8 @@ void NotifyPlayerWhenEnemyTakesControlOfImportantSector(INT16 const x, INT16 con
 		{ // There is a mine and it was producing for us
 			// Get how much we now will get from the mines
 			INT32 const income = GetProjectedTotalDailyIncome();
-			wchar_t     income_string[64];
-			SPrintMoney(income_string, income);
-			swprintf(buf, lengthof(buf), pMapErrorString[16], sector_desc, income_string);
+			ST::string income_string = SPrintMoney(income);
+			buf = st_format_printf(pMapErrorString[16], sector_desc, income_string);
 		}
 		else
 		{
@@ -3788,7 +3785,7 @@ void NotifyPlayerWhenEnemyTakesControlOfImportantSector(INT16 const x, INT16 con
 			// San Mona isn't important
 			if (town_id == SAN_MONA) return;
 
-			swprintf(buf, lengthof(buf), pMapErrorString[25], sector_desc);
+			buf = st_format_printf(pMapErrorString[25], sector_desc);
 		}
 	}
 	DoScreenIndependantMessageBox(buf, MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback);
@@ -3802,26 +3799,26 @@ void NotifyPlayerOfInvasionByEnemyForces(INT16 const x, INT16 const y, INT8 cons
 	// If enemy controlled anyways, leave
 	if (StrategicMap[CALCULATE_STRATEGIC_INDEX(x, y)].fEnemyControlled) return;
 
-	wchar_t buf[128];
-	wchar_t sector_desc[128];
+	ST::string buf;
+	ST::string sector_desc;
 
 	// check if SAM site here
 	if (IsThisSectorASAMSector(x, y, z))
 	{
-		GetShortSectorString(x, y, sector_desc, lengthof(sector_desc));
-		swprintf(buf, lengthof(buf), pMapErrorString[22], sector_desc);
+		sector_desc = GetShortSectorString(x, y);
+		buf = st_format_printf(pMapErrorString[22], sector_desc);
 		DoScreenIndependantMessageBox(buf, MSG_BOX_FLAG_OK, return_callback);
 	}
 	else if (GetTownIdForSector(SECTOR(x, y)) != BLANK_SECTOR)
 	{
-		GetSectorIDString(x, y, z, sector_desc, lengthof(sector_desc), TRUE);
-		swprintf(buf, lengthof(buf), pMapErrorString[23], sector_desc);
+		sector_desc = GetSectorIDString(x, y, z, TRUE);
+		buf = st_format_printf(pMapErrorString[23], sector_desc);
 		DoScreenIndependantMessageBox(buf, MSG_BOX_FLAG_OK, return_callback);
 	}
 	else
 	{
-		GetShortSectorString(x, y, sector_desc, lengthof(sector_desc));
-		swprintf(buf, lengthof(buf), pMapErrorString[24], sector_desc);
+		sector_desc = GetShortSectorString(x, y);
+		buf = st_format_printf(pMapErrorString[24], sector_desc);
 		ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, buf);
 	}
 }
@@ -3858,14 +3855,14 @@ static MoveError CanCharacterMoveInStrategic(SOLDIERTYPE& s)
 		// Dead?
 		if (s.bLife <= 0)
 		{
-			swprintf(gsCustomErrorString, lengthof(gsCustomErrorString), pMapErrorString[35], s.name);
+			gsCustomErrorString = st_format_printf(pMapErrorString[35], s.name);
 			return ME_CUSTOM;
 		}
 
 		// Too injured?
 		if (s.bLife < OKLIFE)
 		{
-			swprintf(gsCustomErrorString, lengthof(gsCustomErrorString), pMapErrorString[33], s.name);
+			gsCustomErrorString = st_format_printf(pMapErrorString[33], s.name);
 			return ME_CUSTOM;
 		}
 	}
@@ -3914,7 +3911,7 @@ static MoveError CanCharacterMoveInStrategic(SOLDIERTYPE& s)
 	 * anyway in the next sector, or already asleep and can't be awakened */
 	if (PlayerSoldierTooTiredToTravel(s))
 	{
-		swprintf(gsCustomErrorString, lengthof(gsCustomErrorString), pMapErrorString[43], s.name);
+		gsCustomErrorString = st_format_printf(pMapErrorString[43], s.name);
 		return ME_CUSTOM;
 	}
 
@@ -3933,8 +3930,8 @@ static MoveError CanCharacterMoveInStrategic(SOLDIERTYPE& s)
 				(s.bAssignment  < ON_DUTY && NumberOfNonEPCsInSquad(s.bAssignment) == 0))
 		{
 			MERCPROFILESTRUCT const&       p    = GetProfile(s.ubProfile);
-			wchar_t           const* const text = p.bSex == MALE ? pMapErrorString[6] : pMapErrorString[7];
-			swprintf(gsCustomErrorString, lengthof(gsCustomErrorString), text, s.name);
+			ST::string text = p.bSex == MALE ? pMapErrorString[6] : pMapErrorString[7];
+			gsCustomErrorString = st_format_printf(text, s.name);
 			return ME_CUSTOM;
 		}
 	}
@@ -3951,7 +3948,7 @@ static MoveError CanCharacterMoveInStrategic(SOLDIERTYPE& s)
 
 	if (problem_exists)
 	{ // Inform user this specific merc cannot be moved out of the sector
-		swprintf(gsCustomErrorString, lengthof(gsCustomErrorString), pMapErrorString[29], s.name);
+		gsCustomErrorString = st_format_printf(pMapErrorString[29], s.name);
 		return ME_CUSTOM;
 	}
 
@@ -3980,7 +3977,7 @@ MoveError CanEntireMovementGroupMercIsInMove(SOLDIERTYPE& s)
 		if (&other == &s) continue; // Skip the same guy we did already
 
 		/* Is he in the same movement group (i.e. squad), or is he still selected to
-		 * go with us (legal?) */
+			* go with us (legal?) */
 		if (GetSoldierGroup(other) != g && !c->selected) continue;
 
 		MoveError const ret = CanCharacterMoveInStrategic(other);
@@ -3996,7 +3993,7 @@ MoveError CanEntireMovementGroupMercIsInMove(SOLDIERTYPE& s)
 void ReportMapScreenMovementError(const INT8 bErrorNumber)
 {
 	// a customized message?
-	const wchar_t* const text = (bErrorNumber != ME_CUSTOM ? pMapErrorString[bErrorNumber] : gsCustomErrorString);
+	ST::string text = (bErrorNumber != ME_CUSTOM ? pMapErrorString[bErrorNumber] : gsCustomErrorString);
 	DoMapMessageBox(MSG_BOX_BASIC_STYLE, text, MAP_SCREEN, MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback);
 }
 
@@ -4117,10 +4114,10 @@ static BOOLEAN CanSoldierMoveWithVehicleId(const SOLDIERTYPE* const pSoldier, co
 
 		// as long as they're in the same location, amd neither is between sectors, different vehicles is also ok
 		if( ( pVehicle1->sSectorX == pVehicle2->sSectorX ) &&
-			  ( pVehicle1->sSectorY == pVehicle2->sSectorY ) &&
-			  ( pVehicle1->sSectorZ == pVehicle2->sSectorZ ) &&
-					!pVehicle1->fBetweenSectors &&
-					!pVehicle2->fBetweenSectors )
+			( pVehicle1->sSectorY == pVehicle2->sSectorY ) &&
+			( pVehicle1->sSectorZ == pVehicle2->sSectorZ ) &&
+			!pVehicle1->fBetweenSectors &&
+			!pVehicle2->fBetweenSectors )
 		{
 			return( TRUE );
 		}
@@ -4154,10 +4151,10 @@ void SaveLeaveItemList(HWFILE const f)
 			for (MERC_LEAVE_ITEM const* i = head; i; i = i->pNext)
 			{
 				BYTE  data[40];
-				BYTE* d = data;
-				d = InjectObject(d, &i->o);
+				DataWriter d{data};
+				InjectObject(d, &i->o);
 				INJ_SKIP(d, 4)
-				Assert(d == endof(data));
+				Assert(d.getConsumed() == lengthof(data));
 
 				FileWrite(f, data, sizeof(data));
 			}
@@ -4197,15 +4194,15 @@ void LoadLeaveItemList(HWFILE const f)
 		MERC_LEAVE_ITEM** anchor = &gpLeaveListHead[i];
 		for (UINT32 n = n_items; n != 0; --n)
 		{
-			MERC_LEAVE_ITEM* const li = MALLOCZ(MERC_LEAVE_ITEM);
+			MERC_LEAVE_ITEM* const li = new MERC_LEAVE_ITEM{};
 
 			BYTE  data[40];
 			FileRead(f, data, sizeof(data));
 
-			BYTE const* d = data;
-			d = ExtractObject(d, &li->o);
+			DataReader d{data};
+			ExtractObject(d, &li->o);
 			EXTR_SKIP(d, 4)
-			Assert(d == endof(data));
+			Assert(d.getConsumed() == lengthof(data));
 
 			// Append node to list
 			*anchor = li;
@@ -4317,7 +4314,7 @@ void HandleBlitOfSectorLocatorIcon( INT16 sSectorX, INT16 sSectorY, INT16 sSecto
 		sScreenX = MAP_GRID_X;
 	}
 	sScreenY--; //Carterism ritual
-  if( sScreenY < MAP_GRID_Y )
+	if( sScreenY < MAP_GRID_Y )
 	{
 		sScreenY = MAP_GRID_Y;
 	}

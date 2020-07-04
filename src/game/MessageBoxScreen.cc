@@ -27,6 +27,9 @@
 #include "Video.h"
 #include "UILayout.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
 
 #define MSGBOX_DEFAULT_WIDTH      300
 
@@ -56,8 +59,8 @@ BOOLEAN            gfStartedFromMapScreen = FALSE;
 BOOLEAN            fRestoreBackgroundForMessageBox = FALSE;
 BOOLEAN            gfDontOverRideSaveBuffer = TRUE;	//this variable can be unset if ur in a non gamescreen and DONT want the msg box to use the save buffer
 
-wchar_t gzUserDefinedButton1[128];
-wchar_t gzUserDefinedButton2[128];
+ST::string gzUserDefinedButton1;
+ST::string gzUserDefinedButton2;
 
 
 static void ContractMsgBoxCallback(GUI_BUTTON* btn, INT32 reason);
@@ -68,7 +71,7 @@ static void OKMsgBoxCallback(GUI_BUTTON* btn, INT32 reason);
 static void YESMsgBoxCallback(GUI_BUTTON* btn, INT32 reason);
 
 
-static GUIButtonRef MakeButton(const wchar_t* text, INT16 fore_colour, INT16 shadow_colour, INT16 x, INT16 y, GUI_CALLBACK click, UINT16 cursor)
+static GUIButtonRef MakeButton(const ST::string& text, INT16 fore_colour, INT16 shadow_colour, INT16 x, INT16 y, GUI_CALLBACK click, UINT16 cursor)
 {
 	GUIButtonRef const btn = CreateIconAndTextButton(gMsgBox.iButtonImages, text, FONT12ARIAL, fore_colour, shadow_colour, fore_colour, shadow_colour, x, y, MSYS_PRIORITY_HIGHEST, click);
 	btn->SetCursor(cursor);
@@ -104,7 +107,7 @@ static MessageBoxStyle const g_msg_box_style[] =
 static MessageBoxStyle const g_msg_box_style_default = { BASIC_MERC_POPUP_BACKGROUND, BASIC_MERC_POPUP_BORDER, INTERFACEDIR "/msgboxbuttons.sti", 0, 1, FONT_MCOLOR_WHITE, DEFAULT_SHADOW, CURSOR_NORMAL };
 
 
-void DoMessageBox(MessageBoxStyleID const ubStyle, wchar_t const* const zString, ScreenID const uiExitScreen, MessageBoxFlags const usFlags, MSGBOX_CALLBACK const ReturnCallback, SGPBox const* const centering_rect)
+void DoMessageBox(MessageBoxStyleID ubStyle, const ST::string str, ScreenID uiExitScreen, MessageBoxFlags usFlags, MSGBOX_CALLBACK ReturnCallback, const SGPBox* centering_rect)
 {
 	GetMousePos(&pOldMousePosition);
 
@@ -128,7 +131,7 @@ void DoMessageBox(MessageBoxStyleID const ubStyle, wchar_t const* const zString,
 	// Init message box
 	UINT16 usTextBoxWidth;
 	UINT16 usTextBoxHeight;
-	gMsgBox.box = PrepareMercPopupBox(0, style.background, style.border, zString, MSGBOX_DEFAULT_WIDTH, 40, 10, 30, &usTextBoxWidth, &usTextBoxHeight);
+	gMsgBox.box = PrepareMercPopupBox(0, style.background, style.border, str, MSGBOX_DEFAULT_WIDTH, 40, 10, 30, &usTextBoxWidth, &usTextBoxHeight);
 
 	// Save height,width
 	gMsgBox.usWidth  = usTextBoxWidth;
@@ -164,7 +167,7 @@ void DoMessageBox(MessageBoxStyleID const ubStyle, wchar_t const* const zString,
 	// Init save buffer
 	gMsgBox.uiSaveBuffer = AddVideoSurface(usTextBoxWidth, usTextBoxHeight, PIXEL_DEPTH);
 
-  //Save what we have under here...
+	//Save what we have under here...
 	SGPBox const r = { gMsgBox.uX, gMsgBox.uY, usTextBoxWidth, usTextBoxHeight };
 	BltVideoSurface(gMsgBox.uiSaveBuffer, FRAME_BUFFER, 0, 0, &r);
 
@@ -210,7 +213,7 @@ void DoMessageBox(MessageBoxStyleID const ubStyle, wchar_t const* const zString,
 
 			for (UINT8 i = 0; i < 4; ++i)
 			{
-				wchar_t text[] = { '1' + i, '\0' };
+				ST::string text = ST::format("{}", i + 1);
 				GUIButtonRef const btn = MakeButton(text, font_colour, shadow_colour, x + dx * i, y, NumberedMsgBoxCallback, cursor);
 				gMsgBox.uiButton[i] = btn;
 				btn->SetUserData(i + 1);
@@ -270,13 +273,13 @@ void DoMessageBox(MessageBoxStyleID const ubStyle, wchar_t const* const zString,
 
 	InterruptTime();
 	PauseGame();
-	LockPauseState(LOCK_PAUSE_01);
+	LockPauseState(LOCK_PAUSE_MSGBOX);
 	// Pause timers as well....
 	PauseTime(TRUE);
 
-  // Save mouse restriction region...
-  GetRestrictedClipCursor(&gOldCursorLimitRectangle);
-  FreeMouseCursor();
+	// Save mouse restriction region...
+	GetRestrictedClipCursor(&gOldCursorLimitRectangle);
+	FreeMouseCursor();
 
 	gfNewMessageBox = TRUE;
 	gfInMsgBox     = TRUE;
@@ -382,8 +385,8 @@ static ScreenID ExitMsgBox(MessageBoxReturnValue const ubExitCode)
 	// UnPause timers as well....
 	PauseTime(FALSE);
 
-  // Restore mouse restriction region...
-  RestrictMouseCursor(&gOldCursorLimitRectangle);
+	// Restore mouse restriction region...
+	RestrictMouseCursor(&gOldCursorLimitRectangle);
 
 	gfInMsgBox = FALSE;
 
@@ -435,8 +438,8 @@ static ScreenID ExitMsgBox(MessageBoxReturnValue const ubExitCode)
 		case MAP_SCREEN:
 			fMapPanelDirty = TRUE;
 			break;
-        default:
-            break;
+		default:
+			break;
 	}
 
 	if (gfFadeInitialized)
@@ -560,12 +563,12 @@ ScreenID MessageBoxScreenHandle(void)
 					case '4': gMsgBox.bHandled = MSG_BOX_RETURN_4; break;
 				}
 				break;
-            default:
-                break;
+			default:
+				break;
 		}
 	}
 
-  if (gMsgBox.bHandled != MSG_BOX_RETURN_NONE)
+	if (gMsgBox.bHandled != MSG_BOX_RETURN_NONE)
 	{
 		SetRenderFlags(RENDER_FLAG_FULL);
 		return ExitMsgBox(gMsgBox.bHandled);
@@ -582,37 +585,19 @@ void MessageBoxScreenShutdown()
 	gMsgBox.box = 0;
 }
 
-
-static void DoScreenIndependantMessageBoxWithRect(wchar_t const* msg, MessageBoxFlags, MSGBOX_CALLBACK, SGPBox const* centering_rect);
-
-
 // a basic box that don't care what screen we came from
-void DoScreenIndependantMessageBox(wchar_t const* const zString, MessageBoxFlags const usFlags, MSGBOX_CALLBACK const ReturnCallback)
+void DoScreenIndependantMessageBox(const ST::string& msg, MessageBoxFlags flags, MSGBOX_CALLBACK callback)
 {
 	SGPBox const centering_rect = {0, 0, SCREEN_WIDTH, INV_INTERFACE_START_Y };
-	DoScreenIndependantMessageBoxWithRect(zString, usFlags, ReturnCallback, &centering_rect);
-}
-
-
-// a basic box that don't care what screen we came from
-void DoLowerScreenIndependantMessageBox(wchar_t const* const zString, MessageBoxFlags const usFlags, MSGBOX_CALLBACK const ReturnCallback)
-{
-	SGPBox const centering_rect = {0, (UINT16)(INV_INTERFACE_START_Y / 2), SCREEN_WIDTH, (UINT16)(INV_INTERFACE_START_Y / 2) };
-	DoScreenIndependantMessageBoxWithRect(zString, usFlags, ReturnCallback, &centering_rect);
-}
-
-
-static void DoScreenIndependantMessageBoxWithRect(wchar_t const* const msg, MessageBoxFlags const flags, MSGBOX_CALLBACK const callback, SGPBox const* const centering_rect)
-{
 	switch (ScreenID const screen = guiCurrentScreen)
 	{
 		case AUTORESOLVE_SCREEN:
-		case GAME_SCREEN:        DoMessageBox(                    MSG_BOX_BASIC_STYLE,    msg, screen, flags, callback, centering_rect); break;
-		case LAPTOP_SCREEN:      DoLapTopSystemMessageBoxWithRect(MSG_BOX_LAPTOP_DEFAULT, msg, screen, flags, callback, centering_rect); break;
-		case MAP_SCREEN:         DoMapMessageBoxWithRect(         MSG_BOX_BASIC_STYLE,    msg, screen, flags, callback, centering_rect); break;
-		case OPTIONS_SCREEN:     DoOptionsMessageBoxWithRect(                             msg, screen, flags, callback, centering_rect); break;
-		case SAVE_LOAD_SCREEN:   DoSaveLoadMessageBoxWithRect(                            msg, screen, flags, callback, centering_rect); break;
-        default:
-            break;
+		case GAME_SCREEN:        DoMessageBox(                    MSG_BOX_BASIC_STYLE,    msg, screen, flags, callback, &centering_rect); break;
+		case LAPTOP_SCREEN:      DoLapTopSystemMessageBoxWithRect(MSG_BOX_LAPTOP_DEFAULT, msg, screen, flags, callback, &centering_rect); break;
+		case MAP_SCREEN:         DoMapMessageBoxWithRect(         MSG_BOX_BASIC_STYLE,    msg, screen, flags, callback, &centering_rect); break;
+		case OPTIONS_SCREEN:     DoOptionsMessageBoxWithRect(                             msg, screen, flags, callback, &centering_rect); break;
+		case SAVE_LOAD_SCREEN:   DoSaveLoadMessageBoxWithRect(                            msg, screen, flags, callback, &centering_rect); break;
+		default:
+			break;
 	}
 }

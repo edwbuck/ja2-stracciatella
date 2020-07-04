@@ -3,14 +3,15 @@
 
 #include "Types.h"
 
+#include <vector>
+
 struct EVENT
 {
 	UINT32 TimeStamp;
 	UINT32	uiFlags;
 	UINT16	usDelay;
 	UINT32	uiEvent;
-	UINT32	uiDataSize;
-	BYTE   Data[];
+	std::vector<BYTE> Data;
 };
 
 enum EventQueueID
@@ -20,7 +21,7 @@ enum EventQueueID
 	DEMAND_EVENT_QUEUE
 };
 
-#define			EVENT_EXPIRED						0x00000002
+#define EVENT_EXPIRED 0x00000002
 
 void InitializeEventManager(void);
 void ShutdownEventManager(void);

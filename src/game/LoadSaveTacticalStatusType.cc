@@ -9,12 +9,12 @@
 
 void ExtractTacticalStatusTypeFromFile(HWFILE const f, bool stracLinuxFormat)
 {
-  UINT32 dataSize = stracLinuxFormat ? TACTICAL_STATUS_TYPE_SIZE_STRAC_LINUX : TACTICAL_STATUS_TYPE_SIZE;
-  std::vector<BYTE> data(dataSize);
+	UINT32 dataSize = stracLinuxFormat ? TACTICAL_STATUS_TYPE_SIZE_STRAC_LINUX : TACTICAL_STATUS_TYPE_SIZE;
+	std::vector<BYTE> data(dataSize);
 	FileRead(f, data.data(), dataSize);
 
 	TacticalStatusType* const s = &gTacticalStatus;
-	const BYTE* d = data.data();
+	DataReader d{data.data()};
 	EXTR_U32(d, s->uiFlags)
 	FOR_EACH(TacticalTeamType, t, s->Team)
 	{
@@ -63,19 +63,19 @@ void ExtractTacticalStatusTypeFromFile(HWFILE const f, bool stracLinuxFormat)
 	EXTR_U16(d, s->usTactialTurnLimitCounter)
 	EXTR_BOOL(d, s->fInTopMessage)
 	EXTR_U8(d, s->ubTopMessageType)
-  if(stracLinuxFormat)
-  {
-    EXTR_SKIP(d, 82);
-  }
-  else
-  {
-    EXTR_SKIP(d, 40);
-  }
+	if(stracLinuxFormat)
+	{
+		EXTR_SKIP(d, 82);
+	}
+	else
+	{
+		EXTR_SKIP(d, 40);
+	}
 	EXTR_U16(d, s->usTactialTurnLimitMax)
-  if(stracLinuxFormat)
-  {
-    EXTR_SKIP(d, 2);
-  }
+	if(stracLinuxFormat)
+	{
+		EXTR_SKIP(d, 2);
+	}
 	EXTR_U32(d, s->uiTactialTurnLimitClock)
 	EXTR_BOOL(d, s->fTactialTurnLimitStartedBeep)
 	EXTR_I8(d, s->bBoxingState)
@@ -132,14 +132,14 @@ void ExtractTacticalStatusTypeFromFile(HWFILE const f, bool stracLinuxFormat)
 	EXTR_U16(d, s->sCreatureTenseQuoteDelay)
 	EXTR_SKIP(d, 2)
 	EXTR_U32(d, s->uiCreatureTenseQuoteLastUpdate)
-	Assert(d == (data.data() + dataSize));
+	Assert(d.getConsumed() == dataSize);
 }
 
 
 void InjectTacticalStatusTypeIntoFile(HWFILE const f)
 {
 	BYTE data[316];
-	BYTE*                     d = data;
+	DataWriter d{data};
 	TacticalStatusType* const s = &gTacticalStatus;
 	INJ_U32(d, s->uiFlags)
 	FOR_EACH(TacticalTeamType const, t, s->Team)
@@ -247,7 +247,7 @@ void InjectTacticalStatusTypeIntoFile(HWFILE const f)
 	INJ_U16(d, s->sCreatureTenseQuoteDelay)
 	INJ_SKIP(d, 2)
 	INJ_U32(d, s->uiCreatureTenseQuoteLastUpdate)
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 
 	FileWrite(f, data, sizeof(data));
 }

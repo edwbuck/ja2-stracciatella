@@ -9,6 +9,8 @@
 
 #include "Soldier_Profile_Type.h"
 
+#include <vector>
+
 
 //Load the Map modifications from the saved game file
 void LoadMapTempFilesFromSavedGameFile(HWFILE, UINT32 savegame_version);
@@ -24,14 +26,14 @@ void SaveCurrentSectorsInformationToTempItemFile(void);
 void LoadCurrentSectorsInformationFromTempItemsFile();
 
 // Loads a World Item array from that sectors temp item file
-void LoadWorldItemsFromTempItemFile(INT16 sMapX, INT16 sMapY, INT8 bMapZ, UINT32* item_count, WORLDITEM** items);
+std::vector<WORLDITEM> LoadWorldItemsFromTempItemFile(INT16 sMapX, INT16 sMapY, INT8 bMapZ);
 
 //  Adds an array of Item Objects to the specified location on a unloaded map.
 //  If you want to overwrite all the items in the array set fReplaceEntireFile to TRUE.
 void AddItemsToUnLoadedSector(INT16 sMapX, INT16 sMapY, INT8 bMapZ, INT16 sGridNo, UINT32 uiNumberOfItems, OBJECTTYPE const* pObject, UINT8 ubLevel, UINT16 usFlags, INT8 bRenderZHeightAboveLevel, Visibility);
 
 
-void AddWorldItemsToUnLoadedSector(INT16 sMapX, INT16 sMapY, INT8 bMapZ, UINT32 uiNumberOfItems, const WORLDITEM* pWorldItem);
+void AddWorldItemsToUnLoadedSector(INT16 sMapX, INT16 sMapY, INT8 bMapZ, const std::vector<WORLDITEM>& wis);
 
 // Delete all the files in the temp directory.
 void InitTacticalSave();
@@ -47,10 +49,10 @@ void AddRottingCorpseToUnloadedSectorsRottingCorpseFile(INT16 sMapX, INT16 sMapY
 
 
 //Flags used for the AddDeadSoldierToUnLoadedSector() function
-#define		ADD_DEAD_SOLDIER_USE_GRIDNO									0x00000001				// just place the items and corpse on the gridno location
-#define		ADD_DEAD_SOLDIER_TO_SWEETSPOT								0x00000002				// Finds the closet free gridno
+#define ADD_DEAD_SOLDIER_USE_GRIDNO			0x00000001 // just place the items and corpse on the gridno location
+#define ADD_DEAD_SOLDIER_TO_SWEETSPOT			0x00000002 // Finds the closet free gridno
 
-#define		ADD_DEAD_SOLDIER__USE_JFK_HEADSHOT_CORPSE		0x00000040				// Will ue the JFK headshot
+#define ADD_DEAD_SOLDIER__USE_JFK_HEADSHOT_CORPSE	0x00000040 // Will ue the JFK headshot
 
 
 
@@ -90,10 +92,10 @@ void GetMapTempFileName(SectorFlags uiType, char* pMapName, INT16 sMapX, INT16 s
 UINT32	GetNumberOfVisibleWorldItemsFromSectorStructureForSector( INT16 sMapX, INT16 sMapY, INT8 bMapZ );
 void		SetNumberOfVisibleWorldItemsInSectorStructureForSector( INT16 sMapX, INT16 sMapY, INT8 bMapZ, UINT32 uiNumberOfItems );
 
-#define NEW_ROTATION_ARRAY_SIZE 49
-#define BASE_NUMBER_OF_ROTATION_ARRAYS 19
+#define NEW_ROTATION_ARRAY_SIZE			49
+#define BASE_NUMBER_OF_ROTATION_ARRAYS			19
 
 
-void SaveWorldItemsToTempItemFile(INT16 sMapX, INT16 sMapY, INT8 bMapZ, UINT32 uiNumberOfItems, WORLDITEM const* pData);
+void SaveWorldItemsToTempItemFile(INT16 sMapX, INT16 sMapY, INT8 bMapZ, const std::vector<WORLDITEM>& items);
 
 #endif

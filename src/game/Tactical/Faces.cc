@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Directories.h"
 #include "Font.h"
 #include "HImage.h"
@@ -40,9 +38,14 @@
 #include "ScreenIDs.h"
 #include "UILayout.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <stdexcept>
+
 
 // Defines
-#define		NUM_FACE_SLOTS					50
+#define NUM_FACE_SLOTS 50
 
 
 // GLOBAL FOR FACES LISTING
@@ -51,10 +54,10 @@ static UINT32   guiNumFaces = 0;
 
 
 #define FOR_EACH_FACE(iter)                                    \
-	for (FACETYPE*       iter        = gFacesData,               \
-	             * const iter##__end = gFacesData + guiNumFaces; \
-	     iter != iter##__end;                                    \
-	     ++iter)                                                 \
+	for (FACETYPE* iter = gFacesData,               \
+		* const iter##__end = gFacesData + guiNumFaces; \
+		iter != iter##__end;                                    \
+		++iter)                                                 \
 		if (!iter->fAllocated) continue; else
 
 
@@ -155,7 +158,7 @@ FACETYPE& InitFace(const ProfileID id, SOLDIERTYPE* const s, const UINT32 uiInit
 	if (uiInitFlags & FACE_BIGFACE)
 	{
 		face_file = FACESDIR "/b%02d.sti";
-    // ATE: Check for profile - if elliot, use special face :)
+		// ATE: Check for profile - if elliot, use special face :)
 		if (id == ELLIOT && p.bNPCData > 3)
 		{
 			if      (p.bNPCData <   7) face_file = FACESDIR "/b%02da.sti";
@@ -177,7 +180,7 @@ FACETYPE& InitFace(const ProfileID id, SOLDIERTYPE* const s, const UINT32 uiInit
 	sprintf(ImageFile, face_file, face_id);
 	SGPVObject* const vo = AddVideoObjectFromFile(ImageFile);
 
-	memset(&f, 0, sizeof(f));
+	f = FACETYPE{};
 	f.uiFlags               = uiInitFlags;
 	f.fAllocated            = TRUE;
 	f.fDisabled             = TRUE; // default to off!
@@ -264,7 +267,7 @@ void DeleteFace(FACETYPE* const pFace)
 	// Check for a valid slot!
 	CHECKV(pFace->fAllocated);
 
-  pFace->fCanHandleInactiveNow = TRUE;
+	pFace->fCanHandleInactiveNow = TRUE;
 
 	SetAutoFaceInActive(*pFace);
 
@@ -475,12 +478,10 @@ static void BlinkAutoFace(FACETYPE& f)
 
 	// CHECK IF BUDDY IS DEAD, UNCONSCIOUS, ASLEEP, OR POW!
 	SOLDIERTYPE const* const s = f.soldier;
-	if (s != NULL &&
-			(
-				s->fMercAsleep           ||
-				s->bLife       <  OKLIFE ||
-				s->bAssignment == ASSIGNMENT_POW
-			))
+	if (s != NULL && (
+		s->fMercAsleep ||
+		s->bLife < OKLIFE ||
+		s->bAssignment == ASSIGNMENT_POW))
 	{
 		return;
 	}
@@ -496,7 +497,7 @@ static void BlinkAutoFace(FACETYPE& f)
 		}
 
 		if (f.fAnimatingTalking &&
-				GetJA2Clock() - f.uiLastExpression > f.uiExpressionFrequency)
+			GetJA2Clock() - f.uiLastExpression > f.uiExpressionFrequency)
 		{
 			f.uiLastExpression = GetJA2Clock();
 			f.ubExpression     = (Random(2) == 0 ? ANGRY : SURPRISED);
@@ -504,15 +505,13 @@ static void BlinkAutoFace(FACETYPE& f)
 	}
 
 	if (f.ubExpression != NO_EXPRESSION &&
-			GetJA2Clock() - f.uiEyelast > f.uiEyeDelay) // Are we going to blink?
+		GetJA2Clock() - f.uiEyelast > f.uiEyeDelay) // Are we going to blink?
 	{
 		f.uiEyelast = GetJA2Clock();
 
 		NewEye(f);
 
 		INT16 sFrame = f.sEyeFrame;
-		if (sFrame > 4) sFrame = 4;
-
 		if (sFrame > 0)
 		{
 			// Blit Accordingly!
@@ -670,8 +669,8 @@ static void HandleTalkingAutoFace(FACETYPE& f)
 	{
 		// Check if we are done talking
 		if (f.fValidSpeech ?
-		      !SoundIsPlaying(f.uiSoundID) :
-		      GetJA2Clock() - f.uiTalkingTimer > f.uiTalkingDuration)
+			!SoundIsPlaying(f.uiSoundID) :
+			GetJA2Clock() - f.uiTalkingTimer > f.uiTalkingDuration)
 		{
 			SetupFinalTalkingDelay(f);
 		}
@@ -698,7 +697,7 @@ static void SetFaceShade(FACETYPE const& f, BOOLEAN const fExternBlit)
 
 	UINT32 shade;
 	if (!fExternBlit && // ATE: Don't shade for damage if blitting extern face
-			s->fFlashPortrait == FLASH_PORTRAIT_START)
+		s->fFlashPortrait == FLASH_PORTRAIT_START)
 	{
 		shade = s->bFlashPortraitFrame;
 	}
@@ -706,11 +705,10 @@ static void SetFaceShade(FACETYPE const& f, BOOLEAN const fExternBlit)
 	{
 		shade = FLASH_PORTRAIT_DARKSHADE;
 	}
-	else if (!fExternBlit                     &&
-			!f.video_overlay                      &&
-			s->bActionPoints == 0                 &&
-			!(gTacticalStatus.uiFlags & REALTIME) &&
-			gTacticalStatus.uiFlags & INCOMBAT)
+	else if (!fExternBlit &&
+		!f.video_overlay &&
+		s->bActionPoints == 0 &&
+		gTacticalStatus.uiFlags & INCOMBAT)
 	{
 		shade = FLASH_PORTRAIT_LITESHADE;
 	}
@@ -795,11 +793,11 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 			}
 		}
 
-    // ATE: If talking in popup, don't do the other things.....
-    if (f.fTalking && gTacticalStatus.uiFlags & IN_ENDGAME_SEQUENCE)
-    {
-      return;
-    }
+		// ATE: If talking in popup, don't do the other things.....
+		if (f.fTalking && gTacticalStatus.uiFlags & IN_ENDGAME_SEQUENCE)
+		{
+			return;
+		}
 
 		// ATE: Only do this, because we can be talking during an interrupt....
 		// Don't do this if we are being handled elsewhere and it's not an extern buffer...
@@ -811,8 +809,7 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 			{
 				SetFontDestBuffer(uiRenderBuffer);
 
-				wchar_t sString[32];
-				swprintf(sString, lengthof(sString), L"%d", s->bOppCnt);
+				ST::string sString = ST::format("{}", s->bOppCnt);
 
 				SetFontAttributes(TINYFONT1, FONT_DKRED, DEFAULT_SHADOW, FONT_NEARBLACK);
 
@@ -832,17 +829,19 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 				RectangleDraw(TRUE, sX1, sY1, sX2, sY2, usLineColor, l.Buffer<UINT16>());
 			}
 
-			if ((s->bInSector && (gTacticalStatus.ubCurrentTeam != OUR_TEAM || !OK_INTERRUPT_MERC(s)) && !gfHiddenInterrupt) ||
-					(gfSMDisableForItems && !gfInItemPickupMenu && gpSMCurrentMerc == s && gsCurInterfacePanel == SM_PANEL))
+			if ((s->bInSector && (gTacticalStatus.ubCurrentTeam != OUR_TEAM || !OK_INTERRUPT_MERC(s)) &&
+				!gfHiddenInterrupt) ||
+				(gfSMDisableForItems && !gfInItemPickupMenu &&
+				gpSMCurrentMerc == s && gsCurInterfacePanel == SM_PANEL))
 			{
 				// Blit hatch!
 				BltVideoObject(uiRenderBuffer, guiHATCH, 0, sFaceX, sFaceY);
 			}
 
 			// Render text above here if that's what was asked for
-			if (!f.fDisabled    &&
-					!f.fInvalidAnim &&
-					f.fDisplayTextOver != FACE_NO_TEXT_OVER)
+			if (!f.fDisabled &&
+				!f.fInvalidAnim &&
+				f.fDisplayTextOver != FACE_NO_TEXT_OVER)
 			{
 				SetFontAttributes(TINYFONT1, FONT_MCOLOR_WHITE);
 				SetFontDestBuffer(uiRenderBuffer);
@@ -869,15 +868,20 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 
 		INT16 sIconIndex = -1;
 
-    // Check if a robot and is not controlled....
-	  if (s->uiStatusFlags & SOLDIER_ROBOT && !CanRobotBeControlled(s)) sIconIndex = 5;
+		// Check if a robot and is not controlled....
+		if (s->uiStatusFlags & SOLDIER_ROBOT && !CanRobotBeControlled(s))
+			sIconIndex = 5;
 
-    if (ControllingRobot(s)) sIconIndex = 4;
+		if (ControllingRobot(s))
+			sIconIndex = 4;
 
 		INT8 icon_pos = 0;
-    if (s->bBlindedCounter > 0)               DoRightIcon(uiRenderBuffer, f, sFaceX, sFaceY, icon_pos++, 6);
-    if (s->bDrugEffect[DRUG_TYPE_ADRENALINE]) DoRightIcon(uiRenderBuffer, f, sFaceX, sFaceY, icon_pos++, 7);
-	  if (GetDrunkLevel(s) != SOBER)            DoRightIcon(uiRenderBuffer, f, sFaceX, sFaceY, icon_pos++, 8);
+		if (s->bBlindedCounter > 0)
+			DoRightIcon(uiRenderBuffer, f, sFaceX, sFaceY, icon_pos++, 6);
+		if (s->bDrugEffect[DRUG_TYPE_ADRENALINE])
+			DoRightIcon(uiRenderBuffer, f, sFaceX, sFaceY, icon_pos++, 7);
+		if (GetDrunkLevel(s) != SOBER)
+			DoRightIcon(uiRenderBuffer, f, sFaceX, sFaceY, icon_pos++, 8);
 
 		INT16   sPtsAvailable = 0;
 		UINT16  usMaximumPts  = 0;
@@ -887,7 +891,8 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 			case DOCTOR:
 				sPtsAvailable = CalculateHealingPointsForDoctor(s, &usMaximumPts, FALSE);
 
-				// divide both amounts by 10 to make the displayed numbers a little more user-palatable (smaller)
+				// divide both amounts by 10 to make the displayed numbers a
+				// little more user-palatable (smaller)
 				sPtsAvailable = (sPtsAvailable + 5) / 10;
 				usMaximumPts  = (usMaximumPts  + 5) / 10;
 				fShowNumber   = TRUE;
@@ -908,8 +913,8 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 			case TRAIN_BY_OTHER:
 			{
 				// there could be bonus pts for training at gun range
-				const BOOLEAN fAtGunRange =
-					s->sSectorX == 13 && s->sSectorY == MAP_ROW_H && s->bSectorZ == 0;
+				const BOOLEAN fAtGunRange = s->sSectorX == 13 &&
+								s->sSectorY == MAP_ROW_H && s->bSectorZ == 0;
 
 				switch (s->bAssignment)
 				{
@@ -923,7 +928,8 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 
 					case TRAIN_TOWN:
 						sPtsAvailable = GetTownTrainPtsForCharacter(s, &usMaximumPts);
-						// divide both amounts by 10 to make the displayed numbers a little more user-palatable (smaller)
+						// divide both amounts by 10 to make the displayed numbers a
+						// little more user-palatable (smaller)
 						sPtsAvailable = (sPtsAvailable + 5) / 10;
 						usMaximumPts  = (usMaximumPts  + 5) / 10;
 						break;
@@ -942,7 +948,8 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 				// check if we are repairing a vehicle
 				if (s->bVehicleUnderRepairID != -1)
 				{
-					// reduce to a multiple of VEHICLE_REPAIR_POINTS_DIVISOR.  This way skill too low will show up as 0 repair pts.
+					// reduce to a multiple of VEHICLE_REPAIR_POINTS_DIVISOR.
+					// This way skill too low will show up as 0 repair pts.
 					sPtsAvailable -= sPtsAvailable % VEHICLE_REPAIR_POINTS_DIVISOR;
 					usMaximumPts  -= usMaximumPts  % VEHICLE_REPAIR_POINTS_DIVISOR;
 				}
@@ -963,13 +970,12 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 			GetXYForIconPlacement(f, sIconIndex, sFaceX, sFaceY, &sIconX, &sIconY);
 			BltVideoObject(uiRenderBuffer, guiPORTRAITICONS, sIconIndex, sIconX, sIconY);
 
-      // ATE: Show numbers only in mapscreen
+			// ATE: Show numbers only in mapscreen
 			if (fShowNumber)
 			{
 				SetFontDestBuffer(uiRenderBuffer);
 
-				wchar_t sString[32];
-				swprintf(sString, lengthof(sString), L"%d/%d", sPtsAvailable, usMaximumPts);
+				ST::string sString = ST::format("{}/{}", sPtsAvailable, usMaximumPts);
 
 				SetFontAttributes(FONT10ARIAL, FONT_YELLOW);
 
@@ -979,7 +985,7 @@ static void HandleRenderFaceAdjustments(FACETYPE& f, BOOLEAN const fDisplayBuffe
 			}
 		}
 	}
-  else if ((f.ubCharacterNum == FATHER || f.ubCharacterNum == MICKY) &&
+	else if ((f.ubCharacterNum == FATHER || f.ubCharacterNum == MICKY) &&
 			gMercProfiles[f.ubCharacterNum].bNPCData >= 5)
 	{
 		DoRightIcon(uiRenderBuffer, f, sFaceX, sFaceY, 0, 8);
@@ -1015,10 +1021,10 @@ void RenderAutoFace(FACETYPE& f)
 
 void ExternRenderFace(SGPVSurface* const buffer, FACETYPE& f, INT16 const sX, INT16 const sY)
 {
-	UINT16						usEyesX;
-	UINT16						usEyesY;
-	UINT16						usMouthX;
-	UINT16						usMouthY;
+	UINT16 usEyesX;
+	UINT16 usEyesY;
+	UINT16 usMouthX;
+	UINT16 usMouthY;
 
 	// Check for a valid slot!
 	CHECKV(f.fAllocated);
@@ -1044,10 +1050,9 @@ void ExternRenderFace(SGPVSurface* const buffer, FACETYPE& f, INT16 const sX, IN
 
 static void NewEye(FACETYPE& f)
 {
-
- switch(f.sEyeFrame)
- {
-  case 0 : //f.sEyeFrame = (INT16)Random(2);	// normal - can blink or frown
+	switch(f.sEyeFrame)
+	{
+		case 0: // normal
 			if ( f.ubExpression == ANGRY )
 			{
 				f.ubEyeWait = 0;
@@ -1059,65 +1064,37 @@ static void NewEye(FACETYPE& f)
 				f.sEyeFrame = 4;
 			}
 			else
-	   //if (f.sEyeFrame && Talk.talking && Talk.expression != DYING)
-	   ///    f.sEyeFrame = 3;
-	   //else
-	       f.sEyeFrame = 1;
-	   break;
-  case 1 : // starting to blink  - has to finish unless dying
-	   //if (Talk.expression == DYING)
-	   //    f.sEyeFrame = 1;
-	   //else
-	       f.sEyeFrame = 2;
-	   break;
-  case 2 : //f.sEyeFrame = (INT16)Random(2);	// finishing blink - can go normal or frown
-	   //if (f.sEyeFrame && Talk.talking)
-	   //    f.sEyeFrame = 3;
-	   //else
-	   //   if (Talk.expression == ANGRY)
-		 // f.sEyeFrame = 3;
-	   //   else
-		  f.sEyeFrame = 0;
-	   break;
+				f.sEyeFrame = 1;
+			break;
 
-  case 3 : //f.sEyeFrame = 4; break;	// frown
+		case 1 : // blink (eyelid down)
+			f.sEyeFrame = 2;
+			break;
+		case 2 : // blink (eyelid up)
+			f.sEyeFrame = 0;
+			break;
 
+		case 3 : // frown (eyebrown down)
 			f.ubEyeWait++;
-
 			if ( f.ubEyeWait > 6 )
 			{
 				f.sEyeFrame = 0;
 			}
 			break;
 
-  case 4 :
-
+		case 4 : // surprise (eyebrow up)
 			f.ubEyeWait++;
-
 			if ( f.ubEyeWait > 6 )
 			{
 				f.sEyeFrame = 0;
 			}
 			break;
 
-  case 5 : f.sEyeFrame = 6;
-
-		f.sEyeFrame = 0;
-	   break;
-
-  case 6 : f.sEyeFrame = 7; break;
-  case 7 : f.sEyeFrame = (INT16)Random(2);	// can stop frowning or continue
-	   //if (f.sEyeFrame && Talk.expression != DYING)
-	    //   f.sEyeFrame = 8;
-	   //else
-	   //    f.sEyeFrame = 0;
-	   //break;
-  case 8 : f.sEyeFrame =  9; break;
-  case 9 : f.sEyeFrame = 10; break;
-  case 10: f.sEyeFrame = 11; break;
-  case 11: f.sEyeFrame = 12; break;
-  case 12: f.sEyeFrame =  0; break;
- }
+		default:
+			SLOGW("unexpected eye frame (%d)", f.sEyeFrame);
+			f.sEyeFrame = 0;
+			break;
+	}
 }
 
 
@@ -1148,9 +1125,12 @@ void HandleAutoFaces(void)
 			BOOLEAN render = FALSE;
 
 			UINT32 new_flags = f.uiFlags & ~(FACE_SHOW_WHITE_HILIGHT | FACE_SHOW_MOVING_HILIGHT | FACE_REDRAW_WHOLE_FACE_NEXT_FRAME);
-			if (s == gSelectedGuy)                                           new_flags |= FACE_SHOW_WHITE_HILIGHT;
-			if (s->sGridNo != s->sFinalDestination && s->sGridNo != NOWHERE) new_flags |= FACE_SHOW_MOVING_HILIGHT;
-			if (f.uiFlags != new_flags)                                      render     = TRUE;
+			if (s == gSelectedGuy)
+				new_flags |= FACE_SHOW_WHITE_HILIGHT;
+			if (s->sGridNo != s->sFinalDestination && s->sGridNo != NOWHERE)
+				new_flags |= FACE_SHOW_MOVING_HILIGHT;
+			if (f.uiFlags != new_flags)
+				render = TRUE;
 			f.uiFlags = new_flags;
 
 			if (s->bStealthMode != f.bOldStealthMode)
@@ -1234,9 +1214,11 @@ void HandleAutoFaces(void)
 					break;
 			}
 
-			if (fInterfacePanelDirty == DIRTYLEVEL2 && guiCurrentScreen == GAME_SCREEN) render = TRUE;
+			if (fInterfacePanelDirty == DIRTYLEVEL2 && guiCurrentScreen == GAME_SCREEN)
+				render = TRUE;
 
-			if (render) RenderAutoFace(f);
+			if (render)
+				RenderAutoFace(f);
 		}
 
 		BlinkAutoFace(f);
@@ -1267,17 +1249,17 @@ static void FaceRestoreSavedBackgroundRect(FACETYPE const& f, INT16 const sDestL
 }
 
 
-void SetFaceTalking(FACETYPE& f, char const* const zSoundFile, wchar_t const* const zTextString)
+void SetFaceTalking(FACETYPE& f, const char* zSoundFile, const ST::string& zTextString)
 {
 	// Set face to talking
 	f.fTalking          = TRUE;
 	f.fAnimatingTalking = TRUE;
 	f.fFinishTalking    = FALSE;
 
-  if ( !AreInMeanwhile( ) )
-  {
-    TurnOnSectorLocator(f.ubCharacterNum);
-  }
+	if ( !AreInMeanwhile( ) )
+	{
+		TurnOnSectorLocator(f.ubCharacterNum);
+	}
 
 	// Play sample
 	if( gGameSettings.fOptions[ TOPTION_SPEECH ] )

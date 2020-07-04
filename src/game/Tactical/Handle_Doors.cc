@@ -32,6 +32,8 @@
 #include "Debug.h"
 #include "GameRes.h"
 
+#include <string_theory/string>
+
 
 static BOOLEAN HandleDoorsOpenClose(SOLDIERTYPE* pSoldier, INT16 sGridNo, STRUCTURE* pStructure, BOOLEAN fNoAnimations);
 
@@ -41,7 +43,7 @@ void HandleDoorChangeFromGridNo(SOLDIERTYPE* const s, INT16 const grid_no, BOOLE
 	STRUCTURE* const structure = FindStructure(grid_no, STRUCTURE_ANYDOOR);
 	if (!structure)
 	{
-		SLOGE(DEBUG_TAG_INTERFACE, "Told to handle door that does not exist at %d.", grid_no);
+		SLOGE("Told to handle door that does not exist at %d.", grid_no);
 		return;
 	}
 
@@ -55,7 +57,7 @@ void HandleDoorChangeFromGridNo(SOLDIERTYPE* const s, INT16 const grid_no, BOOLE
 	DOOR_STATUS* const door_status = GetDoorStatus(grid_no);
 	if (!door_status)
 	{
-		SLOGE(DEBUG_TAG_INTERFACE, "Told to set door busy but can't get door status at %d!", grid_no);
+		SLOGE("Told to set door busy but can't get door status at %d!", grid_no);
 		return;
 	}
 
@@ -169,9 +171,12 @@ void InteractWithClosedDoor(SOLDIERTYPE* const pSoldier, HandleDoor const ubHand
 
 static bool DoTrapCheckOnStartingMenu(SOLDIERTYPE& s, DOOR& d)
 {
-	if (!d.fLocked)                                    return false;
-	if (d.ubTrapID == NO_TRAP)                         return false;
-	if (d.bPerceivedTrapped != DOOR_PERCEIVED_UNKNOWN) return false;
+	if (!d.fLocked)
+		return false;
+	if (d.ubTrapID == NO_TRAP)
+		return false;
+	if (d.bPerceivedTrapped != DOOR_PERCEIVED_UNKNOWN)
+		return false;
 
 	// check for noticing the trap
 	INT8 const detect_level = CalcTrapDetectLevel(&s, FALSE);
@@ -201,7 +206,10 @@ void InteractWithOpenableStruct(SOLDIERTYPE& s, STRUCTURE& structure, UINT8 cons
 		}
 	}
 
-	EVENT_SetSoldierDesiredDirectionForward(&s, direction);
+	if (!s.bCollapsed)
+	{
+		EVENT_SetSoldierDesiredDirectionForward(&s, direction);
+	}
 
 	// Is the door opened?
 	if (structure.fFlags & STRUCTURE_OPEN)
@@ -209,9 +217,13 @@ void InteractWithOpenableStruct(SOLDIERTYPE& s, STRUCTURE& structure, UINT8 cons
 		if (IsOnOurTeam(s) && !(structure.fFlags & STRUCTURE_SWITCH))
 		{
 			// Bring up menu to decide what to do
-			SoldierGotoStationaryStance(&s);
+			if (!s.bCollapsed)
+			{
+				SoldierGotoStationaryStance(&s);
+			}
 			DOOR* const d = FindDoorInfoAtGridNo(base.sGridNo);
-			if (!d || !DoTrapCheckOnStartingMenu(s, *d)) InitDoorOpenMenu(&s, TRUE);
+			if (!d || !DoTrapCheckOnStartingMenu(s, *d))
+				InitDoorOpenMenu(&s, TRUE);
 		}
 		else
 		{ // Easily close door
@@ -226,8 +238,10 @@ void InteractWithOpenableStruct(SOLDIERTYPE& s, STRUCTURE& structure, UINT8 cons
 			if (d && d->fLocked) // Bring up the menu, only if it has a lock
 			{
 				// Bring up menu to decide what to do
-				SoldierGotoStationaryStance(&s);
-
+				if (!s.bCollapsed)
+				{
+					SoldierGotoStationaryStance(&s);
+				}
 				if (!DoTrapCheckOnStartingMenu(s, *d))
 				{
 					InitDoorOpenMenu(&s, FALSE);
@@ -251,24 +265,20 @@ static void ProcessImplicationsOfPCMessingWithDoor(SOLDIERTYPE* pSoldier)
 	// if player is hacking at a door in the brothel and a kingpin guy can see him
 	UINT8 const room = GetRoom(pSoldier->sGridNo);
 	if (IN_BROTHEL(room) ||
-			(
-				gWorldSectorX  == 5         &&
-				gWorldSectorY  == MAP_ROW_D &&
-				gbWorldSectorZ == 0         &&
-				(
-					pSoldier->sGridNo == 11010 ||
-					pSoldier->sGridNo == 11177 ||
-					pSoldier->sGridNo == 11176
-				)
-			))
+		(gWorldSectorX == 5 &&
+		gWorldSectorY == MAP_ROW_D &&
+		gbWorldSectorZ == 0 &&
+		(pSoldier->sGridNo == 11010 ||
+		pSoldier->sGridNo == 11177 ||
+		pSoldier->sGridNo == 11176)))
 	{
 		// see if a kingpin goon can see us
 		FOR_EACH_IN_TEAM(pGoon, CIV_TEAM)
 		{
 			if (pGoon->ubCivilianGroup == KINGPIN_CIV_GROUP &&
-					pGoon->bInSector &&
-					pGoon->bLife >= OKLIFE &&
-					pGoon->bOppList[pSoldier->ubID] == SEEN_CURRENTLY)
+				pGoon->bInSector &&
+				pGoon->bLife >= OKLIFE &&
+				pGoon->bOppList[pSoldier->ubID] == SEEN_CURRENTLY)
 			{
 				MakeCivHostile( pGoon, 2 );
 				if ( ! (gTacticalStatus.uiFlags & INCOMBAT) )
@@ -297,10 +307,10 @@ static void ProcessImplicationsOfPCMessingWithDoor(SOLDIERTYPE* pSoldier)
 BOOLEAN HandleOpenableStruct( SOLDIERTYPE *pSoldier, INT16 sGridNo, STRUCTURE *pStructure )
 {
 	BOOLEAN fHandleDoor = FALSE;
-	INT16		sAPCost = 0, sBPCost = 0;
-	DOOR		*pDoor;
-	BOOLEAN	fDoAction = TRUE;
-	BOOLEAN	fDoor     = FALSE;
+	INT16   sAPCost = 0, sBPCost = 0;
+	DOOR    *pDoor;
+	BOOLEAN fDoAction = TRUE;
+	BOOLEAN fDoor     = FALSE;
 
 	// Are we a door?
 	if (pStructure->fFlags & STRUCTURE_ANYDOOR)
@@ -329,7 +339,9 @@ BOOLEAN HandleOpenableStruct( SOLDIERTYPE *pSoldier, INT16 sGridNo, STRUCTURE *p
 			pDoor = FindDoorInfoAtGridNo( sGridNo );
 
 			// Alrighty, first check for traps ( unless we are examining.... )
-			if ( pSoldier->ubDoorHandleCode != HANDLE_DOOR_EXAMINE && pSoldier->ubDoorHandleCode != HANDLE_DOOR_UNTRAP && pSoldier->ubDoorHandleCode != HANDLE_DOOR_UNLOCK )
+			if (pSoldier->ubDoorHandleCode != HANDLE_DOOR_EXAMINE &&
+				pSoldier->ubDoorHandleCode != HANDLE_DOOR_UNTRAP &&
+				pSoldier->ubDoorHandleCode != HANDLE_DOOR_UNLOCK)
 			{
 				if ( pDoor != NULL )
 				{
@@ -352,7 +364,7 @@ BOOLEAN HandleOpenableStruct( SOLDIERTYPE *pSoldier, INT16 sGridNo, STRUCTURE *p
 							if (DoorTrapTable[pDoor->ubTrapID].fFlags & DOOR_TRAP_STOPS_ACTION)
 							{
 								// trap stops person from opening door!
-								fDoAction	 = FALSE;
+								fDoAction = FALSE;
 							}
 							if (!( DoorTrapTable[pDoor->ubTrapID].fFlags & DOOR_TRAP_RECURRING ) )
 							{
@@ -369,11 +381,11 @@ BOOLEAN HandleOpenableStruct( SOLDIERTYPE *pSoldier, INT16 sGridNo, STRUCTURE *p
 							// do we know it's trapped?
 							if ( pDoor->bPerceivedTrapped == DOOR_PERCEIVED_UNKNOWN )
 							{
-								wchar_t const* const trap_name = GetTrapName(*pDoor);
-								ScreenMsg(MSG_FONT_YELLOW, MSG_INTERFACE, TacticalStr[DOOR_LOCK_DESCRIPTION_STR], trap_name);
+								ST::string trap_name = GetTrapName(*pDoor);
+								ScreenMsg(MSG_FONT_YELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[DOOR_LOCK_DESCRIPTION_STR], trap_name));
 
 								// Stop action this time....
-								fDoAction	 = FALSE;
+								fDoAction = FALSE;
 
 								// report!
 								TacticalCharacterDialogue( pSoldier, QUOTE_BOOBYTRAP_ITEM );
@@ -385,7 +397,7 @@ BOOLEAN HandleOpenableStruct( SOLDIERTYPE *pSoldier, INT16 sGridNo, STRUCTURE *p
 								if (DoorTrapTable[pDoor->ubTrapID].fFlags & DOOR_TRAP_STOPS_ACTION)
 								{
 									// trap stops person from opening door!
-									fDoAction	 = FALSE;
+									fDoAction = FALSE;
 								}
 								if (!( DoorTrapTable[pDoor->ubTrapID].fFlags & DOOR_TRAP_RECURRING ) )
 								{
@@ -577,8 +589,8 @@ BOOLEAN HandleOpenableStruct( SOLDIERTYPE *pSoldier, INT16 sGridNo, STRUCTURE *p
 							{
 								// We have a trap. Use door pointer to determine what type, etc
 								TacticalCharacterDialogue( pSoldier, QUOTE_BOOBYTRAP_ITEM );
-								wchar_t const* const trap_name = GetTrapName(*pDoor);
-								ScreenMsg(MSG_FONT_YELLOW, MSG_INTERFACE, TacticalStr[DOOR_LOCK_DESCRIPTION_STR], trap_name);
+								ST::string trap_name = GetTrapName(*pDoor);
+								ScreenMsg(MSG_FONT_YELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[DOOR_LOCK_DESCRIPTION_STR], trap_name));
 
 								UpdateDoorPerceivedValue( pDoor );
 							}
@@ -628,7 +640,7 @@ BOOLEAN HandleOpenableStruct( SOLDIERTYPE *pSoldier, INT16 sGridNo, STRUCTURE *p
 								// OK PLay damn battle sound
 								if ( Random( 2 ) )
 								{
-									DoMercBattleSound( pSoldier, BATTLE_SOUND_CURSE1 );
+									DoMercBattleSound(pSoldier, BATTLE_SOUND_CURSE1);
 								}
 							}
 						}
@@ -656,7 +668,7 @@ BOOLEAN HandleOpenableStruct( SOLDIERTYPE *pSoldier, INT16 sGridNo, STRUCTURE *p
 							{
 								if ( AttemptToUntrapDoor( pSoldier, pDoor ) )
 								{
-									DoMercBattleSound( pSoldier, BATTLE_SOUND_COOL1 );
+									DoMercBattleSound(pSoldier, BATTLE_SOUND_COOL1);
 									ChangeSoldierState(pSoldier, GetAnimStateForInteraction(*pSoldier, fDoor, END_OPEN_DOOR), 0, FALSE);
 									UpdateDoorPerceivedValue( pDoor );
 									//fHandleDoor = TRUE;
@@ -716,7 +728,7 @@ BOOLEAN HandleOpenableStruct( SOLDIERTYPE *pSoldier, INT16 sGridNo, STRUCTURE *p
 								ChangeSoldierState(pSoldier, GetAnimStateForInteraction(*pSoldier, fDoor, END_OPEN_LOCKED_DOOR), 0, FALSE);
 								// Do we have a quote for locked stuff?
 								// Now just show on message bar
-								ScreenMsg( MSG_FONT_YELLOW, MSG_INTERFACE, TacticalStr[ DOOR_NOT_PROPER_KEY_STR ], pSoldier->name );
+								ScreenMsg( MSG_FONT_YELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[ DOOR_NOT_PROPER_KEY_STR ], pSoldier->name) );
 
 								// Update perceived lock value
 								UpdateDoorPerceivedValue( pDoor );
@@ -763,11 +775,10 @@ BOOLEAN HandleOpenableStruct( SOLDIERTYPE *pSoldier, INT16 sGridNo, STRUCTURE *p
 static BOOLEAN HandleDoorsOpenClose(SOLDIERTYPE* pSoldier, INT16 sGridNo, STRUCTURE* pStructure, BOOLEAN fNoAnimations)
 try
 {
-	LEVELNODE	* pShadowNode;
-	INT32				cnt;
-	BOOLEAN					fOpenedGraphic = FALSE;
-	BOOLEAN					fDoAnimation = TRUE;
-	STRUCTURE *	pBaseStructure;
+	INT32 cnt;
+	BOOLEAN fOpenedGraphic = FALSE;
+	BOOLEAN fDoAnimation = TRUE;
+	STRUCTURE *pBaseStructure;
 
 	pBaseStructure = FindBaseStructure( pStructure );
 	if (!pBaseStructure)
@@ -812,9 +823,6 @@ try
 			}
 		}
 	}
-
-
-	pShadowNode = gpWorldLevelData[ sGridNo ].pShadowHead;
 
 
 	// Check the graphic which is down!
@@ -875,7 +883,7 @@ try
 			ModifyDoorStatus( sGridNo, DONTSETDOORSTATUS, TRUE );
 
 			ANITILE_PARAMS AniParams;
-			memset(&AniParams, 0, sizeof(AniParams));
+			AniParams = ANITILE_PARAMS{};
 			AniParams.uiFlags         = ANITILE_DOOR | ANITILE_EXISTINGTILE | (fOpenedGraphic ? ANITILE_FORWARD : ANITILE_BACKWARD);
 			AniParams.ubLevelID       = ANI_STRUCT_LEVEL;
 			AniParams.sStartFrame     = pNode->sCurrentFrame;
@@ -885,17 +893,6 @@ try
 			AniParams.pGivenLevelNode = pNode;
 			CreateAnimationTile(&AniParams);
 		}
-
-		// SHADOW STUFF HERE
-		//if ( pShadowNode != NULL )
-		//{
-		//	pShadowNode->uiFlags |= LEVELNODE_ANIMATION;
-		//	pShadowNode->uiFlags |= LEVELNODE_ANIMATION_PLAYONCE;
-		//	pShadowNode->uiFlags |= LEVELNODE_ANIMATION_FORWARD;
-		//	if ( pShadowNode->uiFlags & LEVELNODE_ANIMATION_BACKWARD )
-		//		pShadowNode->uiFlags ^= LEVELNODE_ANIMATION_BACKWARD;
-		//	pShadowNode->sDelay		= INTTILE_DOOR_OPENSPEED;
-		//}
 
 		if ( fDoAnimation && pSoldier && pSoldier->ubDoorOpeningNoise)
 		{
@@ -911,15 +908,15 @@ try
 					// change sound ID
 					uiSoundID = GARAGE_DOOR_OPEN;
 				}
-       	else if ( pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_CLOTH )
-	  		{
-		  		// change sound ID
-			  	uiSoundID = CURTAINS_OPEN;
-			  }
-      }
-      else if ( pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_LIGHT_METAL ||
-           pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_THICKER_METAL ||
-           pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_HEAVY_METAL )
+				else if ( pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_CLOTH )
+				{
+					// change sound ID
+					uiSoundID = CURTAINS_OPEN;
+				}
+			}
+			else if (pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_LIGHT_METAL ||
+					pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_THICKER_METAL ||
+					pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_HEAVY_METAL)
 			{
 				// change sound ID
 				uiSoundID = METAL_DOOR_OPEN;
@@ -980,22 +977,22 @@ try
 					// change sound ID
 					uiSoundID = GARAGE_DOOR_CLOSE;
 				}
-        else if ( pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_CLOTH )
-			  {
-				  // change sound ID
-				  uiSoundID = CURTAINS_CLOSE;
-			  }
-      }
-		  else if ( pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_LIGHT_METAL ||
-           pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_THICKER_METAL ||
-           pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_HEAVY_METAL )
+				else if ( pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_CLOTH )
+				{
+					// change sound ID
+					uiSoundID = CURTAINS_CLOSE;
+				}
+			}
+			else if (pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_LIGHT_METAL ||
+				pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_THICKER_METAL ||
+				pStructure->pDBStructureRef->pDBStructure->ubArmour == MATERIAL_HEAVY_METAL)
 			{
 				// change sound ID
 				uiSoundID = METAL_DOOR_CLOSE;
 			}
 
 			ANITILE_PARAMS AniParams;
-			memset(&AniParams, 0, sizeof(AniParams));
+			AniParams = ANITILE_PARAMS{};
 			AniParams.uiFlags         = ANITILE_DOOR | ANITILE_EXISTINGTILE | (fOpenedGraphic ? ANITILE_BACKWARD : ANITILE_FORWARD);
 			AniParams.ubLevelID       = ANI_STRUCT_LEVEL;
 			AniParams.sStartFrame     = pNode->sCurrentFrame;
@@ -1004,20 +1001,10 @@ try
 			AniParams.sGridNo         = sGridNo;
 			AniParams.pGivenLevelNode = pNode;
 			AniParams.ubKeyFrame1     = pNode->sCurrentFrame + (fOpenedGraphic ? -2 : 2);
-	    AniParams.uiKeyFrame1Code = ANI_KEYFRAME_DO_SOUND;
-	    AniParams.v.sound         = uiSoundID;
+			AniParams.uiKeyFrame1Code = ANI_KEYFRAME_DO_SOUND;
+			AniParams.v.sound         = uiSoundID;
 			CreateAnimationTile( &AniParams );
 		}
-
-		//if ( pShadowNode != NULL )
-		//{
-		//	pShadowNode->uiFlags |= LEVELNODE_ANIMATION;
-		//	pShadowNode->uiFlags |= LEVELNODE_ANIMATION_PLAYONCE;
-		//	pShadowNode->uiFlags |= LEVELNODE_ANIMATION_BACKWARD;
-		//	if ( pShadowNode->uiFlags & LEVELNODE_ANIMATION_FORWARD )
-		//		pShadowNode->uiFlags ^= LEVELNODE_ANIMATION_FORWARD;
-		//	pShadowNode->sDelay		= INTTILE_DOOR_OPENSPEED;
-		//}
 
 	}
 
@@ -1040,35 +1027,42 @@ catch (...) { return FALSE; }
 
 void SetDoorString(INT16 const sGridNo)
 {
-	if (!GetIntTileLocationText())
+	if (GetIntTileLocationText().empty())
 	{
 		SetIntTileLocationText(TacticalStr[DOOR_DOOR_MOUSE_DESCRIPTION]);
 		DOOR const* const d = FindDoorInfoAtGridNo(sGridNo);
 		if (d != NULL)
 		{
-			wchar_t const* state = 0;
+			ST::string state;
 			if (d->bPerceivedTrapped == DOOR_PERCEIVED_TRAPPED)
 			{
 				state = TacticalStr[DOOR_TRAPPED_MOUSE_DESCRIPTION];
 			}
 			else switch (d->bPerceivedLocked)
 			{
-				case DOOR_PERCEIVED_UNKNOWN:                                                        break;
-				case DOOR_PERCEIVED_LOCKED:   state = TacticalStr[DOOR_LOCKED_MOUSE_DESCRIPTION];   break;
-				case DOOR_PERCEIVED_UNLOCKED: state = TacticalStr[DOOR_UNLOCKED_MOUSE_DESCRIPTION]; break;
-				case DOOR_PERCEIVED_BROKEN:   state = TacticalStr[DOOR_BROKEN_MOUSE_DESCRIPTION];   break;
+				case DOOR_PERCEIVED_UNKNOWN:
+					break;
+				case DOOR_PERCEIVED_LOCKED:
+					state = TacticalStr[DOOR_LOCKED_MOUSE_DESCRIPTION];
+					break;
+				case DOOR_PERCEIVED_UNLOCKED:
+					state = TacticalStr[DOOR_UNLOCKED_MOUSE_DESCRIPTION];
+					break;
+				case DOOR_PERCEIVED_BROKEN:
+					state = TacticalStr[DOOR_BROKEN_MOUSE_DESCRIPTION];
+					break;
 			}
-			if (state) SetIntTileLocation2Text(state);
+			if (!state.empty()) SetIntTileLocation2Text(state);
 		}
 	}
 
 	// ATE: If here, we try to say, opened or closed...
-	if (!GetIntTileLocation2Text())
+	if (GetIntTileLocation2Text().empty())
 	{
-  if(isGermanVersion())
-  {
+	if(isGermanVersion())
+	{
 		SetIntTileLocation2Text(TacticalStr[DOOR_DOOR_MOUSE_DESCRIPTION]);
-  }
+	}
 
 		// Try to get doors status here...
 		bool                     open;
@@ -1077,7 +1071,8 @@ void SetDoorString(INT16 const sGridNo)
 		{
 			// OK, get status based on graphic.....
 			STRUCTURE const* const structure = FindStructure(sGridNo, STRUCTURE_ANYDOOR);
-			if (!structure) return;
+			if (!structure)
+				return;
 
 			open = (structure->fFlags & STRUCTURE_OPEN) != 0;
 		}
@@ -1086,15 +1081,15 @@ void SetDoorString(INT16 const sGridNo)
 			// Use percived value
 			open = (ds->ubFlags & DOOR_PERCEIVED_OPEN) != 0;
 		}
-		wchar_t const* const state = open ?
+		ST::string state = open ?
 			pMessageStrings[MSG_OPENED] : pMessageStrings[MSG_CLOSED];
-  if(isGermanVersion())
-  {
+	if(isGermanVersion())
+	{
 		SetIntTileLocationText(state);
-  }
-  else
-  {
+	}
+	else
+	{
 		SetIntTileLocation2Text(state);
-  }
+	}
 	}
 }

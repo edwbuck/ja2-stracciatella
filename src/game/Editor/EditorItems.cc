@@ -37,6 +37,9 @@
 #include "MagazineModel.h"
 #include "WeaponModels.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
 
 #define NUMBER_TRIGGERS			27
 #define PRESSURE_ACTION_ID	(NUMBER_TRIGGERS - 1)
@@ -71,7 +74,7 @@ void BuildItemPoolList(void)
 
 		ShowItemCursor(i);
 
-		IPListNode* const n = MALLOC(IPListNode);
+		IPListNode* const n = new IPListNode{};
 		n->sGridNo = i;
 		n->next    = NULL;
 
@@ -94,7 +97,7 @@ void KillItemPoolList()
 	{
 		HideItemCursor( pIPCurr->sGridNo );
 		pIPHead = pIPHead->next;
-		MemFree( pIPCurr );
+		delete pIPCurr;
 		pIPCurr = pIPHead;
 	}
 	pIPHead = NULL;
@@ -118,7 +121,7 @@ void EntryInitEditorItemsInfo()
 	eInfo.pusItemIndex = NULL;
 	if( eInfo.fGameInit )
 	{ //This only gets called one time in game execution.
-		memset( &eInfo, 0, sizeof( EditorItemsInfo ) );
+		eInfo = EditorItemsInfo{};
 		eInfo.sHilitedItemIndex = -1;
 		eInfo.uiItemType = TBAR_MODE_ITEM_WEAPONS;
 		//Pre-calculate the number of each item type.
@@ -195,7 +198,7 @@ void InitEditorItemsInfo(ToolbarMode const uiItemType)
 	SGPRect	SaveRect, NewRect;
 	INT16 i, x, y;
 	UINT16 usCounter;
-	wchar_t pStr[100];//, pStr2[ 100 ];
+	ST::string pStr;
 	BOOLEAN fTypeMatch;
 	INT32 iEquipCount = 0;
 
@@ -274,7 +277,7 @@ void InitEditorItemsInfo(ToolbarMode const uiItemType)
 			return;
 	}
 	//Allocate memory to store all the item pointers.
-	eInfo.pusItemIndex = MALLOCN(UINT16, eInfo.sNumItems);
+	eInfo.pusItemIndex = new UINT16[eInfo.sNumItems]{};
 
 	//Disable the appropriate scroll buttons based on the saved scroll index if applicable
 	//Left most scroll position
@@ -316,7 +319,7 @@ void InitEditorItemsInfo(ToolbarMode const uiItemType)
 
 			SetFontDestBuffer(eInfo.uiBuffer);
 
-			swprintf(pStr, lengthof(pStr), L"%hs", LockTable[i].ubEditorName);
+			pStr = ST::format("{}", LockTable[i].ubEditorName);
 			DisplayWrappedString(x, y + 25, 60, 2, SMALLCOMPFONT, FONT_WHITE, pStr, FONT_BLACK, CENTER_JUSTIFIED | MARK_DIRTY);
 
 			DrawItemCentered(GCM->getItem(item_id), eInfo.uiBuffer, x, y + 2, SGP_TRANSPARENT);
@@ -408,41 +411,41 @@ void InitEditorItemsInfo(ToolbarMode const uiItemType)
 
 				if( eInfo.uiItemType != TBAR_MODE_ITEM_TRIGGERS )
 				{
-					wcslcpy(pStr, ItemNames[usCounter], lengthof(pStr));
+					pStr = ItemNames[usCounter];
 				}
 				else
 				{
 					if( i == PRESSURE_ACTION_ID )
 					{
-						wcslcpy(pStr, L"Pressure Action", lengthof(pStr));
+						pStr = "Pressure Action";
 					}
 					else if( i < 2 )
 					{
 						if( usCounter == SWITCH )
-							wcslcpy(pStr, L"Panic Trigger1", lengthof(pStr));
+							pStr = "Panic Trigger1";
 						else
-							wcslcpy(pStr, L"Panic Action1", lengthof(pStr));
+							pStr = "Panic Action1";
 					}
 					else if( i < 4 )
 					{
 						if( usCounter == SWITCH )
-							wcslcpy(pStr, L"Panic Trigger2", lengthof(pStr));
+							pStr = "Panic Trigger2";
 						else
-							wcslcpy(pStr, L"Panic Action2", lengthof(pStr));
+							pStr = "Panic Action2";
 					}
 					else if( i < 6 )
 					{
 						if( usCounter == SWITCH )
-							wcslcpy(pStr, L"Panic Trigger3", lengthof(pStr));
+							pStr = "Panic Trigger3";
 						else
-							wcslcpy(pStr, L"Panic Action3", lengthof(pStr));
+							pStr = "Panic Action3";
 					}
 					else
 					{
 						if( usCounter == SWITCH )
-							swprintf(pStr, lengthof(pStr), L"Trigger%d", (i - 4) / 2);
+							pStr = ST::format("Trigger{}", (i - 4) / 2);
 						else
-							swprintf(pStr, lengthof(pStr), L"Action%d", (i - 4) / 2);
+							pStr = ST::format("Action{}", (i - 4) / 2);
 					}
 				}
 				DisplayWrappedString(x, y + 25, 60, 2, SMALLCOMPFONT, FONT_WHITE, pStr, FONT_BLACK, CENTER_JUSTIFIED | MARK_DIRTY);
@@ -489,13 +492,13 @@ static UINT16 CountNumberOfEditorPlacementsInWorld(UINT16 usEInfoIndex, UINT16* 
 
 static void drawItemWithOutline(INT16 min_idx, INT16 end_idx, INT16 scroll_idx, INT16 itemIndex, INT16 const outline)
 {
-  if (min_idx <= itemIndex && itemIndex < end_idx)
-  {
-    INT16   const  x    = (itemIndex / 2 - scroll_idx) * 60 + 110;
-    INT16   const  y    = EDITOR_TASKBAR_POS_Y + (itemIndex % 2) * 40;
-    const ItemModel *item = GCM->getItem(eInfo.pusItemIndex[itemIndex]);
-    DrawItemCentered(item, FRAME_BUFFER, x, y + 2, outline);
-  }
+	if (min_idx <= itemIndex && itemIndex < end_idx)
+	{
+		INT16   const  x    = (itemIndex / 2 - scroll_idx) * 60 + 110;
+		INT16   const  y    = EDITOR_TASKBAR_POS_Y + (itemIndex % 2) * 40;
+		const ItemModel *item = GCM->getItem(eInfo.pusItemIndex[itemIndex]);
+		DrawItemCentered(item, FRAME_BUFFER, x, y + 2, outline);
+	}
 }
 
 
@@ -522,8 +525,8 @@ void RenderEditorItemsInfo()
 	// Draw the hilighted and selected items if applicable.
 	if (eInfo.pusItemIndex)
 	{
-    drawItemWithOutline(min_idx, end_idx, scroll_idx, eInfo.sHilitedItemIndex, Get16BPPColor(FROMRGB(250, 250, 0)));
-    drawItemWithOutline(min_idx, end_idx, scroll_idx, eInfo.sSelItemIndex,     Get16BPPColor(FROMRGB(250, 0, 0)));
+		drawItemWithOutline(min_idx, end_idx, scroll_idx, eInfo.sHilitedItemIndex, Get16BPPColor(FROMRGB(250, 250, 0)));
+		drawItemWithOutline(min_idx, end_idx, scroll_idx, eInfo.sSelItemIndex,     Get16BPPColor(FROMRGB(250, 0, 0)));
 	}
 
 	// Draw the numbers of each visible item that currently resides in the world.
@@ -538,11 +541,11 @@ void RenderEditorItemsInfo()
 		SetFontAttributes(FONT10ARIAL, FONT_YELLOW);
 		if (n_items == quantity)
 		{
-			mprintf(x + 12, y + 4, L"%d", n_items);
+			MPrint(x + 12, y + 4, ST::format("{}", n_items));
 		}
 		else
 		{
-			mprintf(x + 12, y + 4, L"%d(%d)", n_items, quantity);
+			MPrint(x + 12, y + 4, ST::format("{}({})", n_items, quantity));
 		}
 	}
 }
@@ -557,7 +560,7 @@ void ClearEditorItemsInfo()
 	}
 	if( eInfo.pusItemIndex )
 	{
-		MemFree( eInfo.pusItemIndex );
+		delete[] eInfo.pusItemIndex;
 		eInfo.pusItemIndex = NULL;
 	}
 	DisableEditorRegion( ITEM_REGION_ID );
@@ -602,8 +605,8 @@ void ClearEditorItemsInfo()
 			eInfo.sSaveSelKeysIndex = eInfo.sSelItemIndex;
 			eInfo.sSaveKeysScrollIndex = eInfo.sScrollIndex;
 			break;
-        default:
-            break;
+		default:
+			break;
 	}
 }
 
@@ -820,7 +823,7 @@ void AddSelectedItemToWorld(INT16 sGridNo)
 	//there isn't one, so we will add it now.
 	ShowItemCursor(sGridNo);
 
-	IPListNode* const n = MALLOC(IPListNode);
+	IPListNode* const n = new IPListNode{};
 	n->next            = 0;
 	n->sGridNo         = sGridNo;
 	*anchor            = n;
@@ -903,7 +906,7 @@ void DeleteSelectedItem()
 		}
 		if( gpEditingItemPool == gpItemPool )
 			gpEditingItemPool = NULL;
-		RemoveItemFromPool(&wi);
+		RemoveItemFromPool(wi);
 		gpItemPool = NULL;
 		//determine if there are still any items at this location
 		gpItemPool = GetItemPool(sGridNo, 0);
@@ -932,7 +935,7 @@ void DeleteSelectedItem()
 					}
 					//remove node
 					HideItemCursor( sGridNo );
-					MemFree( pIPCurr );
+					delete pIPCurr;
 					pIPCurr = NULL;
 					return;
 				}
@@ -1460,6 +1463,6 @@ void DisplayItemStatistics()
 	INT16          const highlited  = eInfo.sHilitedItemIndex;
 	INT16          const idx        = highlited != -1 ? highlited : eInfo.sSelItemIndex;
 	UINT8          const foreground = idx == highlited ? FONT_LTRED : FONT_YELLOW;
-	wchar_t const* const item_name  = ItemNames[eInfo.pusItemIndex[idx]];
+	ST::string item_name  = ItemNames[eInfo.pusItemIndex[idx]];
 	DisplayWrappedString(2, EDITOR_TASKBAR_POS_Y + 41, 97, 2, SMALLCOMPFONT, foreground, item_name, FONT_BLACK, CENTER_JUSTIFIED);
 }

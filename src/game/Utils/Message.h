@@ -3,30 +3,33 @@
 
 #include "Types.h"
 
+#include <string_theory/string>
+
+
 extern UINT8 gubCurrentMapMessageString;
 
-#define		MSG_INTERFACE				0
-#define		MSG_DIALOG					1
-#define		MSG_CHAT						2
-#define   MSG_DEBUG						3
-#define		MSG_UI_FEEDBACK			4
-#define   MSG_SKULL_UI_FEEDBACK	11
+#define MSG_INTERFACE		0
+#define MSG_DIALOG		1
+#define MSG_CHAT		2
+#define MSG_DEBUG		3
+#define MSG_UI_FEEDBACK	4
+#define MSG_SKULL_UI_FEEDBACK	11
 
 
 // These defines correlate to defines in font.h
-#define		MSG_FONT_RED					FONT_MCOLOR_RED
-#define		MSG_FONT_YELLOW				FONT_MCOLOR_LTYELLOW
-#define		MSG_FONT_WHITE				FONT_MCOLOR_WHITE
+#define MSG_FONT_RED		FONT_MCOLOR_RED
+#define MSG_FONT_YELLOW	FONT_MCOLOR_LTYELLOW
+#define MSG_FONT_WHITE		FONT_MCOLOR_WHITE
 
 // are we allowed to beep on message scroll in tactical
 extern BOOLEAN fOkToBeepNewMessage;
 
 
 
-void ScreenMsg( UINT16 usColor, UINT8 ubPriority, const wchar_t *pStringA, ...);
+void ScreenMsg(UINT16 usColor, UINT8 ubPriority, const ST::string& str);
 
 // same as screen message, but only display to mapscreen message system, not tactical
-void MapScreenMessage( UINT16 usColor, UINT8 ubPriority, const wchar_t *pStringA, ...);
+void MapScreenMessage(UINT16 usColor, UINT8 ubPriority, const ST::string& str);
 
 void ScrollString( void );
 void DisplayStringsInMapScreenMessageList( void );

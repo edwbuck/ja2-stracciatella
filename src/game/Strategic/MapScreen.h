@@ -7,11 +7,13 @@
 #include "MessageBoxScreen.h"
 #include "ScreenIDs.h"
 
+#include <string_theory/string>
+
 
 // Sector name identifiers
 enum Towns
 {
-  BLANK_SECTOR=0,
+	BLANK_SECTOR=0,
 	OMERTA,
 	DRASSEN,
 	ALMA,
@@ -23,7 +25,7 @@ enum Towns
 	ORTA,
 	BALIME,
 	MEDUNA,
-  CHITZENA,
+	CHITZENA,
 	NUM_TOWNS
 };
 
@@ -74,10 +76,10 @@ BOOLEAN CanChangeSleepStatusForSoldier(const SOLDIERTYPE* s);
 
 bool MapCharacterHasAccessibleInventory(SOLDIERTYPE const&);
 
-wchar_t const* GetMapscreenMercAssignmentString(SOLDIERTYPE const&);
-void GetMapscreenMercLocationString(SOLDIERTYPE const&, wchar_t* buf, size_t n);
-void GetMapscreenMercDestinationString(SOLDIERTYPE const&, wchar_t* buf, size_t n);
-void GetMapscreenMercDepartureString(SOLDIERTYPE const&, wchar_t* buf, size_t n, UINT8* text_colour);
+ST::string GetMapscreenMercAssignmentString(SOLDIERTYPE const& s);
+ST::string GetMapscreenMercLocationString(SOLDIERTYPE const& s);
+ST::string GetMapscreenMercDestinationString(SOLDIERTYPE const& s);
+ST::string GetMapscreenMercDepartureString(SOLDIERTYPE const& s, UINT8* text_colour);
 
 // mapscreen wrapper to init the item description box
 void MAPInternalInitItemDescriptionBox(OBJECTTYPE* pObject, UINT8 ubStatusIndex, SOLDIERTYPE* pSoldier);
@@ -94,7 +96,7 @@ void    RememberPreviousPathForAllSelectedChars(void);
 void    MapScreenDefaultOkBoxCallback(MessageBoxReturnValue);
 void    SetUpCursorForStrategicMap(void);
 void    DrawFace(void);
-void 		DrawStringRight(const wchar_t* str, UINT16 x, UINT16 y, UINT16 w, UINT16 h, SGPFont);
+void DrawStringRight(const ST::string& str, UINT16 x, UINT16 y, UINT16 w, UINT16 h, SGPFont font);
 
 extern GUIButtonRef giMapInvDoneButton;
 extern BOOLEAN      fInMapMode;
@@ -117,31 +119,31 @@ void MakeDialogueEventEnterMapScreen();
 
 void SetMapCursorItem();
 
-#define     NAME_X                (STD_SCREEN_X + 11)
-#define     NAME_WIDTH            (STD_SCREEN_X + 62 - NAME_X)
-#define     ASSIGN_X              (STD_SCREEN_X + 67)
-#define     ASSIGN_WIDTH          (STD_SCREEN_X + 118 - ASSIGN_X)
-#define			SLEEP_X								(STD_SCREEN_X + 123)
-#define			SLEEP_WIDTH						(STD_SCREEN_X + 142 - SLEEP_X)
-#define     LOC_X                 (STD_SCREEN_X + 147)
-#define     LOC_WIDTH             (STD_SCREEN_X + 179 - LOC_X)
-#define     DEST_ETA_X            (STD_SCREEN_X + 184)
-#define     DEST_ETA_WIDTH        (STD_SCREEN_X + 217 - DEST_ETA_X)
-#define     TIME_REMAINING_X      (STD_SCREEN_X + 222)
-#define     TIME_REMAINING_WIDTH  (STD_SCREEN_X + 250 - TIME_REMAINING_X)
-#define     CLOCK_Y_START         (STD_SCREEN_Y + 298)
-#define     CLOCK_ETA_X           (STD_SCREEN_X + 463 - 15 + 6 + 30)
-#define     CLOCK_HOUR_X_START    (STD_SCREEN_X + 463 + 25 + 30)
-#define     CLOCK_MIN_X_START     (STD_SCREEN_X + 463 + 45 + 30)
+#define NAME_X                (STD_SCREEN_X + 11)
+#define NAME_WIDTH            (STD_SCREEN_X + 62 - NAME_X)
+#define ASSIGN_X              (STD_SCREEN_X + 67)
+#define ASSIGN_WIDTH          (STD_SCREEN_X + 118 - ASSIGN_X)
+#define SLEEP_X               (STD_SCREEN_X + 123)
+#define SLEEP_WIDTH           (STD_SCREEN_X + 142 - SLEEP_X)
+#define LOC_X                 (STD_SCREEN_X + 147)
+#define LOC_WIDTH             (STD_SCREEN_X + 179 - LOC_X)
+#define DEST_ETA_X            (STD_SCREEN_X + 184)
+#define DEST_ETA_WIDTH        (STD_SCREEN_X + 217 - DEST_ETA_X)
+#define TIME_REMAINING_X      (STD_SCREEN_X + 222)
+#define TIME_REMAINING_WIDTH  (STD_SCREEN_X + 250 - TIME_REMAINING_X)
+#define CLOCK_Y_START         (STD_SCREEN_Y + 298)
+#define CLOCK_ETA_X           (STD_SCREEN_X + 463 - 15 + 6 + 30)
+#define CLOCK_HOUR_X_START    (STD_SCREEN_X + 463 + 25 + 30)
+#define CLOCK_MIN_X_START     (STD_SCREEN_X + 463 + 45 + 30)
 
 // contract
-#define CONTRACT_X      (STD_SCREEN_X + 185)
-#define CONTRACT_Y      (STD_SCREEN_Y + 50)
+#define CONTRACT_X            (STD_SCREEN_X + 185)
+#define CONTRACT_Y            (STD_SCREEN_Y + 50)
 
 // trash can
-#define TRASH_CAN_X (STD_SCREEN_X + 176)
-#define TRASH_CAN_Y (211 + PLAYER_INFO_Y)
-#define TRASH_CAN_WIDTH 193 - 165
-#define TRASH_CAN_HEIGHT 239 - 217
+#define TRASH_CAN_X           (STD_SCREEN_X + 176)
+#define TRASH_CAN_Y           (211 + PLAYER_INFO_Y)
+#define TRASH_CAN_WIDTH       193 - 165
+#define TRASH_CAN_HEIGHT      239 - 217
 
 #endif

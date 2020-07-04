@@ -8,7 +8,7 @@
 #include "Weapons.h"
 #include "OppList.h"
 #include "Debug.h"
-#include "slog/slog.h"
+#include "Logger.h"
 
 static void AddGameEventToQueue(UINT32 uiEvent, UINT16 usDelay, PTR pEventData, EventQueueID ubQueueID);
 
@@ -17,12 +17,12 @@ void AddGameEvent(GameEvent const uiEvent, UINT16 const usDelay, PTR const pEven
 {
 	if (usDelay == DEMAND_EVENT_DELAY)
 	{
-		SLOGD(DEBUG_TAG_EVENTPUMP, "AddGameEvent: Sending Local #%d", uiEvent);
+		SLOGD("AddGameEvent: Sending Local #%d", uiEvent);
 		AddGameEventToQueue(uiEvent, 0, pEventData, DEMAND_EVENT_QUEUE);
 	}
 	else
 	{
-		SLOGD(DEBUG_TAG_EVENTPUMP, "AddGameEvent: Sending Local #%d", uiEvent);
+		SLOGD("AddGameEvent: Sending Local #%d", uiEvent);
 		AddGameEventToQueue(uiEvent, usDelay, pEventData, PRIMARY_EVENT_QUEUE);
 	}
 }
@@ -65,7 +65,7 @@ BOOLEAN DequeAllGameEvents(void)
 		// Check if event has a delay and add to secondary queue if so
 		if (pEvent->usDelay > 0)
 		{
-			AddGameEventToQueue(pEvent->uiEvent, pEvent->usDelay, pEvent->Data, SECONDARY_EVENT_QUEUE);
+			AddGameEventToQueue(pEvent->uiEvent, pEvent->usDelay, pEvent->Data.data(), SECONDARY_EVENT_QUEUE);
 		}
 		else
 		{
@@ -128,7 +128,7 @@ BOOLEAN DequeueAllDemandGameEvents(void)
 		// Check if event has a delay and add to secondary queue if so
 		if (pEvent->usDelay > 0)
 		{
-			AddGameEventToQueue(pEvent->uiEvent, pEvent->usDelay, pEvent->Data, SECONDARY_EVENT_QUEUE);
+			AddGameEventToQueue(pEvent->uiEvent, pEvent->usDelay, pEvent->Data.data(), SECONDARY_EVENT_QUEUE);
 		}
 		else
 		{
@@ -158,13 +158,13 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 		case S_GETNEWPATH:
 		{
 			EV_S_GETNEWPATH SGetNewPath;
-			memcpy(&SGetNewPath, pEvent->Data, pEvent->uiDataSize);
+			memcpy(&SGetNewPath, pEvent->Data.data(), pEvent->Data.size());
 
 			SOLDIERTYPE* pSoldier = GetSoldier(SGetNewPath.usSoldierID);
 			if (pSoldier == NULL)
 			{
 				// Handle Error?
-				SLOGE(DEBUG_TAG_EVENTPUMP, "Invalid Soldier ID");
+				SLOGE("Invalid Soldier ID");
 				break;
 			}
 
@@ -174,7 +174,7 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 				break;
 			}
 			// Call soldier function
-			SLOGD(DEBUG_TAG_EVENTPUMP, "GetNewPath");
+			SLOGD("GetNewPath");
 			EVENT_GetNewSoldierPath(pSoldier, SGetNewPath.sDestGridNo, SGetNewPath.usMovementAnim);
 			break;
 		}
@@ -182,13 +182,13 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 		case S_SETDESIREDDIRECTION:
 		{
 			EV_S_SETDESIREDDIRECTION SSetDesiredDirection;
-			memcpy(&SSetDesiredDirection, pEvent->Data, pEvent->uiDataSize);
+			memcpy(&SSetDesiredDirection, pEvent->Data.data(), pEvent->Data.size());
 
 			SOLDIERTYPE* pSoldier = GetSoldier(SSetDesiredDirection.usSoldierID);
 			if (pSoldier == NULL)
 			{
 				// Handle Error?
-				SLOGE(DEBUG_TAG_EVENTPUMP, "Invalid Soldier ID");
+				SLOGE("Invalid Soldier ID");
 				break;
 			}
 
@@ -199,7 +199,7 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 			}
 
 			// Call soldier function
-			SLOGD(DEBUG_TAG_EVENTPUMP, "SetDesiredDirection: Dir( %d )", SSetDesiredDirection.usDesiredDirection);
+			SLOGD("SetDesiredDirection: Dir( %d )", SSetDesiredDirection.usDesiredDirection);
 			EVENT_SetSoldierDesiredDirection(pSoldier, SSetDesiredDirection.usDesiredDirection);
 			break;
 		}
@@ -207,7 +207,7 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 		case S_BEGINFIREWEAPON:
 		{
 			EV_S_BEGINFIREWEAPON SBeginFireWeapon;
-			memcpy(&SBeginFireWeapon, pEvent->Data, pEvent->uiDataSize);
+			memcpy(&SBeginFireWeapon, pEvent->Data.data(), pEvent->Data.size());
 
 			SOLDIERTYPE* pSoldier = GetSoldier(SBeginFireWeapon.usSoldierID);
 			if (pSoldier == NULL)
@@ -215,7 +215,7 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 				pSoldier = NULL;
 				break;
 				// Handle Error?
-				SLOGE(DEBUG_TAG_EVENTPUMP, "Invalid Soldier ID");
+				SLOGE("Invalid Soldier ID");
 			}
 
 			// check for error
@@ -225,7 +225,7 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 			}
 
 			// Call soldier function
-			SLOGD(DEBUG_TAG_EVENTPUMP, "Begin Fire Weapon");
+			SLOGD("Begin Fire Weapon");
 			pSoldier->sTargetGridNo    = SBeginFireWeapon.sTargetGridNo;
 			pSoldier->bTargetLevel     = SBeginFireWeapon.bTargetLevel;
 			pSoldier->bTargetCubeLevel = SBeginFireWeapon.bTargetCubeLevel;
@@ -236,13 +236,13 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 		case S_FIREWEAPON:
 		{
 			EV_S_FIREWEAPON SFireWeapon;
-			memcpy(&SFireWeapon, pEvent->Data, pEvent->uiDataSize);
+			memcpy(&SFireWeapon, pEvent->Data.data(), pEvent->Data.size());
 
 			SOLDIERTYPE* pSoldier = GetSoldier(SFireWeapon.usSoldierID);
 			if (pSoldier == NULL)
 			{
 				// Handle Error?
-				SLOGE(DEBUG_TAG_EVENTPUMP, "Invalid Soldier ID");
+				SLOGE("Invalid Soldier ID");
 				break;
 			}
 
@@ -254,7 +254,7 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 
 
 			// Call soldier function
-			SLOGD(DEBUG_TAG_EVENTPUMP, "FireWeapon");
+			SLOGD("FireWeapon");
 			pSoldier->sTargetGridNo    = SFireWeapon.sTargetGridNo;
 			pSoldier->bTargetLevel     = SFireWeapon.bTargetLevel;
 			pSoldier->bTargetCubeLevel = SFireWeapon.bTargetCubeLevel;
@@ -265,8 +265,8 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 		case S_WEAPONHIT:
 		{
 			EV_S_WEAPONHIT SWeaponHit;
-			memcpy(&SWeaponHit, pEvent->Data, pEvent->uiDataSize);
-			SLOGD(DEBUG_TAG_EVENTPUMP, "WeaponHit %d Damage", SWeaponHit.sDamage);
+			memcpy(&SWeaponHit, pEvent->Data.data(), pEvent->Data.size());
+			SLOGD("WeaponHit %d Damage", SWeaponHit.sDamage);
 			WeaponHit(&GetMan(SWeaponHit.usSoldierID), SWeaponHit.usWeaponIndex, SWeaponHit.sDamage, SWeaponHit.sBreathLoss, SWeaponHit.usDirection, SWeaponHit.sXPos, SWeaponHit.sYPos, SWeaponHit.sZPos, SWeaponHit.sRange, &GetMan(SWeaponHit.ubAttackerID), SWeaponHit.ubSpecial, SWeaponHit.ubLocation);
 			break;
 		}
@@ -274,8 +274,8 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 		case S_NOISE:
 		{
 			EV_S_NOISE SNoise;
-			memcpy(&SNoise, pEvent->Data, pEvent->uiDataSize);
-			SLOGD(DEBUG_TAG_EVENTPUMP, "Noise from %d at %d/%d, type %d volume %d",
+			memcpy(&SNoise, pEvent->Data.data(), pEvent->Data.size());
+			SLOGD("Noise from %d at %d/%d, type %d volume %d",
 						SNoise.ubNoiseMaker, SNoise.sGridNo, SNoise.bLevel,
 						SNoise.ubNoiseType, SNoise.ubVolume);
 			OurNoise(ID2SOLDIER(SNoise.ubNoiseMaker), SNoise.sGridNo, SNoise.bLevel, SNoise.ubVolume, static_cast<NoiseKind>(SNoise.ubNoiseType));
@@ -283,7 +283,7 @@ static BOOLEAN ExecuteGameEvent(EVENT* pEvent)
 		}
 
 		default:
-			SLOGE(DEBUG_TAG_EVENTPUMP, "Invalid Event Received");
+			SLOGE("Invalid Event Received");
 			return FALSE;
 	}
 

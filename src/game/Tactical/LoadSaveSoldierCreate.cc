@@ -4,7 +4,10 @@
 #include "LoadSaveData.h"
 #include "LoadSaveObjectType.h"
 
-#include "slog/slog.h"
+#include "Logger.h"
+
+#include <string_theory/string>
+
 
 UINT16 CalcSoldierCreateCheckSum(const SOLDIERCREATE_STRUCT* const s)
 {
@@ -37,7 +40,7 @@ UINT16 CalcSoldierCreateCheckSum(const SOLDIERCREATE_STRUCT* const s)
 
 static void ExtractSoldierCreate(const BYTE* const data, SOLDIERCREATE_STRUCT* const c, bool stracLinuxFormat)
 {
-	const BYTE* d = data;
+	DataReader d{data};
 	EXTR_BOOL(d, c->fStatic)
 	EXTR_U8(d, c->ubProfile)
 	EXTR_SKIP(d, 2)
@@ -68,28 +71,24 @@ static void ExtractSoldierCreate(const BYTE* const data, SOLDIERCREATE_STRUCT* c
 	EXTR_I8(d, c->bAIMorale)
 	for (size_t i = 0; i < lengthof(c->Inv); i++)
 	{
-		d = ExtractObject(d, &c->Inv[i]);
+		ExtractObject(d, &c->Inv[i]);
 	}
-	EXTR_STR(d, c->HeadPal, lengthof(c->HeadPal))
-	EXTR_STR(d, c->PantsPal, lengthof(c->PantsPal))
-	EXTR_STR(d, c->VestPal, lengthof(c->VestPal))
-	EXTR_STR(d, c->SkinPal, lengthof(c->SkinPal))
+	c->HeadPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	c->PantsPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	c->VestPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
+	c->SkinPal = d.readUTF8(PaletteRepID_LENGTH, ST::substitute_invalid);
 	EXTR_SKIP(d, 30)
 	EXTR_I16A(d, c->sPatrolGrid, lengthof(c->sPatrolGrid))
 	EXTR_I8(d, c->bPatrolCnt)
-  EXTR_BOOL(d, c->fVisible);
-  if(stracLinuxFormat)
-  {
-    DataReader reader(d);
-    reader.readUTF32(c->name, lengthof(c->name));
-    d += reader.getConsumed();
-  }
-  else
-  {
-    DataReader reader(d);
-    reader.readUTF16(c->name, lengthof(c->name));
-    d += reader.getConsumed();
-  }
+	EXTR_BOOL(d, c->fVisible);
+	if(stracLinuxFormat)
+	{
+		c->name = d.readUTF32(SOLDIERTYPE_NAME_LENGTH);
+	}
+	else
+	{
+		c->name = d.readUTF16(SOLDIERTYPE_NAME_LENGTH);
+	}
 	EXTR_U8(d, c->ubSoldierClass)
 	EXTR_BOOL(d, c->fOnRoof)
 	EXTR_I8(d, c->bSectorZ)
@@ -101,61 +100,61 @@ static void ExtractSoldierCreate(const BYTE* const data, SOLDIERCREATE_STRUCT* c
 	EXTR_I8(d, c->bUseGivenVehicleID)
 	EXTR_BOOL(d, c->fHasKeys)
 	EXTR_SKIP(d, 117)
-  if(stracLinuxFormat)
-  {
-    Assert(d == data + 1060);
-  }
-  else
-  {
-    Assert(d == data + 1040);
-  }
+	if(stracLinuxFormat)
+	{
+		Assert(d.getConsumed() == 1060);
+	}
+	else
+	{
+		Assert(d.getConsumed() == 1040);
+	}
 }
 
 
 void ExtractSoldierCreateFromFile(HWFILE const f, SOLDIERCREATE_STRUCT* const c, bool stracLinuxFormat)
 {
-  if(stracLinuxFormat)
-  {
-    BYTE data[1060];
-    FileRead(f, data, sizeof(data));
-    ExtractSoldierCreate(data, c, stracLinuxFormat);
-  }
-  else
-  {
-    BYTE data[1040];
-    FileRead(f, data, sizeof(data));
-    ExtractSoldierCreate(data, c, stracLinuxFormat);
-  }
+	if(stracLinuxFormat)
+	{
+		BYTE data[1060];
+		FileRead(f, data, sizeof(data));
+		ExtractSoldierCreate(data, c, stracLinuxFormat);
+	}
+	else
+	{
+		BYTE data[1040];
+		FileRead(f, data, sizeof(data));
+		ExtractSoldierCreate(data, c, stracLinuxFormat);
+	}
 }
 
 /**
- * Load SOLDIERCREATE_STRUCT structure and checksum from the file and guess the
- * format the structure was saved in (vanilla windows format or stracciatella linux format). */
+* Load SOLDIERCREATE_STRUCT structure and checksum from the file and guess the
+* format the structure was saved in (vanilla windows format or stracciatella linux format). */
 void ExtractSoldierCreateFromFileWithChecksumAndGuess(HWFILE f, SOLDIERCREATE_STRUCT* c, UINT16 *checksum)
 {
-  // First trying to load the windows format.
-  // If checksum doesn't match, trying to load linux format.
+	// First trying to load the windows format.
+	// If checksum doesn't match, trying to load linux format.
 
-  const INT32 pos = FileGetPos(f);
-  ExtractSoldierCreateFromFile(f, c, false);
-  FileRead(f, checksum, 2);
+	const INT32 pos = FileGetPos(f);
+	ExtractSoldierCreateFromFile(f, c, false);
+	FileRead(f, checksum, 2);
 
-  UINT16 const fresh_checksum = CalcSoldierCreateCheckSum(c);
-  if(*checksum != fresh_checksum)
-  {
-    SLOGI(DEBUG_TAG_SAVELOAD, "trying SOLDIERCREATE_STRUCT in linux format");
+	UINT16 const fresh_checksum = CalcSoldierCreateCheckSum(c);
+	if(*checksum != fresh_checksum)
+	{
+		SLOGI("trying SOLDIERCREATE_STRUCT in linux format");
 
-    // trying linux format
-    // not validating the checksum - it will be the job of the caller
-    FileSeek(f, pos, FILE_SEEK_FROM_START);
-    ExtractSoldierCreateFromFile(f, c, true);
-    FileRead(f, checksum, 2);
-  }
+		// trying linux format
+		// not validating the checksum - it will be the job of the caller
+		FileSeek(f, pos, FILE_SEEK_FROM_START);
+		ExtractSoldierCreateFromFile(f, c, true);
+		FileRead(f, checksum, 2);
+	}
 }
 
 static void InjectSoldierCreate(BYTE* const data, const SOLDIERCREATE_STRUCT* const c)
 {
-	BYTE* d = data;
+	DataWriter d{data};
 	INJ_BOOL(d, c->fStatic)
 	INJ_U8(d, c->ubProfile)
 	INJ_SKIP(d, 2)
@@ -186,21 +185,17 @@ static void InjectSoldierCreate(BYTE* const data, const SOLDIERCREATE_STRUCT* co
 	INJ_I8(d, c->bAIMorale)
 	for (size_t i = 0; i < lengthof(c->Inv); i++)
 	{
-		d = InjectObject(d, &c->Inv[i]);
+		InjectObject(d, &c->Inv[i]);
 	}
-	INJ_STR(d, c->HeadPal, lengthof(c->HeadPal))
-	INJ_STR(d, c->PantsPal, lengthof(c->PantsPal))
-	INJ_STR(d, c->VestPal, lengthof(c->VestPal))
-	INJ_STR(d, c->SkinPal, lengthof(c->SkinPal))
+	d.writeUTF8(c->HeadPal, PaletteRepID_LENGTH);
+	d.writeUTF8(c->PantsPal, PaletteRepID_LENGTH);
+	d.writeUTF8(c->VestPal, PaletteRepID_LENGTH);
+	d.writeUTF8(c->SkinPal, PaletteRepID_LENGTH);
 	INJ_SKIP(d, 30)
 	INJ_I16A(d, c->sPatrolGrid, lengthof(c->sPatrolGrid))
 	INJ_I8(d, c->bPatrolCnt)
 	INJ_BOOL(d, c->fVisible)
-  {
-    DataWriter writer(d);
-    writer.writeStringAsUTF16(c->name, lengthof(c->name));
-    d += writer.getConsumed();
-  }
+	d.writeUTF16(c->name, SOLDIERTYPE_NAME_LENGTH);
 	INJ_U8(d, c->ubSoldierClass)
 	INJ_BOOL(d, c->fOnRoof)
 	INJ_I8(d, c->bSectorZ)
@@ -212,7 +207,7 @@ static void InjectSoldierCreate(BYTE* const data, const SOLDIERCREATE_STRUCT* co
 	INJ_I8(d, c->bUseGivenVehicleID)
 	INJ_BOOL(d, c->fHasKeys)
 	INJ_SKIP(d, 117)
-	Assert(d == data + 1040);
+	Assert(d.getConsumed() == 1040);
 }
 
 

@@ -30,15 +30,21 @@
 #include "MemMan.h"
 #include "Debug.h"
 #include "FileMan.h"
-#include "slog/slog.h"
+#include "Logger.h"
+
+#include <string_theory/string>
+
+#include <algorithm>
+#include <iterator>
+#include <vector>
 
 // the max loyalty rating for any given town
 #define MAX_LOYALTY_VALUE 100
 
 // loyalty Omerta drops to and maxes out at if the player betrays the rebels
-#define HOSTILE_OMERTA_LOYALTY_RATING		10
+#define HOSTILE_OMERTA_LOYALTY_RATING 10
 
-#define LOYALTY_EVENT_DISTANCE_THRESHOLD		3			// in sectors
+#define LOYALTY_EVENT_DISTANCE_THRESHOLD 3 // in sectors
 
 
 // effect of unintentional killing /100 vs intentional murder
@@ -55,15 +61,15 @@
 
 
 // gain for hiring an NPC from a particular town (represents max. at 100% town attachment)
-#define MULTIPLIER_LOCAL_RPC_HIRED											25		// 5%
+#define MULTIPLIER_LOCAL_RPC_HIRED 25 // 5%
 
 // multiplier for causing pts of damage directly done to a building
-#define MULTIPLIER_FOR_DAMAGING_A_BUILDING							10		// 50 pts = 1%
+#define MULTIPLIER_FOR_DAMAGING_A_BUILDING 10 // 50 pts = 1%
 // multiplier for not preventing pts of damage to a building
-#define MULTIPLIER_FOR_NOT_PREVENTING_BUILDING_DAMAGE		3			// 167 pts = 1%
+#define MULTIPLIER_FOR_NOT_PREVENTING_BUILDING_DAMAGE 3 // 167 pts = 1%
 
 // divisor for dmg to a building by allied rebel
-#define DIVISOR_FOR_REBEL_BUILDING_DMG									2
+#define DIVISOR_FOR_REBEL_BUILDING_DMG 2
 
 
 // town loyalty table
@@ -71,21 +77,21 @@ TOWN_LOYALTY gTownLoyalty[ NUM_TOWNS ];
 
 
 // Town names and locations
-TownSectorInfo g_town_sectors[40];
+std::vector<TownSectorInfo> g_town_sectors;
 
 
 #define BASIC_COST_FOR_CIV_MURDER	(10 * GAIN_PTS_PER_LOYALTY_PT)
 
 UINT32 uiPercentLoyaltyDecreaseForCivMurder[]={
 	// These get multiplied by GAIN_PTS_PER_LOYALTY_PT so they're in % of loyalty decrease (for an average town)
-	   (5 * GAIN_PTS_PER_LOYALTY_PT),	// fat civ
-	   (7 * GAIN_PTS_PER_LOYALTY_PT),	// man civ
-	   (8 * GAIN_PTS_PER_LOYALTY_PT),	// min civ
-    (10 * GAIN_PTS_PER_LOYALTY_PT),	// dress (woman)
-    (20 * GAIN_PTS_PER_LOYALTY_PT), // hat kid
-    (20 * GAIN_PTS_PER_LOYALTY_PT), // kid
-	  (20 * GAIN_PTS_PER_LOYALTY_PT),	// cripple
-     (1 * GAIN_PTS_PER_LOYALTY_PT),	// cow
+	(5 * GAIN_PTS_PER_LOYALTY_PT), // fat civ
+	(7 * GAIN_PTS_PER_LOYALTY_PT), // man civ
+	(8 * GAIN_PTS_PER_LOYALTY_PT), // min civ
+	(10 * GAIN_PTS_PER_LOYALTY_PT), // dress (woman)
+	(20 * GAIN_PTS_PER_LOYALTY_PT), // hat kid
+	(20 * GAIN_PTS_PER_LOYALTY_PT), // kid
+	(20 * GAIN_PTS_PER_LOYALTY_PT), // cripple
+	(1 * GAIN_PTS_PER_LOYALTY_PT), // cow
 };
 
 
@@ -93,36 +99,36 @@ UINT32 uiPercentLoyaltyDecreaseForCivMurder[]={
 // it primarily controls the RATE of loyalty change in each town: the loyalty effect of the same events depends on it
 UINT8 gubTownRebelSentiment[ NUM_TOWNS ] =
 {
-	0,	// not a town - blank sector index
- 90,	// OMERTA,	- They ARE the rebels!!!
- 30,	// DRASSEN,	- Rebel friendly, makes it pretty easy to get first mine's income going at the start
- 12,	// ALMA			- Military town, high loyalty to Queen, need quests to get 100%
- 15,	// GRUMM,		- Close to Meduna, strong influence
- 20,	// TIXA,		- Not a real town
- 15,	// CAMBRIA, - Artificially much lower 'cause it's big and central and too easy to get loyalty up there
- 20,	// SAN_MONA,- Neutral ground, loyalty doesn't vary
- 20,	// ESTONI,	- Not a real town
- 20,	// ORTA,		- Not a real town
- 12,	// BALIME,	- Rich town, high loyalty to Queen
- 10,	// MEDUNA,	- Enemy HQ, for God's sake!
- 35,	// CHITZENA, - Artificially high 'cause there's not enough fights near it to get the loyalty up otherwise
+	0, // not a town - blank sector index
+	90, // OMERTA, - They ARE the rebels!!!
+	30, // DRASSEN, - Rebel friendly, makes it pretty easy to get first mine's income going at the start
+	12, // ALMA - Military town, high loyalty to Queen, need quests to get 100%
+	15, // GRUMM, - Close to Meduna, strong influence
+	20, // TIXA, - Not a real town
+	15, // CAMBRIA, - Artificially much lower 'cause it's big and central and too easy to get loyalty up there
+	20, // SAN_MONA, - Neutral ground, loyalty doesn't vary
+	20, // ESTONI, - Not a real town
+	20, // ORTA, - Not a real town
+	12, // BALIME, - Rich town, high loyalty to Queen
+	10, // MEDUNA, - Enemy HQ, for God's sake!
+	35, // CHITZENA, - Artificially high 'cause there's not enough fights near it to get the loyalty up otherwise
 };
 
 BOOLEAN gfTownUsesLoyalty[ NUM_TOWNS ] =
 {
-	FALSE,		// not a town - blank sector index
-	TRUE	,		// OMERTA
-	TRUE,			// DRASSEN
-	TRUE,			// ALMA
-	TRUE,			// GRUMM
-	FALSE,		// TIXA
-	TRUE,			// CAMBRIA
-	FALSE,		// SAN_MONA
-	FALSE,		// ESTONI
-	FALSE,		// ORTA
-	TRUE,			// BALIME
-	TRUE,			// MEDUNA
-	TRUE,			// CHITZENA
+	FALSE, // not a town - blank sector index
+	TRUE, // OMERTA
+	TRUE, // DRASSEN
+	TRUE, // ALMA
+	TRUE, // GRUMM
+	FALSE, // TIXA
+	TRUE, // CAMBRIA
+	FALSE, // SAN_MONA
+	FALSE, // ESTONI
+	FALSE, // ORTA
+	TRUE, // BALIME
+	TRUE, // MEDUNA
+	TRUE, // CHITZENA
 };
 
 // location of first enocunter with enemy
@@ -492,7 +498,7 @@ void HandleMurderOfCivilian(const SOLDIERTYPE* const pSoldier)
 			iLoyaltyChange /= 100;
 
 			// debug message
-			SLOGD(DEBUG_TAG_LOYALTY, "You're being blamed for a death you didn't cause!");
+			SLOGD("You're being blamed for a death you didn't cause!");
 		}
 	}
 
@@ -505,7 +511,7 @@ void HandleMurderOfCivilian(const SOLDIERTYPE* const pSoldier)
 			fIncrement = FALSE;
 
 			// debug message
-			SLOGD(DEBUG_TAG_LOYALTY, "Civilian killed by friendly forces.");
+			SLOGD("Civilian killed by friendly forces.");
 			break;
 
 		case ENEMY_TEAM:
@@ -516,7 +522,7 @@ void HandleMurderOfCivilian(const SOLDIERTYPE* const pSoldier)
 				fIncrement = TRUE;
 
 				// debug message
-				SLOGD(DEBUG_TAG_LOYALTY, "Enemy soldiers murdered a civilian. Town loyalty increases");
+				SLOGD("Enemy soldiers murdered a civilian. Town loyalty increases");
 			}
 			else
 			{
@@ -528,7 +534,7 @@ void HandleMurderOfCivilian(const SOLDIERTYPE* const pSoldier)
 				fIncrement = FALSE;
 
 				// debug message
-				SLOGD(DEBUG_TAG_LOYALTY, "Town holds you responsible for murder by enemy.");
+				SLOGD("Town holds you responsible for murder by enemy.");
 			}
 			break;
 
@@ -544,7 +550,7 @@ void HandleMurderOfCivilian(const SOLDIERTYPE* const pSoldier)
 				fIncrement = FALSE;
 
 				// debug message
-				SLOGD(DEBUG_TAG_LOYALTY, "Town holds you responsible for murder by rebels.");
+				SLOGD("Town holds you responsible for murder by rebels.");
 			}
 			break;
 
@@ -597,7 +603,7 @@ void HandleTownLoyaltyForNPCRecruitment( SOLDIERTYPE *pSoldier )
 
 	UINT8 const bTownId = GetTownIdForSector(SECTOR(pSoldier->sSectorX, pSoldier->sSectorY));
 
-  // is the merc currently in their home town?
+	// is the merc currently in their home town?
 	if( bTownId == gMercProfiles[ pSoldier->ubProfile ].bTown )
 	{
 		// yep, value of loyalty bonus depends on his importance to this to town
@@ -617,8 +623,7 @@ void RemoveRandomItemsInSector(INT16 const sSectorX, INT16 const sSectorY, INT16
 	 * unvisited sectors, but let's check anyway */
 	Assert(GetSectorFlagStatus(sSectorX, sSectorY, sSectorZ, SF_ALREADY_VISITED));
 
-	wchar_t wSectorName[128];
-	GetSectorIDString(sSectorX, sSectorY, sSectorZ, wSectorName, lengthof(wSectorName), TRUE);
+	ST::string wSectorName = GetSectorIDString(sSectorX, sSectorY, sSectorZ, TRUE);
 
 	// go through list of items in sector and randomly remove them
 
@@ -629,47 +634,42 @@ void RemoveRandomItemsInSector(INT16 const sSectorX, INT16 const sSectorY, INT16
 	{
 		/* if the player has never been there, there's no temp file, and 0 items
 		 * will get returned, preventing any stealing */
-		UINT32     uiNumberOfItems;
-		WORLDITEM* pItemList;
-		LoadWorldItemsFromTempItemFile(sSectorX, sSectorY, sSectorZ, &uiNumberOfItems, &pItemList);
-		if (uiNumberOfItems == 0) return;
+		std::vector<WORLDITEM> pItemList = LoadWorldItemsFromTempItemFile(sSectorX, sSectorY, sSectorZ);
+		if (pItemList.size() == 0) return;
 
-		UINT32 uiNewTotal = uiNumberOfItems;
+		bool somethingWasStolen = false;
 
 		// set up item list ptrs
-		WORLDITEM const* const end = pItemList + uiNumberOfItems;
-		for (WORLDITEM* wi = pItemList; wi != end; ++wi)
+		for (WORLDITEM& wi : pItemList)
 		{
 			//if the item exists, and is visible and reachable, see if it should be stolen
-			if (!wi->fExists)                          continue;
-			if (wi->bVisible != VISIBLE)               continue;
-			if (!(wi->usFlags & WORLD_ITEM_REACHABLE)) continue;
+			if (!wi.fExists)                          continue;
+			if (wi.bVisible != VISIBLE)               continue;
+			if (!(wi.usFlags & WORLD_ITEM_REACHABLE)) continue;
 			if (Random(100) >= ubChance)               continue;
 
 			// remove
-			--uiNewTotal;
-			wi->fExists = FALSE;
+			somethingWasStolen = true;
+			wi.fExists = FALSE;
 
-			SLOGD(DEBUG_TAG_LOYALTY, "%ls stolen in %ls!", ItemNames[wi->o.usItem], wSectorName);
+			SLOGD("%s stolen in %s!", ItemNames[wi.o.usItem].c_str(), wSectorName.c_str());
 		}
 
 		// only save if something was stolen
-		if (uiNewTotal < uiNumberOfItems)
+		if (somethingWasStolen)
 		{
-			SaveWorldItemsToTempItemFile(sSectorX, sSectorY, sSectorZ, uiNumberOfItems, pItemList);
+			SaveWorldItemsToTempItemFile(sSectorX, sSectorY, sSectorZ, pItemList);
 		}
-
-		MemFree(pItemList);
 	}
 	else	// handle a loaded sector
 	{
 		FOR_EACH_WORLD_ITEM(wi)
 		{
 			// note, can't do reachable test here because we'd have to do a path call
-			if (wi->bVisible != VISIBLE) continue;
+			if (wi.bVisible != VISIBLE) continue;
 			if (Random(100) >= ubChance) continue;
 
-			SLOGD(DEBUG_TAG_LOYALTY, "%ls stolen in %ls!", ItemNames[wi->o.usItem], wSectorName);
+			SLOGD("%s stolen in %s!", ItemNames[wi.o.usItem].c_str(), wSectorName.c_str());
 			RemoveItemFromPool(wi);
 		}
 	}
@@ -678,19 +678,15 @@ void RemoveRandomItemsInSector(INT16 const sSectorX, INT16 const sSectorY, INT16
 
 void BuildListOfTownSectors()
 {
-	memset(g_town_sectors, 0, sizeof(g_town_sectors));
-
-	TownSectorInfo* i = g_town_sectors;
 	for (INT32 x = 1; x != MAP_WORLD_X - 1; ++x)
 	{
 		for (INT32 y = 1; y != MAP_WORLD_Y - 1; ++y)
 		{
 			INT8 const town = StrategicMap[CALCULATE_STRATEGIC_INDEX(x, y)].bNameId;
 			if (town < FIRST_TOWN || NUM_TOWNS <= town) continue;
-
-			i->sector = SECTOR(x, y);
-			i->town   = town;
-			++i;
+			g_town_sectors.push_back(
+				TownSectorInfo{ (UINT8)town, SECTOR(x, y) }
+			);
 		}
 	}
 }
@@ -702,7 +698,7 @@ void SaveStrategicTownLoyaltyToSaveGameFile(HWFILE const f)
 	FOR_EACH(TOWN_LOYALTY const, i, gTownLoyalty)
 	{
 		BYTE  data[26];
-		BYTE* d = data;
+		DataWriter d{data};
 		INJ_U8(  d, i->ubRating)
 		INJ_SKIP(d, 1)
 		INJ_I16( d, i->sChange)
@@ -710,7 +706,7 @@ void SaveStrategicTownLoyaltyToSaveGameFile(HWFILE const f)
 		INJ_SKIP(d, 1)
 		INJ_BOOL(d, i->fLiberatedAlready)
 		INJ_SKIP(d, 19)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 
 		FileWrite(f, data, sizeof(data));
 	}
@@ -725,7 +721,7 @@ void LoadStrategicTownLoyaltyFromSavedGameFile(HWFILE const f)
 		BYTE data[26];
 		FileRead(f, data, sizeof(data));
 
-		BYTE const* d = data;
+		DataReader d{data};
 		EXTR_U8(  d, i->ubRating)
 		EXTR_SKIP(d, 1)
 		EXTR_I16( d, i->sChange)
@@ -733,7 +729,7 @@ void LoadStrategicTownLoyaltyFromSavedGameFile(HWFILE const f)
 		EXTR_SKIP(d, 1)
 		EXTR_BOOL(d, i->fLiberatedAlready)
 		EXTR_SKIP(d, 19)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 	}
 }
 
@@ -804,31 +800,21 @@ INT32 GetNumberOfWholeTownsUnderControlButExcludeCity( INT8 bCityToExclude )
 // is the ENTIRE town under player control?
 INT32 IsTownUnderCompleteControlByPlayer( INT8 bTownId )
 {
-	if( GetTownSectorSize( bTownId ) == GetTownSectorsUnderControl( bTownId ) )
-	{
-		return( TRUE );
-	}
-
-	return( FALSE );
+	return GetTownSectorSize(bTownId) == GetTownSectorsUnderControl(bTownId);
 }
 
 
 // is the ENTIRE town under enemy control?
 static INT32 IsTownUnderCompleteControlByEnemy(INT8 bTownId)
 {
-	if ( GetTownSectorsUnderControl( bTownId ) == 0 )
-	{
-		return( TRUE );
-	}
-
-	return( FALSE );
+	return GetTownSectorsUnderControl(bTownId) == 0;
 }
 
 void AdjustLoyaltyForCivsEatenByMonsters( INT16 sSectorX, INT16 sSectorY, UINT8 ubHowMany)
 {
 	UINT32 uiLoyaltyChange = 0;
-	wchar_t str[256];
-	wchar_t pSectorString[128];
+	ST::string str;
+	ST::string pSectorString;
 
 	UINT8 const bTownId = GetTownIdForSector(SECTOR(sSectorX, sSectorY));
 
@@ -839,8 +825,8 @@ void AdjustLoyaltyForCivsEatenByMonsters( INT16 sSectorX, INT16 sSectorY, UINT8 
 	}
 
 	//Report this to player
-	GetSectorIDString( sSectorX, sSectorY, 0, pSectorString, lengthof(pSectorString), TRUE );
-	swprintf( str, lengthof(str), gpStrategicString[ STR_DIALOG_CREATURES_KILL_CIVILIANS ], ubHowMany, pSectorString );
+	pSectorString = GetSectorIDString(sSectorX, sSectorY, 0, TRUE);
+	str = st_format_printf(gpStrategicString[ STR_DIALOG_CREATURES_KILL_CIVILIANS ], ubHowMany, pSectorString);
 	DoScreenIndependantMessageBox( str, MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback );
 
 	// use same formula as if it were a civilian "murder" in tactical!!!
@@ -1169,17 +1155,17 @@ bool DidFirstBattleTakePlaceInThisTown(INT8 const town)
 
 static UINT32 PlayerStrength(void)
 {
-	UINT32					uiStrength, uiTotal = 0;
+	UINT32 uiStrength, uiTotal = 0;
 
 	CFOR_EACH_IN_TEAM(s, OUR_TEAM)
 	{
 		if (s->bInSector ||
-				(
-					s->fBetweenSectors &&
-					s->ubPrevSectorID % 16 + 1 == gWorldSectorX &&
-					s->ubPrevSectorID / 16 + 1 == gWorldSectorY &&
-					s->bSectorZ == gbWorldSectorZ
-				))
+			(
+				s->fBetweenSectors &&
+				s->ubPrevSectorID % 16 + 1 == gWorldSectorX &&
+				s->ubPrevSectorID / 16 + 1 == gWorldSectorY &&
+				s->bSectorZ == gbWorldSectorZ
+			))
 		{
 			// count this person's strength (condition), calculated as life reduced up to half according to maxbreath
 			uiStrength = s->bLife * (s->bBreathMax + 100) / 200;

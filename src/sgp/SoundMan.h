@@ -3,13 +3,15 @@
 
 #include "Types.h"
 
+#include <vector>
+
 
 #define MAXVOLUME 127
 
 
 // Sound error values (they're all the same)
-#define		NO_SAMPLE							0xffffffff
-#define		SOUND_ERROR						0xffffffff
+#define NO_SAMPLE	0xffffffff
+#define SOUND_ERROR	0xffffffff
 
 
 // Zeros out the structs for the system info, and initializes the cache.
@@ -20,7 +22,7 @@ void InitializeSoundManager(void);
 void ShutdownSoundManager(void);
 
 
-UINT32 SoundPlayFromBuffer(INT16* pbuffer, UINT32 size, UINT32 volume, UINT32 pan, UINT32 loop, void (*end_callback)(void*), void* data);
+UINT32 SoundPlayFromSmackBuff(const char* name, UINT8 channels, UINT8 depth, UINT32 rate, std::vector<UINT8>& buf, UINT32 volume, UINT32 pan, UINT32 loop, void (*end_callback)(void*), void* data);
 
 
 /* Starts a sample playing. If the sample is not loaded in the cache, it will
@@ -106,5 +108,6 @@ UINT32 SoundGetPosition(UINT32 uiSoundID);
 
 // Allows or disallows the startup of the sound hardware.
 void SoundEnableSound(BOOLEAN fEnable);
+bool IsSoundEnabled();
 
 #endif

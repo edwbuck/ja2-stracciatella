@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Directories.h"
 #include "Font.h"
 #include "HImage.h"
@@ -15,20 +13,24 @@
 #include "MemMan.h"
 #include "UILayout.h"
 
+#include <string_theory/string>
 
-#define		TEXT_POPUP_GAP_BN_LINES						10
-#define		TEXT_POPUP_FONT										FONT12ARIAL
-#define		TEXT_POPUP_COLOR									FONT_MCOLOR_WHITE
+#include <stdexcept>
 
-#define		MERC_TEXT_FONT										FONT12ARIAL
-#define		MERC_TEXT_COLOR										FONT_MCOLOR_WHITE
 
-#define		MERC_TEXT_MIN_WIDTH								10
-#define		MERC_TEXT_POPUP_WINDOW_TEXT_OFFSET_X		10
-#define		MERC_TEXT_POPUP_WINDOW_TEXT_OFFSET_Y		10
+#define TEXT_POPUP_GAP_BN_LINES		10
+#define TEXT_POPUP_FONT			FONT12ARIAL
+#define TEXT_POPUP_COLOR			FONT_MCOLOR_WHITE
 
-#define		MERC_BACKGROUND_WIDTH										350
-#define		MERC_BACKGROUND_HEIGHT									200
+#define MERC_TEXT_FONT				FONT12ARIAL
+#define MERC_TEXT_COLOR			FONT_MCOLOR_WHITE
+
+#define MERC_TEXT_MIN_WIDTH			10
+#define MERC_TEXT_POPUP_WINDOW_TEXT_OFFSET_X	10
+#define MERC_TEXT_POPUP_WINDOW_TEXT_OFFSET_Y	10
+
+#define MERC_BACKGROUND_WIDTH			350
+#define MERC_BACKGROUND_HEIGHT			200
 
 
 // both of the below are index by the enum for thier types - background and border in
@@ -37,21 +39,21 @@
 // filenames for border popup .sti's
 static char const* const zMercBorderPopupFilenames[] =
 {
- INTERFACEDIR "/tactpopup.sti",
- INTERFACEDIR "/tactredpopup.sti",
- INTERFACEDIR "/tactbluepopup.sti",
- INTERFACEDIR "/tactpopupmain.sti",
- INTERFACEDIR "/laptoppopup.sti"
+	INTERFACEDIR "/tactpopup.sti",
+	INTERFACEDIR "/tactredpopup.sti",
+	INTERFACEDIR "/tactbluepopup.sti",
+	INTERFACEDIR "/tactpopupmain.sti",
+	INTERFACEDIR "/laptoppopup.sti"
 };
 
 // filenames for background popup .pcx's
 static char const* const zMercBackgroundPopupFilenames[] =
 {
-  INTERFACEDIR "/tactpopupbackground.pcx",
-  INTERFACEDIR "/tactpopupwhitebackground.pcx",
-  INTERFACEDIR "/tactpopupgreybackground.pcx",
-  INTERFACEDIR "/tactpopupbackgroundmain.pcx",
-  INTERFACEDIR "/laptoppopupbackground.pcx",
+	INTERFACEDIR "/tactpopupbackground.pcx",
+	INTERFACEDIR "/tactpopupwhitebackground.pcx",
+	INTERFACEDIR "/tactpopupgreybackground.pcx",
+	INTERFACEDIR "/tactpopupbackgroundmain.pcx",
+	INTERFACEDIR "/laptoppopupbackground.pcx",
 	INTERFACEDIR "/imp_popup_background.pcx"
 };
 
@@ -81,7 +83,7 @@ void InitMercPopupBox()
 // Tactical Popup
 static void LoadTextMercPopupImages(MercPopUpBox* const box, MercPopUpBackground const ubBackgroundIndex, MercPopUpBorder const ubBorderIndex)
 {
-  // this function will load the graphics associated with the background and border index values
+	// this function will load the graphics associated with the background and border index values
 	box->uiMercTextPopUpBackground = AddVideoSurfaceFromFile(zMercBackgroundPopupFilenames[ubBackgroundIndex]);
 	box->uiMercTextPopUpBorder     = AddVideoObjectFromFile(zMercBorderPopupFilenames[ubBorderIndex]);
 
@@ -117,7 +119,7 @@ void RenderMercPopUpBox(MercPopUpBox const* const box, INT16 const sDestX, INT16
 static void GetMercPopupBoxFontColor(UINT8 ubBackgroundIndex, UINT8* pubFontColor, UINT8* pubFontShadowColor);
 
 
-MercPopUpBox* PrepareMercPopupBox(MercPopUpBox* box, MercPopUpBackground const ubBackgroundIndex, MercPopUpBorder const ubBorderIndex, wchar_t const* const pString, UINT16 usWidth, UINT16 const usMarginX, UINT16 const usMarginTopY, UINT16 const usMarginBottomY, UINT16* const pActualWidth, UINT16* const pActualHeight, MercPopupBoxFlags const flags)
+MercPopUpBox* PrepareMercPopupBox(MercPopUpBox* box, MercPopUpBackground ubBackgroundIndex, MercPopUpBorder ubBorderIndex, const ST::utf32_buffer& codepoints, UINT16 usWidth, UINT16 usMarginX, UINT16 usMarginTopY, UINT16 usMarginBottomY, UINT16* pActualWidth, UINT16* pActualHeight, MercPopupBoxFlags flags)
 {
 	if (usWidth >= SCREEN_WIDTH)
 	{
@@ -147,7 +149,7 @@ MercPopUpBox* PrepareMercPopupBox(MercPopUpBox* box, MercPopUpBackground const u
 		}
 	}
 
-	UINT16 const usStringPixLength = StringPixLength(pString, TEXT_POPUP_FONT);
+	UINT16 const usStringPixLength = StringPixLength(codepoints, TEXT_POPUP_FONT);
 	UINT16       usTextWidth;
 	if (usStringPixLength < usWidth - MERC_TEXT_POPUP_WINDOW_TEXT_OFFSET_X * 2)
 	{
@@ -159,7 +161,7 @@ MercPopUpBox* PrepareMercPopupBox(MercPopUpBox* box, MercPopUpBackground const u
 		usTextWidth = usWidth - MERC_TEXT_POPUP_WINDOW_TEXT_OFFSET_X * 2 + 1 - usMarginX;
 	}
 
-	UINT16 const usNumberVerticalPixels = IanWrappedStringHeight(usTextWidth, 2, TEXT_POPUP_FONT, pString);
+	UINT16 const usNumberVerticalPixels = IanWrappedStringHeight(usTextWidth, 2, TEXT_POPUP_FONT, codepoints);
 	UINT16       usHeight               = usNumberVerticalPixels + MERC_TEXT_POPUP_WINDOW_TEXT_OFFSET_Y * 2;
 
 	// Add height for margins
@@ -211,17 +213,17 @@ MercPopUpBox* PrepareMercPopupBox(MercPopUpBox* box, MercPopUpBackground const u
 	for (UINT16 i = TEXT_POPUP_GAP_BN_LINES; i < usWidth - TEXT_POPUP_GAP_BN_LINES; i += TEXT_POPUP_GAP_BN_LINES)
 	{
 		//TOP ROW
-	  BltVideoObject(vs, hImageHandle, 1, i, usPosY);
+		BltVideoObject(vs, hImageHandle, 1, i, usPosY);
 		//BOTTOM ROW
-	  BltVideoObject(vs, hImageHandle, 6, i, usHeight - TEXT_POPUP_GAP_BN_LINES + 6);
+		BltVideoObject(vs, hImageHandle, 6, i, usHeight - TEXT_POPUP_GAP_BN_LINES + 6);
 	}
 
 	//blit the left and right row of images
 	UINT16 usPosX = 0;
 	for (UINT16 i= TEXT_POPUP_GAP_BN_LINES; i < usHeight - TEXT_POPUP_GAP_BN_LINES; i += TEXT_POPUP_GAP_BN_LINES)
 	{
-	  BltVideoObject(vs, hImageHandle, 3, usPosX,               i);
-	  BltVideoObject(vs, hImageHandle, 4, usPosX + usWidth - 4, i);
+		BltVideoObject(vs, hImageHandle, 3, usPosX,               i);
+		BltVideoObject(vs, hImageHandle, 4, usPosX + usWidth - 4, i);
 	}
 
 	//blt the corner images for the row
@@ -260,7 +262,7 @@ MercPopUpBox* PrepareMercPopupBox(MercPopUpBox* box, MercPopUpBackground const u
 		sDispTextXPos += 30;
 	}
 
-	DisplayWrappedString(sDispTextXPos, MERC_TEXT_POPUP_WINDOW_TEXT_OFFSET_Y + usMarginTopY, usTextWidth, 2, MERC_TEXT_FONT, ubFontColor, pString, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
+	DisplayWrappedString(sDispTextXPos, MERC_TEXT_POPUP_WINDOW_TEXT_OFFSET_Y + usMarginTopY, usTextWidth, 2, MERC_TEXT_FONT, ubFontColor, codepoints, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 
 	SetFontDestBuffer(FRAME_BUFFER);
 	SetFontShadow(DEFAULT_SHADOW);
@@ -281,7 +283,7 @@ void RemoveMercPopupBox(MercPopUpBox* const box)
 	//Delete the background and the border
 	RemoveTextMercPopupImages(box);
 
-	MemFree(box);
+	delete box;
 }
 
 

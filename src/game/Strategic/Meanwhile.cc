@@ -1,36 +1,44 @@
-#include "MapScreen.h"
 #include "Meanwhile.h"
-#include "PreBattle_Interface.h"
-#include "MessageBoxScreen.h"
-#include "StrategicMap.h"
-#include "Fade_Screen.h"
-#include "ScreenIDs.h"
-#include "JAScreens.h"
-#include "NPC.h"
-#include "Game_Event_Hook.h"
-#include "Game_Clock.h"
-#include "Tactical_Save.h"
-#include "Soldier_Profile.h"
-#include "Overhead.h"
-#include "Dialogue_Control.h"
+
 #include "Assignments.h"
-#include "Text.h"
-#include "GameSettings.h"
-#include "Interface_Control.h"
-#include "Interface_Items.h"
-#include "Map_Information.h"
-#include "Map_Screen_Interface_Map.h"
-#include "Map_Screen_Interface.h"
-#include "Music_Control.h"
-#include "ContentMusic.h"
-#include "Interface.h"
-#include "Game_Events.h"
-#include "Strategic_AI.h"
-#include "Interface_Dialogue.h"
-#include "Quests.h"
 #include "Campaign_Types.h"
-#include "Squads.h"
+#include "ContentManager.h"
+#include "ContentMusic.h"
+#include "Dialogue_Control.h"
+#include "Fade_Screen.h"
+#include "GameInstance.h"
+#include "GameSettings.h"
+#include "Game_Clock.h"
+#include "Game_Event_Hook.h"
+#include "Game_Events.h"
+#include "Interface.h"
+#include "Interface_Control.h"
+#include "Interface_Dialogue.h"
+#include "Interface_Items.h"
+#include "JAScreens.h"
+#include "MapScreen.h"
+#include "Map_Information.h"
+#include "Map_Screen_Helicopter.h"
+#include "Map_Screen_Interface.h"
+#include "Map_Screen_Interface_Map.h"
+#include "MessageBoxScreen.h"
+#include "Music_Control.h"
+#include "NPC.h"
+#include "Overhead.h"
+#include "PreBattle_Interface.h"
+#include "Quests.h"
 #include "Random.h"
+#include "SamSiteModel.h"
+#include "ScreenIDs.h"
+#include "Soldier_Profile.h"
+#include "Squads.h"
+#include "StrategicMap.h"
+#include "Strategic_AI.h"
+#include "Tactical_Save.h"
+#include "Text.h"
+
+#include <string_theory/format>
+#include <string_theory/string>
 
 
 #define MAX_MEANWHILE_PROFILES	10
@@ -60,19 +68,19 @@ static const UINT16 gusMeanWhileGridNo[] =
 
 struct NPC_SAVE_INFO
 {
-	UINT8		ubProfile;
-	INT16		sX;
-	INT16		sY;
-	INT16		sZ;
-	INT16		sGridNo;
+	UINT8 ubProfile;
+	INT16 sX;
+	INT16 sY;
+	INT16 sZ;
+	INT16 sGridNo;
 };
 
 
 // BEGIN SERALIZATION
-MEANWHILE_DEFINITION	gCurrentMeanwhileDef;
-MEANWHILE_DEFINITION	gMeanwhileDef[NUM_MEANWHILES];
-BOOLEAN								gfMeanwhileTryingToStart = FALSE;
-BOOLEAN								gfInMeanwhile = FALSE;
+MEANWHILE_DEFINITION gCurrentMeanwhileDef;
+MEANWHILE_DEFINITION gMeanwhileDef[NUM_MEANWHILES];
+BOOLEAN              gfMeanwhileTryingToStart = FALSE;
+BOOLEAN              gfInMeanwhile = FALSE;
 // END SERIALIZATION
 static INT16 gsOldSectorX;
 static INT16 gsOldSectorY;
@@ -91,23 +99,23 @@ static UINT8         ubCurrentMeanWhileId = 0;
 UINT32 uiMeanWhileFlags = 0;
 
 // meanwhile flag defines
-#define END_OF_PLAYERS_FIRST_BATTLE_FLAG			0x00000001
-#define	DRASSEN_LIBERATED_FLAG								0x00000002
-#define	CAMBRIA_LIBERATED_FLAG								0x00000004
-#define	ALMA_LIBERATED_FLAG										0x00000008
-#define	GRUMM_LIBERATED_FLAG									0x00000010
-#define	CHITZENA_LIBERATED_FLAG								0x00000020
-#define	NW_SAM_FLAG														0x00000040
-#define	NE_SAM_FLAG														0x00000080
-#define	CENTRAL_SAM_FLAG											0x00000100
-#define	FLOWERS_FLAG													0x00000200
-#define	LOST_TOWN_FLAG												0x00000400
-#define	CREATURES_FLAG												0x00000800
-#define	KILL_CHOPPER_FLAG											0x00001000
-#define	AWOL_SCIENTIST_FLAG										0x00002000
-#define	OUTSKIRTS_MEDUNA_FLAG									0x00004000
-#define INTERROGATION_FLAG										0x00008000
-#define BALIME_LIBERATED_FLAG									0x00010000
+#define END_OF_PLAYERS_FIRST_BATTLE_FLAG	0x00000001
+#define DRASSEN_LIBERATED_FLAG			0x00000002
+#define CAMBRIA_LIBERATED_FLAG			0x00000004
+#define ALMA_LIBERATED_FLAG			0x00000008
+#define GRUMM_LIBERATED_FLAG			0x00000010
+#define CHITZENA_LIBERATED_FLAG			0x00000020
+#define NW_SAM_FLAG				0x00000040
+#define NE_SAM_FLAG				0x00000080
+#define CENTRAL_SAM_FLAG			0x00000100
+#define FLOWERS_FLAG				0x00000200
+#define LOST_TOWN_FLAG				0x00000400
+#define CREATURES_FLAG				0x00000800
+#define KILL_CHOPPER_FLAG			0x00001000
+#define AWOL_SCIENTIST_FLAG			0x00002000
+#define OUTSKIRTS_MEDUNA_FLAG			0x00004000
+#define INTERROGATION_FLAG			0x00008000
+#define BALIME_LIBERATED_FLAG			0x00010000
 
 
 static UINT32 MeanwhileIDToFlag(UINT8 const meanwhile_id)
@@ -183,14 +191,14 @@ void ScheduleMeanwhileEvent(INT16 const x, INT16 const y, UINT16 const trigger_e
 	m.ubMeanwhileID  = meanwhile_id;
 	m.ubNPCNumber    = npc;
 
-  // A meanwhile.. poor elliot!
-  // increment his slapped count...
+	// A meanwhile.. poor elliot!
+	// increment his slapped count...
 
-  // We need to do it here 'cause they may skip it...
-  if ( gMercProfiles[ ELLIOT ].bNPCData != 17 )
-  {
-    gMercProfiles[ ELLIOT ].bNPCData++;
-  }
+	// We need to do it here 'cause they may skip it...
+	if ( gMercProfiles[ ELLIOT ].bNPCData != 17 )
+	{
+		gMercProfiles[ ELLIOT ].bNPCData++;
+	}
 
 	AddStrategicEvent(EVENT_MEANWHILE, time, meanwhile_id);
 }
@@ -199,7 +207,7 @@ void ScheduleMeanwhileEvent(INT16 const x, INT16 const y, UINT16 const trigger_e
 void BeginMeanwhile(UINT8 ubMeanwhileID)
 {
 	INT32 cnt;
-  
+
 	// Save if we are in Dead is Dead Mode
 	DoDeadIsDeadSaveIfNecessary();
 
@@ -209,7 +217,7 @@ void BeginMeanwhile(UINT8 ubMeanwhileID)
 	gfMeanwhileTryingToStart = TRUE;
 	PauseGame();
 	// prevent anyone from messing with the pause!
-	LockPauseState(LOCK_PAUSE_06);
+	LockPauseState(LOCK_PAUSE_MEANWHILE);
 
 	// Set NO_PROFILE info....
 	for ( cnt = 0; cnt < MAX_MEANWHILE_PROFILES; cnt++ )
@@ -224,9 +232,7 @@ static void BeginMeanwhileCallBack(MessageBoxReturnValue);
 
 static void BringupMeanwhileBox(void)
 {
-	wchar_t zStr[256];
-
-	swprintf( zStr, lengthof(zStr), L"%ls.....", pMessageStrings[ MSG_MEANWHILE ] );
+	ST::string zStr = ST::format("{}.....", pMessageStrings[ MSG_MEANWHILE ]);
 	MessageBoxFlags const flags =
 		gCurrentMeanwhileDef.ubMeanwhileID != INTERROGATION
 		&& MeanwhileSceneSeen(gCurrentMeanwhileDef.ubMeanwhileID)
@@ -249,25 +255,25 @@ void CheckForMeanwhileOKStart( )
 			return;
 		}
 
-	  if ( !DialogueQueueIsEmptyOrSomebodyTalkingNow( ) )
-	  {
-      return;
-    }
+		if (!DialogueQueueIsEmptyAndNobodyIsTalking())
+		{
+			return;
+		}
 
 		gfMeanwhileTryingToStart = FALSE;
 
 		guiOldScreen = guiCurrentScreen;
 
-    if ( guiCurrentScreen == GAME_SCREEN )
-    {
-  		LeaveTacticalScreen( GAME_SCREEN );
-    }
+		if ( guiCurrentScreen == GAME_SCREEN )
+		{
+			LeaveTacticalScreen( GAME_SCREEN );
+		}
 
 
 
-    // We need to make sure we have no item - at least in tactical
-    // In mapscreen, time is paused when manipulating items...
-    CancelItemPointer( );
+		// We need to make sure we have no item - at least in tactical
+		// In mapscreen, time is paused when manipulating items...
+		CancelItemPointer( );
 
 		BringupMeanwhileBox( );
 	}
@@ -446,6 +452,7 @@ bool AreInMeanwhile()
 
 static void ProcessImplicationsOfMeanwhile(void)
 {
+	auto samList = GCM->getSamSites();
 	switch( gCurrentMeanwhileDef.ubMeanwhileID )
 	{
 		case END_OF_PLAYERS_FIRST_BATTLE:
@@ -512,9 +519,9 @@ static void ProcessImplicationsOfMeanwhile(void)
 
 		{
 			UINT8 sector;
-		case NW_SAM:      sector = pSamList[0]; goto send_troops_to_sam;
-		case NE_SAM:      sector = pSamList[1]; goto send_troops_to_sam;
-		case CENTRAL_SAM: sector = pSamList[2]; goto send_troops_to_sam;
+		case NW_SAM:      sector = samList[SAM_SITE_ONE]->sectorId; goto send_troops_to_sam;
+		case NE_SAM:      sector = samList[SAM_SITE_TWO]->sectorId; goto send_troops_to_sam;
+		case CENTRAL_SAM: sector = samList[SAM_SITE_THREE]->sectorId; goto send_troops_to_sam;
 send_troops_to_sam:
 			ExecuteStrategicAIAction(NPC_ACTION_SEND_TROOPS_TO_SAM, SECTORX(sector), SECTORY(sector));
 			break;
@@ -564,8 +571,8 @@ void EndMeanwhile( )
 	UnLockPauseState();
 	UnPauseGame();
 
-  // ATE: Make sure!
-  TurnOffSectorLocator();
+	// ATE: Make sure!
+	TurnOffSectorLocator();
 
 	if ( gCurrentMeanwhileDef.ubMeanwhileID != INTERROGATION )
 	{
@@ -601,7 +608,7 @@ static void DoneFadeOutMeanwhileOnceDone(void)
 	{
 		SetCurrentWorldSector( gsOldSectorX, gsOldSectorY, (INT8)gsOldSectorZ );
 
-  	ExamineCurrentSquadLights( );
+		ExamineCurrentSquadLights( );
 	}
 	else
 	{
@@ -851,7 +858,7 @@ void HandleFirstMeanWhileSetUpWithTrashWorld( void )
 
 TEST(Meanwhile, asserts)
 {
-  EXPECT_EQ(sizeof(MEANWHILE_DEFINITION), 8);
+	EXPECT_EQ(sizeof(MEANWHILE_DEFINITION), 8u);
 }
 
 #endif

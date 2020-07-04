@@ -26,8 +26,8 @@ class SGPVSurface
 	public:
 		SGPVSurface(SDL_Surface*);
 
-  protected:
-    SGPVSurface(UINT16 w, UINT16 h, UINT8 bpp);
+	protected:
+		SGPVSurface(UINT16 w, UINT16 h, UINT8 bpp);
 
 	public:
 		virtual ~SGPVSurface();
@@ -59,6 +59,9 @@ class SGPVSurface
 		/* This function will stretch the source image to the size of the dest rect.
 		 * If the 2 images are not 16 Bpp, it returns false. */
 		friend void BltStretchVideoSurface(SGPVSurface* dst, SGPVSurface const* src, SGPBox const* src_rect, SGPBox const* dst_rect);
+
+		// needs read access to *surface_ to initalize z-buffer properly
+		friend void MainGameScreenInit(void);
 
 	protected:
 		SDL_Surface*                               surface_;
@@ -132,8 +135,8 @@ class SGPVSurface
 class SGPVSurfaceAuto : public SGPVSurface
 {
 	public:
-    SGPVSurfaceAuto(UINT16 w, UINT16 h, UINT8 bpp);
-    SGPVSurfaceAuto(SDL_Surface*);
+		SGPVSurfaceAuto(UINT16 w, UINT16 h, UINT8 bpp);
+		SGPVSurfaceAuto(SDL_Surface*);
 
 		virtual ~SGPVSurfaceAuto();
 };

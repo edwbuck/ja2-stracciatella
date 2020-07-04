@@ -15,60 +15,64 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
 
-#define	NUM_AIM_POLICY_PAGES				11
-#define	NUM_AIM_POLICY_TOC_BUTTONS	9
-#define	AIMPOLICYFILE BINARYDATADIR "/aimpol.edt"
-#define AIM_POLICY_LINE_SIZE 80 * 5
+#include <algorithm>
 
-#define AIM_POLICY_TITLE_FONT				FONT14ARIAL
+#define NUM_AIM_POLICY_PAGES			11
+#define NUM_AIM_POLICY_TOC_BUTTONS		9
+#define AIMPOLICYFILE				BINARYDATADIR "/aimpol.edt"
+#define AIM_POLICY_LINE_SIZE			80 * 5
+
+#define AIM_POLICY_TITLE_FONT			FONT14ARIAL
 #define AIM_POLICY_TITLE_COLOR			AIM_GREEN
-#define AIM_POLICY_TEXT_FONT				FONT10ARIAL
-#define AIM_POLICY_TEXT_COLOR				FONT_MCOLOR_WHITE
-#define AIM_POLICY_TOC_FONT					FONT12ARIAL
-#define AIM_POLICY_TOC_COLOR				FONT_MCOLOR_WHITE
+#define AIM_POLICY_TEXT_FONT			FONT10ARIAL
+#define AIM_POLICY_TEXT_COLOR			FONT_MCOLOR_WHITE
+#define AIM_POLICY_TOC_FONT			FONT12ARIAL
+#define AIM_POLICY_TOC_COLOR			FONT_MCOLOR_WHITE
 #define AIM_POLICY_SUBTITLE_FONT		FONT12ARIAL
 #define AIM_POLICY_SUBTITLE_COLOR		FONT_MCOLOR_WHITE
-#define AIM_POLICY_AGREE_TOC_COLOR_ON			FONT_MCOLOR_WHITE
-#define AIM_POLICY_AGREE_TOC_COLOR_OFF			FONT_MCOLOR_DKWHITE
+#define AIM_POLICY_AGREE_TOC_COLOR_ON		FONT_MCOLOR_WHITE
+#define AIM_POLICY_AGREE_TOC_COLOR_OFF		FONT_MCOLOR_DKWHITE
 
-#define	AIM_POLICY_MENU_X						LAPTOP_SCREEN_UL_X + 40
-#define	AIM_POLICY_MENU_Y						STD_SCREEN_Y + 390 + LAPTOP_SCREEN_WEB_DELTA_Y
-#define	AIM_POLICY_MENU_BUTTON_AMOUNT	4
-#define	AIM_POLICY_GAP_X						40 + BOTTOM_BUTTON_START_WIDTH
+#define AIM_POLICY_MENU_X			LAPTOP_SCREEN_UL_X + 40
+#define AIM_POLICY_MENU_Y			STD_SCREEN_Y + 390 + LAPTOP_SCREEN_WEB_DELTA_Y
+#define AIM_POLICY_MENU_BUTTON_AMOUNT		4
+#define AIM_POLICY_GAP_X			40 + BOTTOM_BUTTON_START_WIDTH
 
-#define	AIM_POLICY_TITLE_X						IMAGE_OFFSET_X + 149
-#define AIM_POLICY_TITLE_Y						AIM_SYMBOL_Y + AIM_SYMBOL_SIZE_Y + 11
-#define AIM_POLICY_TITLE_WIDTH				AIM_SYMBOL_WIDTH
+#define AIM_POLICY_TITLE_X			IMAGE_OFFSET_X + 149
+#define AIM_POLICY_TITLE_Y			AIM_SYMBOL_Y + AIM_SYMBOL_SIZE_Y + 11
+#define AIM_POLICY_TITLE_WIDTH			AIM_SYMBOL_WIDTH
 
 #define AIM_POLICY_TITLE_STATEMENT_WIDTH	300
-#define	AIM_POLICY_TITLE_STATEMENT_X	IMAGE_OFFSET_X + (500 - AIM_POLICY_TITLE_STATEMENT_WIDTH) / 2 +5//80
-#define AIM_POLICY_TITLE_STATEMENT_Y	AIM_SYMBOL_Y + AIM_SYMBOL_SIZE_Y + 75
+#define AIM_POLICY_TITLE_STATEMENT_X		IMAGE_OFFSET_X + (500 - AIM_POLICY_TITLE_STATEMENT_WIDTH) / 2 +5//80
+#define AIM_POLICY_TITLE_STATEMENT_Y		AIM_SYMBOL_Y + AIM_SYMBOL_SIZE_Y + 75
 
-#define	AIM_POLICY_SUBTITLE_NUMBER	AIM_POLICY_TITLE_STATEMENT_X - 75
-#define	AIM_POLICY_SUBTITLE_X				AIM_POLICY_SUBTITLE_NUMBER + 20
-#define	AIM_POLICY_SUBTITLE_Y				STD_SCREEN_Y + 115 + LAPTOP_SCREEN_WEB_DELTA_Y
+#define AIM_POLICY_SUBTITLE_NUMBER		AIM_POLICY_TITLE_STATEMENT_X - 75
+#define AIM_POLICY_SUBTITLE_X			AIM_POLICY_SUBTITLE_NUMBER + 20
+#define AIM_POLICY_SUBTITLE_Y			STD_SCREEN_Y + 115 + LAPTOP_SCREEN_WEB_DELTA_Y
 
-#define	AIM_POLICY_PARAGRAPH_NUMBER	AIM_POLICY_SUBTITLE_X - 12
-#define	AIM_POLICY_PARAGRAPH_X			AIM_POLICY_PARAGRAPH_NUMBER + 23
-#define	AIM_POLICY_PARAGRAPH_Y			AIM_POLICY_SUBTITLE_Y + 20
-#define AIM_POLICY_PARAGRAPH_WIDTH	380
+#define AIM_POLICY_PARAGRAPH_NUMBER		AIM_POLICY_SUBTITLE_X - 12
+#define AIM_POLICY_PARAGRAPH_X			AIM_POLICY_PARAGRAPH_NUMBER + 23
+#define AIM_POLICY_PARAGRAPH_Y			AIM_POLICY_SUBTITLE_Y + 20
+#define AIM_POLICY_PARAGRAPH_WIDTH		380
 #define AIM_POLICY_PARAGRAPH_GAP		6
-#define	AIM_POLICY_SUBPARAGRAPH_NUMBER	AIM_POLICY_PARAGRAPH_X
-#define	AIM_POLICY_SUBPARAGRAPH_X		AIM_POLICY_SUBPARAGRAPH_NUMBER + 25
+#define AIM_POLICY_SUBPARAGRAPH_NUMBER		AIM_POLICY_PARAGRAPH_X
+#define AIM_POLICY_SUBPARAGRAPH_X		AIM_POLICY_SUBPARAGRAPH_NUMBER + 25
 
-#define AIM_POLICY_TOC_X									STD_SCREEN_X + 259
-#define AIM_POLICY_TOC_Y									AIM_POLICY_SUBTITLE_Y
-#define	AIM_POLICY_TOC_GAP_Y							25
-#define AIM_POLICY_TOC_TEXT_OFFSET_X			5
-#define AIM_POLICY_TOC_TEXT_OFFSET_Y			5
+#define AIM_POLICY_TOC_X			STD_SCREEN_X + 259
+#define AIM_POLICY_TOC_Y			AIM_POLICY_SUBTITLE_Y
+#define AIM_POLICY_TOC_GAP_Y			25
+#define AIM_POLICY_TOC_TEXT_OFFSET_X		5
+#define AIM_POLICY_TOC_TEXT_OFFSET_Y		5
 
 
 #define AIM_POLICY_AGREEMENT_X			IMAGE_OFFSET_X + 150
 #define AIM_POLICY_AGREEMENT_Y			STD_SCREEN_Y + 350 + LAPTOP_SCREEN_WEB_DELTA_Y
 
-#define AIM_POLICY_TOC_PAGE					1
-#define	AIM_POLICY_LAST_PAGE				10
+#define AIM_POLICY_TOC_PAGE			1
+#define AIM_POLICY_LAST_PAGE			10
 
 
 // These enums represent which paragraph they are located in the AIMPOLICYFILE file
@@ -158,7 +162,7 @@ static BOOLEAN     AimPoliciesSubPagesVisitedFlag[NUM_AIM_POLICY_PAGES];
 
 void EnterInitAimPolicies()
 {
-	memset( &AimPoliciesSubPagesVisitedFlag, 0, NUM_AIM_POLICY_PAGES);
+	std::fill_n(AimPoliciesSubPagesVisitedFlag, NUM_AIM_POLICY_PAGES, 0);
 }
 
 
@@ -216,7 +220,7 @@ void HandleAimPolicies()
 	if (!gfAimPolicyMenuBarLoaded && gubCurPageNum != 0)
 	{
 		InitAimPolicyMenuBar();
-//		RenderAimPolicies();
+		//RenderAimPolicies();
 		fPausedReDrawScreenFlag = TRUE;
 	}
 
@@ -288,7 +292,7 @@ void RenderAimPolicies()
 			usNumPixles += DisplayAimPolicySubParagraph(usNumPixles, LOCATION_0F_ENGAGEMENT_2_1, (FLOAT)3.21) + AIM_POLICY_PARAGRAPH_GAP;
 			usNumPixles += DisplayAimPolicySubParagraph(usNumPixles, LOCATION_0F_ENGAGEMENT_2_2, (FLOAT)3.22) + AIM_POLICY_PARAGRAPH_GAP;
 			usNumPixles += DisplayAimPolicySubParagraph(usNumPixles, LOCATION_0F_ENGAGEMENT_2_3, (FLOAT)3.23) + AIM_POLICY_PARAGRAPH_GAP;
-//			usNumPixles += DisplayAimPolicySubParagraph(usNumPixles, LOCATION_0F_ENGAGEMENT_2_4, (FLOAT)3.24) + AIM_POLICY_PARAGRAPH_GAP;
+			//usNumPixles += DisplayAimPolicySubParagraph(usNumPixles, LOCATION_0F_ENGAGEMENT_2_4, (FLOAT)3.24) + AIM_POLICY_PARAGRAPH_GAP;
 
 			usNumPixles += DisplayAimPolicyParagraph(usNumPixles, LOCATION_0F_ENGAGEMENT_2_4, (FLOAT)3.3) + AIM_POLICY_PARAGRAPH_GAP;
 
@@ -347,11 +351,11 @@ void RenderAimPolicies()
 			break;
 	}
 
-  MarkButtonsDirty( );
+	MarkButtonsDirty( );
 
 	RenderWWWProgramTitleBar( );
 
-  InvalidateRegion(LAPTOP_SCREEN_UL_X,LAPTOP_SCREEN_WEB_UL_Y,LAPTOP_SCREEN_LR_X,LAPTOP_SCREEN_WEB_LR_Y);
+	InvalidateRegion(LAPTOP_SCREEN_UL_X,LAPTOP_SCREEN_WEB_UL_Y,LAPTOP_SCREEN_LR_X,LAPTOP_SCREEN_WEB_LR_Y);
 }
 
 
@@ -369,7 +373,7 @@ static void InitAimPolicyMenuBar()
 
 	UINT16          x    = AIM_POLICY_MENU_X;
 	UINT16  const   y    = AIM_POLICY_MENU_Y;
-	const StrPointer *text = AimPolicyText;
+	const ST::string* text = AimPolicyText;
 	INT32           idx  = 0;
 	FOR_EACHX(GUIButtonRef, i, guiPoliciesMenuButton, x += AIM_POLICY_GAP_X)
 	{
@@ -390,33 +394,32 @@ static void ExitAimPolicyMenuBar()
 }
 
 
-static void LoadAIMPolicyText(wchar_t* Text, UINT32 Offset)
+static ST::string LoadAIMPolicyText(UINT32 Offset)
 {
-	GCM->loadEncryptedString(AIMPOLICYFILE, Text, Offset * AIM_POLICY_LINE_SIZE, AIM_POLICY_LINE_SIZE);
+	return GCM->loadEncryptedString(AIMPOLICYFILE, Offset * AIM_POLICY_LINE_SIZE, AIM_POLICY_LINE_SIZE);
 }
 
 
 static void DrawAimPolicyMenu(void)
 {
-	UINT16			i, usPosY;
-	UINT8				ubLocInFile[]=
-								{	DEFINITIONS,
-									LENGTH_OF_ENGAGEMENT,
-									LOCATION_0F_ENGAGEMENT,
-									CONTRACT_EXTENSIONS,
-									TERMS_OF_PAYMENT,
-									TERMS_OF_ENGAGEMENT,
-									ENGAGEMENT_TERMINATION,
-									EQUIPMENT_AND_INVENTORY,
-									POLICY_MEDICAL};
+	UINT16 i, usPosY;
+	UINT8  ubLocInFile[] = {
+		DEFINITIONS,
+		LENGTH_OF_ENGAGEMENT,
+		LOCATION_0F_ENGAGEMENT,
+		CONTRACT_EXTENSIONS,
+		TERMS_OF_PAYMENT,
+		TERMS_OF_ENGAGEMENT,
+		ENGAGEMENT_TERMINATION,
+		EQUIPMENT_AND_INVENTORY,
+		POLICY_MEDICAL};
 
 	usPosY = AIM_POLICY_TOC_Y;
 	for(i=0; i<NUM_AIM_POLICY_TOC_BUTTONS; i++)
 	{
 		BltVideoObject(FRAME_BUFFER, guiContentButton, 0, AIM_POLICY_TOC_X, usPosY);
 
-		wchar_t sText[AIM_POLICY_LINE_SIZE];
-		LoadAIMPolicyText(sText, ubLocInFile[i]);
+		ST::string sText = LoadAIMPolicyText(ubLocInFile[i]);
 		DrawTextToScreen(sText, AIM_POLICY_TOC_X + AIM_POLICY_TOC_TEXT_OFFSET_X, usPosY + AIM_POLICY_TOC_TEXT_OFFSET_Y, AIM_CONTENTBUTTON_WIDTH, AIM_POLICY_TOC_FONT, AIM_POLICY_TOC_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 
 		usPosY += AIM_POLICY_TOC_GAP_Y;
@@ -437,7 +440,8 @@ static void InitAimPolicyTocMenu()
 	UINT16       y    = AIM_POLICY_TOC_Y;
 	INT32        page = 2;
 	FOR_EACHX(MOUSE_REGION, i, gSelectedPolicyTocMenuRegion, y += AIM_POLICY_TOC_GAP_Y)
-	{ // Mouse region for the toc buttons
+	{
+		// Mouse region for the toc buttons
 		MOUSE_REGION& r = *i;
 		MSYS_DefineRegion(&r, x, y, x + AIM_CONTENTBUTTON_WIDTH, y + AIM_CONTENTBUTTON_HEIGHT, MSYS_PRIORITY_HIGH, CURSOR_WWW, MSYS_NO_CALLBACK, SelectPolicyTocMenuRegionCallBack);
 		MSYS_SetRegionUserData(&r, 0, page++);
@@ -476,8 +480,7 @@ static void SelectPolicyTocMenuRegionCallBack(MOUSE_REGION* pRegion, INT32 iReas
 
 static void DisplayAimPolicyTitleText(void)
 {
-	wchar_t	sText[AIM_POLICY_LINE_SIZE];
-	LoadAIMPolicyText(sText, AIM_STATEMENT_OF_POLICY);
+	ST::string	sText = LoadAIMPolicyText(AIM_STATEMENT_OF_POLICY);
 
 	UINT16 y = (gubCurPageNum == 0 ? AIM_POLICY_TITLE_STATEMENT_Y - 25 : AIM_POLICY_TITLE_Y);
 	DrawTextToScreen(sText, AIM_POLICY_TITLE_X, y, AIM_POLICY_TITLE_WIDTH, AIM_POLICY_TITLE_FONT, AIM_POLICY_TITLE_COLOR, FONT_MCOLOR_BLACK, CENTER_JUSTIFIED);
@@ -486,15 +489,15 @@ static void DisplayAimPolicyTitleText(void)
 
 static void DisplayAimPolicyStatement(void)
 {
-	wchar_t	sText[AIM_POLICY_LINE_SIZE];
+	ST::string	sText;
 	UINT16	usNumPixels;
 
 	//load and display the statment of policies
-	LoadAIMPolicyText(sText, AIM_STATEMENT_OF_POLICY_1);
+	sText = LoadAIMPolicyText(AIM_STATEMENT_OF_POLICY_1);
 	usNumPixels = DisplayWrappedString(AIM_POLICY_TITLE_STATEMENT_X, AIM_POLICY_TITLE_STATEMENT_Y, AIM_POLICY_TITLE_STATEMENT_WIDTH, 2, AIM_POLICY_TEXT_FONT, AIM_POLICY_TEXT_COLOR, sText, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 
 	//load and display the statment of policies
-	LoadAIMPolicyText(sText, AIM_STATEMENT_OF_POLICY_2);
+	sText = LoadAIMPolicyText(AIM_STATEMENT_OF_POLICY_2);
 	DisplayWrappedString(AIM_POLICY_TITLE_STATEMENT_X, AIM_POLICY_TITLE_STATEMENT_Y + usNumPixels + 15, AIM_POLICY_TITLE_STATEMENT_WIDTH, 2, AIM_POLICY_TEXT_FONT, AIM_POLICY_TEXT_COLOR, sText, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 }
 
@@ -507,7 +510,7 @@ static void InitAgreementRegion()
 
 	UINT16          x    = AIM_POLICY_AGREEMENT_X;
 	UINT16  const   y    = AIM_POLICY_AGREEMENT_Y;
-	const StrPointer *text = AimPolicyText + AIM_POLICIES_DISAGREE;
+	const ST::string* text = AimPolicyText + AIM_POLICIES_DISAGREE;
 	INT32           idx  = 0;
 	FOR_EACHX(GUIButtonRef, i, guiPoliciesAgreeButton, x += 125)
 	{
@@ -530,24 +533,22 @@ static void ExitAgreementButton()
 
 static void DisplayAimPolicyTitle(UINT16 usPosY, UINT8 ubPageNum)
 {
-	wchar_t	sText[AIM_POLICY_LINE_SIZE];
-	LoadAIMPolicyText(sText, ubPageNum);
+	ST::string	sText = LoadAIMPolicyText(ubPageNum);
 	DrawTextToScreen(sText, AIM_POLICY_SUBTITLE_NUMBER, usPosY, 0, AIM_POLICY_SUBTITLE_FONT, AIM_POLICY_SUBTITLE_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 }
 
 
 static UINT16 DisplayAimPolicyParagraph(UINT16 usPosY, UINT8 ubPageNum, FLOAT fNumber)
 {
-	wchar_t	sTemp[20];
+	ST::string sTemp;
 	UINT16	usNumPixels;
 
-	wchar_t	sText[AIM_POLICY_LINE_SIZE];
-	LoadAIMPolicyText(sText, ubPageNum);
+	ST::string sText = LoadAIMPolicyText(ubPageNum);
 
 	if(fNumber != 0.0)
 	{
 		//Display the section number
-		swprintf(sTemp, lengthof(sTemp), L"%2.1f", fNumber);
+		sTemp = ST::format("{2.1f}", fNumber);
 		DrawTextToScreen(sTemp, AIM_POLICY_PARAGRAPH_NUMBER, usPosY, 0, AIM_POLICY_TEXT_FONT, AIM_POLICY_TEXT_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 	}
 
@@ -560,14 +561,13 @@ static UINT16 DisplayAimPolicyParagraph(UINT16 usPosY, UINT8 ubPageNum, FLOAT fN
 
 static UINT16 DisplayAimPolicySubParagraph(UINT16 usPosY, UINT8 ubPageNum, FLOAT fNumber)
 {
-	wchar_t	sTemp[20];
+	ST::string sTemp;
 	UINT16	usNumPixels;
 
-	wchar_t	sText[AIM_POLICY_LINE_SIZE];
-	LoadAIMPolicyText(sText, ubPageNum);
+	ST::string sText = LoadAIMPolicyText(ubPageNum);
 
 	//Display the section number
-	swprintf(sTemp, lengthof(sTemp), L"%2.2f", fNumber);
+	sTemp = ST::format("{2.2f}", fNumber);
 	DrawTextToScreen(sTemp, AIM_POLICY_SUBPARAGRAPH_NUMBER, usPosY, 0, AIM_POLICY_TEXT_FONT, AIM_POLICY_TEXT_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 
 	//Display the text beside the section number

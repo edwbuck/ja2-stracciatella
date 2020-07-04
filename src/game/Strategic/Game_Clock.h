@@ -3,14 +3,16 @@
 
 #include "Types.h"
 
+#include <string_theory/string>
 
-#define			NUM_SEC_IN_DAY						86400
-#define			NUM_SEC_IN_HOUR						3600
-#define			NUM_SEC_IN_MIN						60
-#define			ROUNDTO_MIN								5
 
-#define			NUM_MIN_IN_DAY						1440
-#define			NUM_MIN_IN_HOUR						60
+#define NUM_SEC_IN_DAY		86400
+#define NUM_SEC_IN_HOUR		3600
+#define NUM_SEC_IN_MIN		60
+#define ROUNDTO_MIN		5
+
+#define NUM_MIN_IN_DAY		1440
+#define NUM_MIN_IN_HOUR		60
 
 //Kris:
 //This is the plan for game time...
@@ -24,26 +26,24 @@
 
 enum LockPauseReason
 {
-	LOCK_PAUSE_01 =  1,
-	LOCK_PAUSE_02 =  2,
-	LOCK_PAUSE_04 =  4,
-	LOCK_PAUSE_05 =  5,
-	LOCK_PAUSE_06 =  6,
-	LOCK_PAUSE_07 =  7,
-	LOCK_PAUSE_08 =  8,
-	LOCK_PAUSE_09 =  9,
-	LOCK_PAUSE_10 = 10,
-	LOCK_PAUSE_11 = 11,
-	LOCK_PAUSE_12 = 12,
-	LOCK_PAUSE_13 = 13,
-	LOCK_PAUSE_14 = 14,
-	LOCK_PAUSE_15 = 15,
-	LOCK_PAUSE_16 = 16,
-	LOCK_PAUSE_17 = 17,
-	LOCK_PAUSE_18 = 18,
-	LOCK_PAUSE_19 = 19,
-	LOCK_PAUSE_20 = 20,
-	LOCK_PAUSE_21 = 21
+	LOCK_PAUSE_MSGBOX =  1,
+	LOCK_PAUSE_CREATURE_ATTACK =  2,
+	LOCK_PAUSE_DISPLAY_SOLDIER_UPDATE =  4,
+	LOCK_PAUSE_CREATE_SOLDIER_UPDATE =  5,
+	LOCK_PAUSE_MEANWHILE =  6,
+	LOCK_PAUSE_CONTRACT_RENEWAL =  7,
+	LOCK_PAUSE_CONTRACT_ENDING =  8,
+	LOCK_PAUSE_PREBATTLE_CURRENT_SQUAD = 11,
+	LOCK_PAUSE_PREBATTLE = 12,
+	LOCK_PAUSE_SIMULTANEOUS_ARRIVAL = 13,
+	LOCK_PAUSE_ENGAGED_IN_CONV = 14,
+	LOCK_PAUSE_MERC_TALKING = 15,
+	LOCK_PAUSE_LOCKUI_MODE = 16,
+	LOCK_PAUSE_LOCKOURTURN_UI_MODE = 17,
+	LOCK_PAUSE_ITEM_PICKUP = 18,
+	LOCK_PAUSE_DOOR_OPEN = 19,
+	LOCK_PAUSE_START_HELI = 20,
+	LOCK_PAUSE_SECTOR_EXIT = 21
 };
 
 //PAUSE FEATURES
@@ -97,10 +97,10 @@ enum
 extern INT32 giTimeCompressSpeeds[ NUM_TIME_COMPRESS_SPEEDS ];
 
 
-#define			STARTING_TIME						( ( 1 * NUM_SEC_IN_HOUR ) + ( 0 * NUM_SEC_IN_MIN ) + NUM_SEC_IN_DAY )		// 1am
-#define			FIRST_ARRIVAL_DELAY			( ( 6 * NUM_SEC_IN_HOUR ) + ( 0 * NUM_SEC_IN_MIN ) )		// 7am ( 6hours later)
+#define STARTING_TIME		( ( 1 * NUM_SEC_IN_HOUR ) + ( 0 * NUM_SEC_IN_MIN ) + NUM_SEC_IN_DAY ) // 1am
+#define FIRST_ARRIVAL_DELAY	( ( 6 * NUM_SEC_IN_HOUR ) + ( 0 * NUM_SEC_IN_MIN ) ) // 7am ( 6hours later)
 
-#define WORLDTIMESTR	gswzWorldTimeStr
+#define WORLDTIMESTR		gswzWorldTimeStr
 
 
 // compress mode now in use
@@ -123,7 +123,7 @@ void AdvanceToNextDay(void);
 void UpdateClock(void);
 
 
-extern wchar_t gswzWorldTimeStr[ 20 ]; //Day 99, 23:55
+extern ST::string gswzWorldTimeStr; //Day 99, 23:55
 
 extern	UINT32			guiDay;
 extern	UINT32			guiHour;

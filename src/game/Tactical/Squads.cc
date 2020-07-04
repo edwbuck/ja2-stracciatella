@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Interface_Panels.h"
 #include "LoadSaveData.h"
 #include "Types.h"
@@ -20,6 +18,8 @@
 #include "ScreenIDs.h"
 #include "FileMan.h"
 
+#include <algorithm>
+#include <stdexcept>
 
 // squad array
 SOLDIERTYPE *Squad[ NUMBER_OF_SQUADS ][ NUMBER_OF_SOLDIERS_PER_SQUAD ];
@@ -54,7 +54,10 @@ void InitSquads( void )
 		SquadMovementGroups[iCounter] = g->ubGroupID;
 	}
 
-	memset( sDeadMercs, -1, sizeof( INT16 ) * NUMBER_OF_SQUADS * NUMBER_OF_SOLDIERS_PER_SQUAD );
+	for (int i = 0; i < NUMBER_OF_SQUADS; ++i)
+	{
+		std::fill_n(sDeadMercs[i], NUMBER_OF_SOLDIERS_PER_SQUAD, -1);
+	}
 }
 
 BOOLEAN IsThisSquadFull( INT8 bSquadValue )
@@ -122,7 +125,7 @@ BOOLEAN AddCharacterToSquad(SOLDIERTYPE* const s, INT8 const bSquadValue)
 		INT16 sY;
 		INT8  bZ;
 		if (SectorSquadIsIn(bSquadValue, &sX, &sY, &bZ) &&
-				(s->sSectorX != sX || s->sSectorY != sY || s->bSectorZ != bZ))
+			(s->sSectorX != sX || s->sSectorY != sY || s->bSectorZ != bZ))
 		{
 			return FALSE;
 		}
@@ -293,9 +296,9 @@ BOOLEAN RemoveCharacterFromSquads(SOLDIERTYPE* const s)
 			if (*i != s) continue;
 			*i = 0;
 
-			/* Release memory for his personal path, but don't clear his group's
-			 * path/waypoints (pass in groupID -1).  Just because one guy leaves a
-			 * group is no reason to cancel movement for the rest of the group. */
+			// Release memory for his personal path, but don't clear his group's
+			// path/waypoints (pass in groupID -1).  Just because one guy leaves a
+			// group is no reason to cancel movement for the rest of the group.
 			s->pMercPath = ClearStrategicPathList(s->pMercPath, -1);
 
 			RemovePlayerFromGroup(*s);
@@ -452,10 +455,10 @@ BOOLEAN SetCurrentSquad( INT32 iCurrentSquad, BOOLEAN fForce )
 	// set the current tactical squad
 
 	// ARM: can't call SetCurrentSquad() in mapscreen, it calls SelectSoldier(), that will initialize interface panels!!!
-  // ATE: Adjusted conditions a bit ( sometimes were not getting selected )
+	// ATE: Adjusted conditions a bit ( sometimes were not getting selected )
 	if ( guiCurrentScreen == LAPTOP_SCREEN || guiCurrentScreen == MAP_SCREEN )
-  {
-  	return( FALSE );
+	{
+		return( FALSE );
 	}
 
 	// ATE; Added to allow us to have NO current squad
@@ -494,7 +497,7 @@ BOOLEAN SetCurrentSquad( INT32 iCurrentSquad, BOOLEAN fForce )
 	RemoveAllPlayersFromSlot( );
 
 	// set all auto faces inactive
-  SetAllAutoFacesInactive( );
+	SetAllAutoFacesInactive( );
 
 	if (iCurrentSquad != NO_CURRENT_SQUAD)
 	{
@@ -534,7 +537,7 @@ void RebuildCurrentSquad( void )
 	RemoveAllPlayersFromSlot( );
 
 	// set all auto faces inactive
-  SetAllAutoFacesInactive( );
+	SetAllAutoFacesInactive( );
 
 	gfPausedTacticalRenderInterfaceFlags = DIRTYLEVEL2;
 
@@ -652,7 +655,7 @@ void SaveSquadInfoToSavedGameFile(HWFILE const f)
 {
 	// Save the squad info to the Saved Game File
 	BYTE data[NUMBER_OF_SQUADS * NUMBER_OF_SOLDIERS_PER_SQUAD * 12];
-	BYTE* d = data;
+	DataWriter d{data};
 	for (INT32 squad = 0; squad < NUMBER_OF_SQUADS; ++squad)
 	{
 		FOR_EACH_SLOT_IN_SQUAD(slot, squad)
@@ -662,7 +665,7 @@ void SaveSquadInfoToSavedGameFile(HWFILE const f)
 			INJ_SKIP(d, 10)
 		}
 	}
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 	FileWrite(f, data, sizeof(data));
 
 	// Save all the squad movement IDs
@@ -674,7 +677,7 @@ void LoadSquadInfoFromSavedGameFile(HWFILE const f)
 {
 	// Load in the squad info
 	BYTE data[NUMBER_OF_SQUADS * NUMBER_OF_SOLDIERS_PER_SQUAD * 12];
-	BYTE const* d = data;
+	DataReader d{data};
 	FileRead(f, data, sizeof(data));
 	for (INT32 squad = 0; squad != NUMBER_OF_SQUADS; ++squad)
 	{
@@ -686,7 +689,7 @@ void LoadSquadInfoFromSavedGameFile(HWFILE const f)
 			*slot = id != -1 ? &GetMan(id) : 0;
 		}
 	}
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 
 	// Load in the Squad movement IDs
 	FileRead(f, SquadMovementGroups, sizeof(SquadMovementGroups));
@@ -739,7 +742,7 @@ static void UpdateCurrentlySelectedMerc(SOLDIERTYPE* pSoldier, INT8 bSquadValue)
 		{
 			SetSelectedMan(NULL);
 
-      // ATE: Make sure we are in TEAM panel at this point!
+			// ATE: Make sure we are in TEAM panel at this point!
 			SetCurrentInterfacePanel( TEAM_PANEL );
 		}
 	}
@@ -805,7 +808,7 @@ BOOLEAN SoldierIsDeadAndWasOnSquad( SOLDIERTYPE *pSoldier, INT8 bSquadValue )
 
 void ResetDeadSquadMemberList(INT32 const iSquadValue)
 {
-	memset( sDeadMercs[ iSquadValue ], -1, sizeof( INT16 ) * NUMBER_OF_SOLDIERS_PER_SQUAD );
+	std::fill_n(sDeadMercs[ iSquadValue ], NUMBER_OF_SOLDIERS_PER_SQUAD, -1);
 }
 
 
@@ -813,7 +816,7 @@ void ResetDeadSquadMemberList(INT32 const iSquadValue)
 BOOLEAN IsMercOnCurrentSquad(const SOLDIERTYPE* pSoldier)
 {
 	// current squad valid?
-  if( iCurrentTacticalSquad >= NUMBER_OF_SQUADS )
+	if( iCurrentTacticalSquad >= NUMBER_OF_SQUADS )
 	{
 		// no
 		return( FALSE );
@@ -840,7 +843,8 @@ INT8 NumberOfPlayerControllableMercsInSquad( INT8 bSquadValue )
 	FOR_EACH_IN_SQUAD(i, bSquadValue)
 	{
 		SOLDIERTYPE const* const pSoldier = *i;
-		//Kris:  This breaks the CLIENT of this function, tactical traversal.  Do NOT check for EPCS or ROBOT here.
+		//Kris:  This breaks the CLIENT of this function, tactical traversal.
+		//       Do NOT check for EPCS or ROBOT here.
 		//if ( !AM_AN_EPC( pSoldier ) && !AM_A_ROBOT( pSoldier ) &&
 		if( !( pSoldier->uiStatusFlags & SOLDIER_VEHICLE ) )
 		{

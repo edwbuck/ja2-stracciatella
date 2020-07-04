@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Directories.h"
 #include "HImage.h"
 #include "Overhead.h"
@@ -17,22 +15,29 @@
 
 #include "ContentManager.h"
 #include "GameInstance.h"
-#include "slog/slog.h"
+#include "Logger.h"
 
-#define EMPTY_SLOT		-1
-#define TO_INIT				0
+#include <algorithm>
+#include <iterator>
+#include <stdexcept>
 
-#define ANIMPROFILEFILENAME BINARYDATADIR "/ja2prof.dat"
+#define EMPTY_SLOT					-1
+#define TO_INIT					0
+
+#define ANIMPROFILEFILENAME				BINARYDATADIR "/ja2prof.dat"
+
+#define PATH_STRUCT					ANIMSDIR "/STRUCTDATA/"
+#define SUFFIX						".JSD"
 
 
 
-ANIM_PROF		*gpAnimProfiles = NULL;
+ANIM_PROF *gpAnimProfiles = NULL;
 static UINT8 gubNumAnimProfiles = 0;
 
-INT8				gbAnimUsageHistory[ NUMANIMATIONSURFACETYPES ][ MAX_NUM_SOLDIERS ];
+INT8 gbAnimUsageHistory[ NUMANIMATIONSURFACETYPES ][ MAX_NUM_SOLDIERS ];
 
 
-#define M(name, file, type, flags, dir, profile) { name, file, type, flags, dir, TO_INIT, NULL, 0, profile }
+#define M(name, file, type, flags, dir, profile)	{ name, file, type, flags, dir, TO_INIT, NULL, 0, profile }
 
 AnimationSurfaceType gAnimSurfaceDatabase[NUMANIMATIONSURFACETYPES] =
 {
@@ -472,8 +477,6 @@ struct AnimationStructureType
 };
 
 
-#define PATH_STRUCT ANIMSDIR "/STRUCTDATA/"
-#define SUFFIX      ".JSD"
 #define ABCDEF(a, b, c, d, e, f)  \
 {                                 \
 	{ PATH_STRUCT a SUFFIX, NULL }, \
@@ -536,7 +539,7 @@ static void LoadAnimationProfiles(void);
 
 void InitAnimationSystem()
 {
-	INT32									cnt1, cnt2;
+	INT32 cnt1, cnt2;
 
 	LoadAnimationStateInstructions();
 	InitAnimationSurfacesPerBodytype();
@@ -593,7 +596,7 @@ void DeInitAnimationSystem()
 
 static STRUCTURE_FILE_REF* InternalGetAnimationStructureRef(const SOLDIERTYPE* const s, const UINT16 usSurfaceIndex, const UINT16 usAnimState, const BOOLEAN fUseAbsolute)
 {
-	INT8	bStructDataType;
+	INT8 bStructDataType;
 
 	if ( usSurfaceIndex == INVALID_ANIMATION_SURFACE )
 	{
@@ -646,14 +649,14 @@ void LoadAnimationSurface(UINT16 const usSoldierID, UINT16 const usSurfaceIndex,
 	if (a->hVideoObject != NULL)
 	{
 		// just increment usage counter ( below )
-		SLOGD(DEBUG_TAG_ANIMATIONS, "Surface Database: Hit %d", usSurfaceIndex);
+		SLOGD("Surface Database: Hit %d", usSurfaceIndex);
 	}
 	else
 	{
 		try
 		{
 			// Load into memory
-			SLOGD(DEBUG_TAG_ANIMATIONS, "Surface Database: Loading %d", usSurfaceIndex);
+			SLOGD("Surface Database: Loading %d", usSurfaceIndex);
 
 			AutoSGPImage   hImage(CreateImage(a->Filename, IMAGE_ALLDATA));
 			AutoSGPVObject hVObject(AddVideoObjectFromHImage(hImage));
@@ -691,12 +694,12 @@ void LoadAnimationSurface(UINT16 const usSoldierID, UINT16 const usSurfaceIndex,
 			// Determine if we have a problem with #frames + directions ( ie mismatch )
 			if (a->uiNumDirections * a->uiNumFramesPerDir != a->hVideoObject->SubregionCount())
 			{
-				SLOGW(DEBUG_TAG_ANIMATIONS, "Surface Database: Surface %d has #frames mismatch.", usSurfaceIndex);
+				SLOGW("Surface Database: Surface %d has #frames mismatch.", usSurfaceIndex);
 			}
 		}
 		catch (...)
 		{
-			SLOGE(DEBUG_TAG_ANIMATIONS, "Could not load animation file: %s", a->Filename);
+			SLOGE("Could not load animation file: %s", a->Filename);
 			throw;
 		}
 	}
@@ -704,7 +707,7 @@ void LoadAnimationSurface(UINT16 const usSoldierID, UINT16 const usSurfaceIndex,
 	// Increment usage count only if history for soldier is not yet set
 	if (gbAnimUsageHistory[usSurfaceIndex][usSoldierID] == 0)
 	{
-		SLOGD(DEBUG_TAG_ANIMATIONS, "Surface Database: Incrementing Usage %d ( Soldier %d )", usSurfaceIndex, usSoldierID);
+		SLOGD("Surface Database: Incrementing Usage %d ( Soldier %d )", usSurfaceIndex, usSoldierID);
 		// Increment usage count
 		++a->bUsageCount;
 		// Set history for particular sodlier
@@ -720,18 +723,18 @@ void UnLoadAnimationSurface(const UINT16 usSoldierID, const UINT16 usSurfaceInde
 	if (*in_use <= 0)
 	{
 		// Return warning that we have not actually loaded the surface previously
-		SLOGW(DEBUG_TAG_ANIMATIONS, "Surface Database: Soldier has tried to unlock surface that he has not locked.");
+		SLOGW("Surface Database: Soldier has tried to unlock surface that he has not locked.");
 		return;
 	}
 	*in_use = 0; // Set history for particular sodlier
 
-	SLOGD(DEBUG_TAG_ANIMATIONS, "Surface Database: Decrementing Usage %d ( Soldier %d )", usSurfaceIndex, usSoldierID);
+	SLOGD("Surface Database: Decrementing Usage %d ( Soldier %d )", usSurfaceIndex, usSoldierID);
 
 	AnimationSurfaceType* const a         = &gAnimSurfaceDatabase[usSurfaceIndex];
 	INT8*                 const use_count = &a->bUsageCount;
 	--*use_count;
 
-	SLOGD(DEBUG_TAG_ANIMATIONS, "Surface Database: MercUsage: %d, Global Uasage: %d", *in_use, *use_count);
+	SLOGD("Surface Database: MercUsage: %d, Global Uasage: %d", *in_use, *use_count);
 
 	Assert(*use_count >= 0);
 	if (*use_count < 0) *use_count = 0;
@@ -739,7 +742,7 @@ void UnLoadAnimationSurface(const UINT16 usSoldierID, const UINT16 usSurfaceInde
 	// Delete if count reched zero
 	if (*use_count == 0)
 	{
-		SLOGD(DEBUG_TAG_ANIMATIONS, "Surface Database: Unloading Surface: %d", usSurfaceIndex);
+		SLOGD("Surface Database: Unloading Surface: %d", usSurfaceIndex);
 		SGPVObject** const vo = &a->hVideoObject;
 		CHECKV(*vo != NULL);
 		DeleteVideoObject(*vo);
@@ -766,7 +769,7 @@ try
 
 	FileRead(f, &gubNumAnimProfiles, sizeof(gubNumAnimProfiles));
 
-	ANIM_PROF* const aps = MALLOCN(ANIM_PROF, gubNumAnimProfiles);
+	ANIM_PROF* const aps = new ANIM_PROF[gubNumAnimProfiles]{};
 	gpAnimProfiles = aps;
 
 	for (INT32 profile_idx = 0; profile_idx < gubNumAnimProfiles; ++profile_idx)
@@ -777,7 +780,7 @@ try
 			ANIM_PROF_DIR* const apd = &ap->Dirs[direction_idx];
 
 			FileRead(f, &apd->ubNumTiles, sizeof(UINT8));
-			ANIM_PROF_TILE* const apts = MALLOCN(ANIM_PROF_TILE, apd->ubNumTiles);
+			ANIM_PROF_TILE* const apts = new ANIM_PROF_TILE[apd->ubNumTiles]{};
 			apd->pTiles = apts;
 
 			for (INT32 tile_idx = 0; tile_idx < apd->ubNumTiles; ++tile_idx)
@@ -792,15 +795,15 @@ try
 }
 catch (...)
 {
-	SLOGE(DEBUG_TAG_ANIMATIONS, "Problems initializing Animation Profiles");
+	SLOGE("Problems initializing Animation Profiles");
 	throw;
 }
 
 
 static void DeleteAnimationProfiles(void)
 {
-	INT32				iProfileCount, iDirectionCount;
-	ANIM_PROF_DIR			*pProfileDir;
+	INT32 iProfileCount, iDirectionCount;
+	ANIM_PROF_DIR *pProfileDir;
 
 	// Loop profiles
 	for ( iProfileCount = 0; iProfileCount < gubNumAnimProfiles; iProfileCount++ )
@@ -812,26 +815,29 @@ static void DeleteAnimationProfiles(void)
 			pProfileDir = &( gpAnimProfiles[ iProfileCount ].Dirs[ iDirectionCount ] );
 
 			// Free tile
-			MemFree( pProfileDir->pTiles );
+			delete[] pProfileDir->pTiles;
 
 		}
 	}
 
 	// Free profile data!
-	MemFree( gpAnimProfiles );
+	delete[] gpAnimProfiles;
 
 }
 
 
 void ZeroAnimSurfaceCounts( )
 {
-  INT32 cnt;
+	INT32 cnt;
 
-  for ( cnt = 0; cnt < NUMANIMATIONSURFACETYPES; cnt++ )
-  {
-    gAnimSurfaceDatabase[ cnt ].bUsageCount   = 0;
-    gAnimSurfaceDatabase[ cnt ].hVideoObject  = NULL;
-  }
+	for ( cnt = 0; cnt < NUMANIMATIONSURFACETYPES; cnt++ )
+	{
+		gAnimSurfaceDatabase[ cnt ].bUsageCount   = 0;
+		gAnimSurfaceDatabase[ cnt ].hVideoObject  = NULL;
+	}
 
-  memset( gbAnimUsageHistory, 0, sizeof( gbAnimUsageHistory ) );
+	for (auto& i : gbAnimUsageHistory)
+	{
+		std::fill(std::begin(i), std::end(i), 0);
+	}
 }

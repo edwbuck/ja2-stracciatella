@@ -1,7 +1,9 @@
 # JA2-Stracciatella Continued
 
-[![Build Status Travis](https://img.shields.io/travis/ja2-stracciatella/ja2-stracciatella/master.svg?style=flat-square)](https://travis-ci.org/ja2-stracciatella/ja2-stracciatella)
-[![Build Status Appveyor](https://img.shields.io/appveyor/ci/ja2-stracciatella/ja2-stracciatella/master.svg?style=flat-square)](https://ci.appveyor.com/project/ja2-stracciatella/ja2-stracciatella)
+[![GitHub CI](https://img.shields.io/github/workflow/status/ja2-stracciatella/ja2-stracciatella/GitHub%20CI/nightly?label=GitHub%20CI&logo=github)](https://github.com/ja2-stracciatella/ja2-stracciatella/actions?query=workflow%3A%22GitHub+CI%22)
+[![Travis CI](https://img.shields.io/travis/ja2-stracciatella/ja2-stracciatella/nightly.svg?style=flat-square&logo=travis&label=Travis%20CI)](https://travis-ci.org/ja2-stracciatella/ja2-stracciatella)
+[![AppVeyor](https://img.shields.io/appveyor/ci/ja2-stracciatella/ja2-stracciatella/nightly.svg?style=flat-square&logo=appveyor&label=AppVeyor)](https://ci.appveyor.com/project/ja2-stracciatella/ja2-stracciatella)
+[![Coverity Scan](https://img.shields.io/coverity/scan/8431.svg?style=flat-square&label=Coverity%20Scan)](https://scan.coverity.com/projects/ja2-stracciatella-ja2-stracciatella)
 
 This is continuation of venerable JA2-Stracciatella project.
 
@@ -9,23 +11,34 @@ The goal of the project was to make Jagged Alliance 2 available on a wide range 
 
 Official Homepage: http://ja2-stracciatella.github.io/
 
+To get in touch with the developers you can use the [#ja2-stracciatella IRC channel on freenode](http://webchat.freenode.net/?channels=ja2-stracciatella).
+
 ## How to start the game
 
 1. Install original Jagged Alliance 2 game on your computer.  Data files from the original game will be used by JA2-Stracciatella
 
 2. [Download JA2-Stracciatella](http://ja2-stracciatella.github.io/download/) or [compile](COMPILATION.md) it from the cloned git repository.
 
+### With the optional launcher
+3. Start the launcher and use it to configure the game. It will automatically create the configuration file.
+
+4. Set “JA2 Data Directory” to point to the directory where the original game was installed during step 1. You can manually enter the directory or use the “...” button to browse your computer.
+
+5. If you haven't installed the English version of the original game, you have to select the correct “Game Version” i.e. localization. Note that the game supports two different Russian localizations: RUSSIAN for the “BUKA Agonia Vlasty” release and RUSSIAN_GOLD for the “Gold” release.
+
+### Without the optional launcher
 3. Start the game the first time.  It will create the configuration file %USERPROFILE%\Documents\JA2\ja2.json on Windows or ~/.ja2/ja2.json on Unix-like systems.
 
-4. Edit the configuration file and set parameter data_dir to point on the directory where the original game was installed on step 1.  For example, D:\games\ja2\ (on Windows) or /home/user/games/ja2-installed (on Linux).
+4. Edit the configuration file and set parameter game_dir to point to the directory where the original game was installed during step 1.  For example, D:\games\ja2\ (on Windows) or /home/user/games/ja2-installed (on Linux).
 
 5. If you installed not English version of the original game, but one of the localized varieties (e.g. French or Russian), you need to start ja2.exe with parameter telling which version of the game you are using.  For example: ```ja2.exe -resversion FRENCH```
 
-Supported localizations are DUTCH, ENGLISH, FRENCH, GERMAN, ITALIAN, POLISH, RUSSIAN, RUSSIAN_GOLD.  RUSSIAN is for BUKA Agonia Vlasty release, RUSSIAN_GOLD is for Gold release.
+Supported localizations are DUTCH, ENGLISH, FRENCH, GERMAN, ITALIAN, POLISH, RUSSIAN, RUSSIAN_GOLD. Use RUSSIAN for the “BUKA Agonia Vlasty” release and RUSSIAN_GOLD for the “Gold” release.
 
-If you downloaded precompiled version of JA2-Stracciatella, the archive may already contain set of bat files for each supported localizations.
+If you downloaded a precompiled version of JA2-Stracciatella, the archive may contain a set of bat files for all supported localizations.
 
 Run ```ja2.exe -help``` for list of available options.
+
 
 ## Development
 
@@ -46,8 +59,9 @@ The second best way is to file a bug report if you encounter a bug.
 5. Create a pull requst from your branch into master
 
 Please don't reformat the code for the sake of it, because it will make the merge process harder.  Instead use the following settings in your editor:
-- display tab as 2 spaces
-- indent with spaces
+- display tab as 8 spaces
+- indent with tabs
+If you add new code, please don't add spaces after opening or before closing round brackets.
 
 ## History of the Project
 

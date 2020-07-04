@@ -28,9 +28,11 @@
 #include "MemMan.h"
 #include "ScreenIDs.h"
 #include "GameState.h"
-#include "slog/slog.h"
+#include "Logger.h"
+#include "EditorMercs.h"
 
-extern const wchar_t* gszScheduleActions[NUM_SCHEDULE_ACTIONS];
+#include <string_theory/string>
+
 
 #define FOURPM 960
 
@@ -51,7 +53,7 @@ void CopyScheduleToList( SCHEDULENODE *pSchedule, SOLDIERINITNODE *pNode )
 {
 	SCHEDULENODE *curr;
 	curr = gpScheduleList;
-	gpScheduleList = MALLOC(SCHEDULENODE);
+	gpScheduleList = new SCHEDULENODE{};
 	*gpScheduleList = *pSchedule;
 	gpScheduleList->next = curr;
 	gubScheduleID++;
@@ -65,7 +67,7 @@ void CopyScheduleToList( SCHEDULENODE *pSchedule, SOLDIERINITNODE *pNode )
 		OptimizeSchedules();
 		if( gubScheduleID > 32 )
 		{
-			SLOGW(DEBUG_TAG_SCHEDULER, "too many Schedules posted." );
+			SLOGW("too many Schedules posted." );
 		}
 	}
 }
@@ -94,7 +96,7 @@ void DestroyAllSchedules()
 	{
 		curr = gpScheduleList;
 		gpScheduleList = gpScheduleList->next;
-		MemFree( curr );
+		delete curr;
 	}
 	gpScheduleList = NULL;
 	gubScheduleID = 0;
@@ -110,7 +112,7 @@ void DestroyAllSchedulesWithoutDestroyingEvents()
 	{
 		curr = gpScheduleList;
 		gpScheduleList = gpScheduleList->next;
-		MemFree( curr );
+		delete curr;
 	}
 	gpScheduleList = NULL;
 	gubScheduleID = 0;
@@ -122,7 +124,7 @@ void DeleteSchedule( UINT8 ubScheduleID )
 
 	if (!gpScheduleList)
 	{
-		SLOGW(DEBUG_TAG_SCHEDULER, "Attempting to delete schedule that doesn't exist");
+		SLOGW("Attempting to delete schedule that doesn't exist");
 		return;
 	}
 
@@ -146,7 +148,7 @@ void DeleteSchedule( UINT8 ubScheduleID )
 	if( temp )
 	{
 		DeleteStrategicEvent( EVENT_PROCESS_TACTICAL_SCHEDULE, temp->ubScheduleID );
-		MemFree( temp );
+		delete temp;
 	}
 }
 
@@ -164,14 +166,14 @@ void ProcessTacticalSchedule( UINT8 ubScheduleID )
 	pSchedule = GetSchedule( ubScheduleID );
 	if( !pSchedule )
 	{
-		SLOGW(DEBUG_TAG_SCHEDULER, "Schedule callback:  Schedule ID of %d not found.", ubScheduleID );
+		SLOGW("Schedule callback:  Schedule ID of %d not found.", ubScheduleID );
 		return;
 	}
 	//Attempt to access the soldier involved
 	SOLDIERTYPE* const pSoldier = pSchedule->soldier;
 	if (pSoldier == NULL)
 	{
-		SLOGW(DEBUG_TAG_SCHEDULER, "Schedule callback:  Illegal NULL soldier.");
+		SLOGW("Schedule callback:  Illegal NULL soldier.");
 		return;
 	}
 
@@ -184,7 +186,7 @@ void ProcessTacticalSchedule( UINT8 ubScheduleID )
 
 	if ( !pSoldier->bActive )
 	{
-		SLOGW(DEBUG_TAG_SCHEDULER, "Schedule callback:  Soldier isn't active.  Name is %ls.", pSoldier->name);
+		SLOGW("Schedule callback:  Soldier isn't active.  Name is %s.", pSoldier->name.c_str());
 	}
 
 	//Okay, now we have good pointers to the soldier and the schedule.
@@ -192,7 +194,7 @@ void ProcessTacticalSchedule( UINT8 ubScheduleID )
 	fAutoProcess = FALSE;
 	if( guiCurrentScreen != GAME_SCREEN )
 	{
-		SLOGW(DEBUG_TAG_SCHEDULER, "Schedule callback occurred outside of tactical -- Auto processing!" );
+		SLOGW("Schedule callback occurred outside of tactical -- Auto processing!" );
 		fAutoProcess = TRUE;
 	}
 	else
@@ -201,14 +203,14 @@ void ProcessTacticalSchedule( UINT8 ubScheduleID )
 		{
 			if( pSchedule->usTime[ iScheduleIndex ] == GetWorldMinutesInDay() )
 			{
-				SLOGD(DEBUG_TAG_SCHEDULER, "Processing schedule on time -- AI processing!" );
+				SLOGD("Processing schedule on time -- AI processing!" );
 				break;
 			}
 		}
 		if( iScheduleIndex == MAX_SCHEDULE_ACTIONS )
 		{
 			fAutoProcess = TRUE;
-			SLOGD(DEBUG_TAG_SCHEDULER, "Possible timewarp causing schedule callback to occur late -- Auto processing!" );
+			SLOGD("Possible timewarp causing schedule callback to occur late -- Auto processing!" );
 		}
 	}
 	if ( fAutoProcess )
@@ -306,7 +308,7 @@ void PrepareSchedulesForEditorEntry()
 			curr->soldier->ubScheduleID = 0;
 			temp = curr;
 			curr = curr->next;
-			MemFree( temp );
+			delete temp;
 			gubScheduleID--;
 		}
 		else
@@ -335,7 +337,7 @@ void PrepareSchedulesForEditorExit()
 void LoadSchedules(HWFILE const f)
 {
 	/* Delete all the schedules we might have loaded (though we shouldn't have any
-	 * loaded!) */
+		* loaded!) */
 	if (gpScheduleList) DestroyAllSchedules();
 
 	UINT8 n_schedules;
@@ -348,9 +350,9 @@ void LoadSchedules(HWFILE const f)
 		BYTE data[36];
 		FileRead(f, data, sizeof(data));
 
-		SCHEDULENODE* const node = MALLOCZ(SCHEDULENODE);
+		SCHEDULENODE* const node = new SCHEDULENODE{};
 
-		BYTE const* d = data;
+		DataReader d{data};
 		EXTR_SKIP(d, 4)
 		EXTR_U16A(d, node->usTime,   lengthof(node->usTime))
 		EXTR_U16A(d, node->usData1,  lengthof(node->usData1))
@@ -358,7 +360,7 @@ void LoadSchedules(HWFILE const f)
 		EXTR_U8A( d, node->ubAction, lengthof(node->ubAction))
 		EXTR_SKIP(d, 2) // skip schedule ID and soldier ID, they get overwritten
 		EXTR_U16( d, node->usFlags)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 
 		node->ubScheduleID = gubScheduleID++;
 
@@ -385,9 +387,9 @@ void LoadSchedulesFromSave(HWFILE const f)
 		BYTE data[36];
 		FileRead(f, data, sizeof(data));
 
-		SCHEDULENODE* const node = MALLOCZ(SCHEDULENODE);
+		SCHEDULENODE* const node = new SCHEDULENODE{};
 
-		BYTE const* s = data;
+		DataReader s{data};
 		EXTR_SKIP(   s, 4)
 		EXTR_U16A(   s, node->usTime,   lengthof(node->usTime))
 		EXTR_U16A(   s, node->usData1,  lengthof(node->usData1))
@@ -396,7 +398,7 @@ void LoadSchedulesFromSave(HWFILE const f)
 		EXTR_U8(     s, node->ubScheduleID)
 		EXTR_SOLDIER(s, node->soldier)
 		EXTR_U16(    s, node->usFlags)
-		Assert(s == endof(data));
+		Assert(s.getConsumed() == lengthof(data));
 
 		// Add node to the list
 		*anchor = node;
@@ -476,7 +478,7 @@ void SaveSchedules(HWFILE const f)
 		if (n_to_save-- == 0) return;
 
 		BYTE data[36];
-		BYTE* d = data;
+		DataWriter d{data};
 		INJ_SKIP(   d, 4)
 		INJ_U16A(   d, i->usTime,   lengthof(i->usTime))
 		INJ_U16A(   d, i->usData1,  lengthof(i->usData1))
@@ -485,7 +487,7 @@ void SaveSchedules(HWFILE const f)
 		INJ_U8(     d, i->ubScheduleID)
 		INJ_SOLDIER(d, i->soldier)
 		INJ_U16(    d, i->usFlags)
-		Assert(d == endof(data));
+		Assert(d.getConsumed() == lengthof(data));
 
 		FileWrite(f, data, sizeof(data));
 	}
@@ -584,13 +586,13 @@ static void AutoProcessSchedule(SCHEDULENODE* pSchedule, INT32 index)
 
 	SOLDIERTYPE* const pSoldier = pSchedule->soldier;
 
-  if(GameState::getInstance()->isEditorMode())
-  {
+	if(GameState::getInstance()->isEditorMode())
+	{
 		if ( pSoldier->ubProfile != NO_PROFILE )
 		{
-				SLOGD(DEBUG_TAG_SCHEDULER, "Autoprocessing schedule action %ls for %ls (%d) at time %02ld:%02ld (set for %02d:%02d), data1 = %d",
-				gszScheduleActions[ pSchedule->ubAction[ index ] ],
-				pSoldier->name,
+				SLOGD("Autoprocessing schedule action %s for %s (%d) at time %02ld:%02ld (set for %02d:%02d), data1 = %d",
+				gszScheduleActions[ pSchedule->ubAction[ index ] ].c_str(),
+				pSoldier->name.c_str(),
 				pSoldier->ubID,
 				GetWorldHour(),
 				guiMin,
@@ -600,8 +602,8 @@ static void AutoProcessSchedule(SCHEDULENODE* pSchedule, INT32 index)
 		}
 		else
 		{
-			SLOGD(DEBUG_TAG_SCHEDULER, "Autoprocessing schedule action %ls for civ (%d) at time %02ld:%02ld (set for %02d:%02d), data1 = %d",
-				gszScheduleActions[ pSchedule->ubAction[ index ] ],
+			SLOGD("Autoprocessing schedule action %s for civ (%d) at time %02ld:%02ld (set for %02d:%02d), data1 = %d",
+				gszScheduleActions[ pSchedule->ubAction[ index ] ].c_str(),
 				pSoldier->ubID,
 				GetWorldHour(),
 				guiMin,
@@ -609,7 +611,7 @@ static void AutoProcessSchedule(SCHEDULENODE* pSchedule, INT32 index)
 				pSchedule->usTime[ index ] % 60,
 				pSchedule->usData1[ index ]);
 		}
-  }
+	}
 
 	// always assume the merc is going to wake, unless the event is a sleep
 	pSoldier->fAIFlags &= ~(AI_ASLEEP);
@@ -887,7 +889,7 @@ static void PostDefaultSchedule(SOLDIERTYPE* pSoldier)
 	//Create a new node at the head of the list.  The head will become the new schedule
 	//we are about to add.
 	curr = gpScheduleList;
-	gpScheduleList = MALLOCZ(SCHEDULENODE);
+	gpScheduleList = new SCHEDULENODE{};
 	gpScheduleList->next = curr;
 	gubScheduleID++;
 	//Assign all of the links
@@ -916,7 +918,7 @@ static void PostDefaultSchedule(SOLDIERTYPE* pSoldier)
 		OptimizeSchedules();
 		if( gubScheduleID == 255 )
 		{
-			SLOGE(DEBUG_TAG_ASSERTS, "Too many schedules posted" );
+			SLOGA("Too many schedules posted" );
 		}
 	}
 
@@ -935,7 +937,7 @@ void PostSchedules()
 	#endif
 	//If no way to leave the map, then don't post default schedules.
 	if( gMapInformation.sNorthGridNo != -1 || gMapInformation.sEastGridNo != -1 ||
-		  gMapInformation.sSouthGridNo != -1 || gMapInformation.sWestGridNo != -1 )
+		gMapInformation.sSouthGridNo != -1 || gMapInformation.sWestGridNo != -1 )
 	{
 		fDefaultSchedulesPossible = TRUE;
 	}
@@ -951,11 +953,11 @@ void PostSchedules()
 			{
 				// ATE: There should be a better way here...
 				if( curr->pSoldier->ubBodyType != COW &&
-						curr->pSoldier->ubBodyType != BLOODCAT &&
-						curr->pSoldier->ubBodyType != HUMVEE &&
-					  curr->pSoldier->ubBodyType != ELDORADO &&
-					  curr->pSoldier->ubBodyType != ICECREAMTRUCK &&
-					  curr->pSoldier->ubBodyType != JEEP )
+					curr->pSoldier->ubBodyType != BLOODCAT &&
+					curr->pSoldier->ubBodyType != HUMVEE &&
+					curr->pSoldier->ubBodyType != ELDORADO &&
+					curr->pSoldier->ubBodyType != ICECREAMTRUCK &&
+					curr->pSoldier->ubBodyType != JEEP )
 				{
 					PostDefaultSchedule( curr->pSoldier );
 				}

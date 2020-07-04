@@ -4,6 +4,8 @@
 #include "JA2Types.h"
 #include "World_Items.h"
 
+#include <vector>
+
 
 enum ItemHandleResult
 {
@@ -19,10 +21,10 @@ enum ItemHandleResult
 };
 
 // Define for code to try and pickup all items....
-#define ITEM_PICKUP_ACTION_ALL									32000
-#define ITEM_PICKUP_SELECTION										31000
+#define ITEM_PICKUP_ACTION_ALL	32000
+#define ITEM_PICKUP_SELECTION	31000
 
-#define ITEM_IGNORE_Z_LEVEL											-1
+#define ITEM_IGNORE_Z_LEVEL	-1
 
 enum Visibility
 {
@@ -38,21 +40,21 @@ enum Visibility
 #define	ITEM_LOCATOR_LOCKED 0x02
 
 
-/* Check if at least one item in the item pool is visible */
+// Check if at least one item in the item pool is visible
 bool IsItemPoolVisible(ITEM_POOL const*);
 
 
 struct ITEM_POOL
 {
-	ITEM_POOL*  pNext;
-	INT32				iItemIndex;
-	LEVELNODE*  pLevelNode;
+	ITEM_POOL *pNext;
+	INT32     iItemIndex;
+	LEVELNODE *pLevelNode;
 };
 
 
 ItemHandleResult HandleItem(SOLDIERTYPE* pSoldier, INT16 usGridNo, INT8 bLevel, UINT16 usHandItem, BOOLEAN fFromUI);
 
-/* iItemIndex is ignored for player soldiers */
+// iItemIndex is ignored for player soldiers
 void SoldierPickupItem( SOLDIERTYPE *pSoldier, INT32 iItemIndex, INT16 sGridNo, INT8 bZLevel );
 
 void HandleSoldierPickupItem( SOLDIERTYPE *pSoldier, INT32 iItemIndex, INT16 sGridNo, INT8 bZLevel );
@@ -78,7 +80,7 @@ INT32 InternalAddItemToPool(INT16* psGridNo, OBJECTTYPE* pObject, Visibility, UI
 GridNo     AdjustGridNoForItemPlacement(SOLDIERTYPE*, GridNo);
 ITEM_POOL* GetItemPool(UINT16 usMapPos, UINT8 ubLevel);
 void       DrawItemPoolList(const ITEM_POOL* pItemPool, INT8 bZLevel, INT16 sXPos, INT16 sYPos);
-void       RemoveItemFromPool(WORLDITEM*);
+void       RemoveItemFromPool(WORLDITEM& wi);
 void       MoveItemPools(INT16 sStartPos, INT16 sEndPos);
 
 BOOLEAN SetItemsVisibilityOn(GridNo, UINT8 level, Visibility bAllGreaterThan, BOOLEAN fSetLocator);
@@ -114,7 +116,7 @@ void RemoveBlueFlag( INT16 sGridNo, INT8 bLevel  );
 // check if item is booby trapped
 BOOLEAN ContinuePastBoobyTrapInMapScreen( OBJECTTYPE *pObject, SOLDIERTYPE *pSoldier );
 
-void RefreshItemPools(const WORLDITEM* pItemList, INT32 iNumberOfItems);
+void RefreshItemPools(const std::vector<WORLDITEM>& pItemList);
 
 BOOLEAN ItemTypeExistsAtLocation( INT16 sGridNo, UINT16 usItem, UINT8 ubLevel, INT32 * piItemIndex );
 

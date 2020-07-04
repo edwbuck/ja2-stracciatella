@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "GameLoop.h"
 #include "GameVersion.h"
 #include "Local.h"
@@ -32,13 +30,18 @@
 #include "UILayout.h"
 #include "GameState.h"
 #include "sgp/FileMan.h"
-#include "slog/slog.h"
+#include "Logger.h"
+
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <stdexcept>
+
 
 ScreenID guiCurrentScreen = ERROR_SCREEN; // XXX TODO001A had no explicit initialisation
 ScreenID guiPendingScreen = NO_PENDING_SCREEN;
 
-#define	DONT_CHECK_FOR_FREE_SPACE		255
-static UINT8 gubCheckForFreeSpaceOnHardDriveCount = DONT_CHECK_FOR_FREE_SPACE;
+static BOOLEAN gfCheckForFreeSpaceOnHardDrive = FALSE;
 
 // The InitializeGame function is responsible for setting up all data and Gaming Engine
 // tasks which will run the game
@@ -57,15 +60,15 @@ void InitializeGame(void)
 
 	InitTacticalSave();
 
-	SLOGI(DEBUG_TAG_GAMELOOP, "Version Label: %s", g_version_label);
-	SLOGI(DEBUG_TAG_GAMELOOP, "Version #:     %s", g_version_number);
+	SLOGI("Version Label: %s", g_version_label);
+	SLOGI("Version #:     %s", g_version_number);
 
 	// Initialize Game Screens.
-  for (uiIndex = 0; uiIndex < MAX_SCREENS; uiIndex++)
-  {
+	for (uiIndex = 0; uiIndex < MAX_SCREENS; uiIndex++)
+	{
 		void (*const init)(void) = GameScreens[uiIndex].InitializeScreen;
 		if (init) init();
-  }
+	}
 
 	//Init the help screen system
 	InitHelpScreenSystem();
@@ -91,66 +94,12 @@ void    ShutdownGame(void)
 	// handle shutdown of game with respect to preloaded mapscreen graphics
 	HandleRemovalOfPreLoadedMapGraphics( );
 
-	 ShutdownJA2( );
+	ShutdownJA2( );
 
 	//Save the general save game settings to disk
 	SaveGameSettings();
 
 	InitTacticalSave();
-}
-
-
-static void InsertCommasIntoNumber(wchar_t pString[])
-{
-  INT16 sCounter = 0;
-  INT16 sZeroCount = 0;
-	INT16 sTempCounter = 0;
-
-	// go to end of dollar figure
-	while (pString[sCounter] != L'\0')
-	{
-		sCounter++;
-	}
-
-	// is there under $1,000?
-	if (sCounter < 4)
-	{
-		// can't do anything, return
-		return;
-	}
-
-	// at end, start backing up until beginning
-  while (sCounter > 0)
-	{
-		// enough for a comma?
-		if (sZeroCount == 3)
-		{
-			// reset count
-			sZeroCount = 0;
-      // set tempcounter to current counter
-			sTempCounter = sCounter;
-
-			// run until end
-			while (pString[sTempCounter] != L'\0')
-			{
-				sTempCounter++;
-			}
-			// now shift everything over ot the right one place until sTempCounter = sCounter
-			while (sTempCounter >= sCounter)
-			{
-				pString[sTempCounter + 1] = pString[sTempCounter];
-				sTempCounter--;
-			}
-			// now insert comma
-			pString[sCounter] = L',';
-		}
-
-		// increment count of digits
-		sZeroCount++;
-
-		// decrement counter
-		sCounter--;
-	}
 }
 
 
@@ -163,7 +112,7 @@ static void HandleNewScreenChange(UINT32 uiNewScreen, UINT32 uiOldScreen);
 void GameLoop(void)
 try
 {
-  InputAtom					InputEvent;
+	InputAtom InputEvent;
 	ScreenID uiOldScreen = guiCurrentScreen;
 
 	SGPPoint MousePos;
@@ -172,8 +121,8 @@ try
 	MouseSystemHook(MOUSE_POS, MousePos.iX, MousePos.iY);
 	MusicPoll();
 
-  while (DequeueSpecificEvent(&InputEvent, MOUSE_EVENTS))
-  {
+	while (DequeueSpecificEvent(&InputEvent, MOUSE_EVENTS))
+	{
 		MouseSystemHook(InputEvent.usEvent, MousePos.iX, MousePos.iY);
 	}
 
@@ -185,41 +134,25 @@ try
 
 
 	//if we are to check for free space on the hard drive
-	if( gubCheckForFreeSpaceOnHardDriveCount < DONT_CHECK_FOR_FREE_SPACE )
+	if( gfCheckForFreeSpaceOnHardDrive )
 	{
 		//only if we are in a screen that can get this check
 		if( guiCurrentScreen == MAP_SCREEN || guiCurrentScreen == GAME_SCREEN || guiCurrentScreen == SAVE_LOAD_SCREEN )
 		{
-			if( gubCheckForFreeSpaceOnHardDriveCount < 1 )
+			// Make sure the user has enough hard drive space
+			uint64_t uiSpaceOnDrive = GetFreeSpaceOnHardDriveWhereGameIsRunningFrom();
+			if( uiSpaceOnDrive < REQUIRED_FREE_SPACE )
 			{
-				gubCheckForFreeSpaceOnHardDriveCount++;
+				ST::string zSpaceOnDrive = ST::format("{.2f}", uiSpaceOnDrive / (FLOAT)BYTESINMEGABYTE);
+
+				ST::string zText = st_format_printf(pMessageStrings[ MSG_LOWDISKSPACE_WARNING ], zSpaceOnDrive, "20");
+
+				if( guiPreviousOptionScreen == MAP_SCREEN )
+					DoMapMessageBox( MSG_BOX_BASIC_STYLE, zText, MAP_SCREEN, MSG_BOX_FLAG_OK, NULL );
+				else
+					DoMessageBox( MSG_BOX_BASIC_STYLE, zText, GAME_SCREEN, MSG_BOX_FLAG_OK, NULL, NULL );
 			}
-			else
-			{
-				// Make sure the user has enough hard drive space
-				if( !DoesUserHaveEnoughHardDriveSpace() )
-				{
-					wchar_t	zText[512];
-					wchar_t	zSpaceOnDrive[512];
-					uintmax_t uiSpaceOnDrive;
-					wchar_t	zSizeNeeded[512];
-
-					swprintf( zSizeNeeded, lengthof(zSizeNeeded), L"%d", REQUIRED_FREE_SPACE / BYTESINMEGABYTE );
-					InsertCommasIntoNumber(zSizeNeeded);
-
-					uiSpaceOnDrive = GetFreeSpaceOnHardDriveWhereGameIsRunningFrom( );
-
-					swprintf( zSpaceOnDrive, lengthof(zSpaceOnDrive), L"%.2f", uiSpaceOnDrive / (FLOAT)BYTESINMEGABYTE );
-
-					swprintf( zText, lengthof(zText), pMessageStrings[ MSG_LOWDISKSPACE_WARNING ], zSpaceOnDrive, zSizeNeeded );
-
-					if( guiPreviousOptionScreen == MAP_SCREEN )
-						DoMapMessageBox( MSG_BOX_BASIC_STYLE, zText, MAP_SCREEN, MSG_BOX_FLAG_OK, NULL );
-					else
-						DoMessageBox( MSG_BOX_BASIC_STYLE, zText, GAME_SCREEN, MSG_BOX_FLAG_OK, NULL, NULL );
-				}
-				gubCheckForFreeSpaceOnHardDriveCount = DONT_CHECK_FOR_FREE_SPACE;
-			}
+			gfCheckForFreeSpaceOnHardDrive = FALSE;
 		}
 	}
 
@@ -245,8 +178,8 @@ try
 				case LAPTOP_SCREEN:
 					ExitLaptop();
 					break;
-                default:
-                    break;
+				default:
+					break;
 			}
 		}
 
@@ -265,7 +198,7 @@ try
 
 
 
-  uiOldScreen = (*(GameScreens[guiCurrentScreen].HandleScreen))();
+	uiOldScreen = (*(GameScreens[guiCurrentScreen].HandleScreen))();
 
 	// if the screen has chnaged
 	if( uiOldScreen != guiCurrentScreen )
@@ -300,7 +233,7 @@ catch (std::exception const& e)
 	else
 	{
 		what = "savegame";
-		if (SaveGame(SAVE__ERROR_NUM, L"error savegame"))
+		if (SaveGame(SAVE__ERROR_NUM, "error savegame"))
 		{
 			success = "succeeded (error.sav)";
 			attach  = " Do not forget to attach the savegame.";
@@ -337,7 +270,7 @@ static void HandleNewScreenChange(UINT32 uiNewScreen, UINT32 uiOldScreen)
 
 void HandleShortCutExitState()
 {
-	SLOGI(DEBUG_TAG_GAMELOOP, "User pressed ESCape, TERMINATING");
+	SLOGI("User pressed ESCape, TERMINATING");
 
 	// Use YES/NO pop up box, setup for particular screen
 	switch (guiCurrentScreen)
@@ -374,7 +307,7 @@ void HandleShortCutExitState()
 void EndGameMessageBoxCallBack(MessageBoxReturnValue const bExitValue)
 {
 	// yes, so start over, else stay here and do nothing for now
-  if( bExitValue == MSG_BOX_RETURN_YES )
+	if( bExitValue == MSG_BOX_RETURN_YES )
 	{
 		requestGameExit();
 	}
@@ -390,5 +323,5 @@ void EndGameMessageBoxCallBack(MessageBoxReturnValue const bExitValue)
 
 void NextLoopCheckForEnoughFreeHardDriveSpace()
 {
-	gubCheckForFreeSpaceOnHardDriveCount = 0;
+	gfCheckForFreeSpaceOnHardDrive = TRUE;
 }

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <map>
-#include <string>
-
 #include "rapidjson/document.h"
+
+#include <map>
 
 struct ItemModel;
 class ItemSystem;
@@ -20,18 +19,18 @@ class ItemSystem;
 class DealerInventory
 {
 public:
-  DealerInventory(rapidjson::Document *json, const ItemSystem *itemSystem);
+	DealerInventory(rapidjson::Document *json, const ItemSystem *itemSystem);
 
-  /**
-   * Check if item in the inventory.
-   */
-  bool hasItem(const ItemModel *item) const;
+	/**
+	 * Check if item in the inventory.
+	 */
+	bool hasItem(const ItemModel *item) const;
 
-  /**
-   * Return amount of the given item in the inventory or zero if the item is not present.
-   */
-  int getMaxItemAmount(const ItemModel *item) const;
+	/**
+	 * Return amount of the given item in the inventory or zero if the item is not present.
+	 */
+	int getMaxItemAmount(const ItemModel *item) const;
 
 protected:
-  std::map<const ItemModel*, int> m_inventory;
+	std::map<const ItemModel*, int> m_inventory;
 };

@@ -35,8 +35,8 @@ extern	BOOLEAN	gfDoneWithSplashScreen;
 
 static SMKFLIC* gpSmackFlic = 0;
 
-#define		SMKINTRO_FIRST_VIDEO				255
-#define		SMKINTRO_NO_VIDEO						-1
+#define SMKINTRO_FIRST_VIDEO	255
+#define SMKINTRO_NO_VIDEO	-1
 
 //enums for the various smacker files
 enum
@@ -174,17 +174,12 @@ static void ExitIntroScreen(void)
 
 static void HandleIntroScreen(void)
 {
-	BOOLEAN	fFlicStillPlaying = FALSE;
-
 	//if we are exiting this screen, this frame, dont update the screen
 	if( gfIntroScreenExit )
 		return;
 
 	//handle smaker each frame
-	fFlicStillPlaying = SmkPollFlics();
-
-	//if the flic is not playing
-	if( !fFlicStillPlaying )
+	while (!SmkPollFlics())
 	{
 		INT32 iNextVideoToPlay = -1;
 
@@ -198,6 +193,7 @@ static void HandleIntroScreen(void)
 		{
 			PrepareToExitIntroScreen();
 			giCurrentIntroBeingPlayed = -1;
+			break;
 		}
 	}
 

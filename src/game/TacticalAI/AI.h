@@ -3,7 +3,7 @@
 
 #include "JA2Types.h"
 #include "WorldDef.h"
-#include "slog/slog.h"
+#include "Logger.h"
 
 extern INT8	gubAIPathCosts[19][19];
 #define AI_PATHCOST_RADIUS 9
@@ -25,7 +25,7 @@ enum CreatureCalls
 
 // ANY NEW ACTIONS ADDED - UPDATE OVERHEAD.C ARRAY WITH ACTION'S STRING VALUE
 #define FIRST_MOVEMENT_ACTION AI_ACTION_RANDOM_PATROL
-#define LAST_MOVEMENT_ACTION AI_ACTION_MOVE_TO_CLIMB
+#define LAST_MOVEMENT_ACTION AI_ACTION_CHANGE_STANCE
 enum ActionType
 {
 	AI_ACTION_NONE = 0,						// maintain current position & facing
@@ -134,6 +134,7 @@ INT8 CalcMorale(SOLDIERTYPE *pSoldier);
 void CallAvailableEnemiesTo(GridNo);
 void CallAvailableKingpinMenTo( INT16 sGridNo );
 void CallAvailableTeamEnemiesTo(GridNo, INT8 team);
+void CallAvailableTeamEnemiesToAmbush(GridNo);
 void CallEldinTo( INT16 sGridNo );
 void CancelAIAction(SOLDIERTYPE* pSoldier);
 void CheckForChangingOrders(SOLDIERTYPE *pSoldier );

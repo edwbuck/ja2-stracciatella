@@ -1,4 +1,4 @@
-file(GLOB LOCAL_JA2_HEADERS ${CMAKE_CURRENT_SOURCE_DIR} *.h)
+file(GLOB LOCAL_JA2_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 set(LOCAL_JA2_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Button_Sound_Control.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/Button_System.cc
@@ -10,7 +10,6 @@ set(LOCAL_JA2_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/HImage.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/ImpTGA.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/Input.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/LibraryDataBase.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/Line.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/LoadSaveData.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/MemMan.cc
@@ -20,12 +19,11 @@ set(LOCAL_JA2_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/SGP.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/SGPStrings.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/STCI.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/Logger.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/Shading.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/Smack_Stub.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/SoundMan.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/StrUtils.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/TranslationTable.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/UTF8String.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/VObject.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/VObject_Blitters.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/VSurface.cc
@@ -37,8 +35,8 @@ if (WITH_UNITTESTS)
         ${LOCAL_JA2_SOURCES}
         ${CMAKE_CURRENT_SOURCE_DIR}/FileMan_unittest.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/LoadSaveData_unittest.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/UTF8String_unittest.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/wchar_unittest.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/SGPStrings_unittest.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/string_unittest.cc
     )
 endif()
 

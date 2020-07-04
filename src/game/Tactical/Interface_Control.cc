@@ -44,6 +44,8 @@
 #include "Civ_Quotes.h"
 #include "UILayout.h"
 
+#include <string_theory/format>
+
 
 static SGPRect gOldClippingRect;
 static SGPRect gOldDirtyClippingRect;
@@ -52,7 +54,7 @@ static UINT16 gusUICurIntTileEffectIndex;
 static INT16  gsUICurIntTileEffectGridNo;
 static UINT8  gsUICurIntTileOldShade;
 
-BOOLEAN		gfRerenderInterfaceFromHelpText = FALSE;
+BOOLEAN gfRerenderInterfaceFromHelpText = FALSE;
 
 
 DirtyLevel gfPausedTacticalRenderInterfaceFlags = DIRTYLEVEL0;
@@ -90,10 +92,14 @@ static void RenderPanel(void)
 {
 	switch (gsCurInterfacePanel)
 	{
-		case SM_PANEL:   RenderSMPanel(&fInterfacePanelDirty);  break;
-		case TEAM_PANEL: RenderTEAMPanel(fInterfacePanelDirty); break;
-        default:
-            break;
+		case SM_PANEL:
+			RenderSMPanel(&fInterfacePanelDirty);
+			break;
+		case TEAM_PANEL:
+			RenderTEAMPanel(fInterfacePanelDirty);
+			break;
+		default:
+			break;
 	}
 }
 
@@ -111,7 +117,7 @@ void RenderTacticalInterface( )
 	{
 		HandleFlashingItems( );
 
-    HandleMultiPurposeLocator( );
+		HandleMultiPurposeLocator( );
 
 	}
 
@@ -125,8 +131,8 @@ void RenderTacticalInterface( )
 }
 
 
-/* handle paused render of tactical panel, if flag set, OR it in with tactical
- * render flags then reset */
+// handle paused render of tactical panel, if flag set, OR it in with tactical
+// render flags then reset
 static void HandlePausedTacticalRender(void)
 {
 
@@ -180,11 +186,20 @@ void SetUpInterface()
 	{
 		UINT16 idx;
 
-		case NONSELECTED_GUY_SELECTION: idx = GOODRING1;      goto add_node;
-		//case SELECTED_GUY_SELECTION:    idx = SELRING1;       goto add_node;
-		case SELECTED_GUY_SELECTION:    idx = FIRSTPOINTERS2; goto add_node;
-		case ENEMY_GUY_SELECTION:       idx = FIRSTPOINTERS2; goto add_node;
-		default:                        break;
+		case NONSELECTED_GUY_SELECTION:
+			idx = GOODRING1;
+			goto add_node;
+		//case SELECTED_GUY_SELECTION:
+			idx = SELRING1;
+			goto add_node;
+		case SELECTED_GUY_SELECTION:
+			idx = FIRSTPOINTERS2;
+			goto add_node;
+		case ENEMY_GUY_SELECTION:
+			idx = FIRSTPOINTERS2;
+			goto add_node;
+		default:
+			break;
 
 add_node:
 			LEVELNODE* (&add)(UINT32, UINT16) = gsSelectedLevel == 0 ? AddObjectToHead : AddRoofToHead;
@@ -199,10 +214,9 @@ add_node:
 		SOLDIERTYPE const* const sel = GetSelectedMan();
 		if (sel && sel->sGridNo != gsUIHandleShowMoveGridLocation)
 		{
-			UINT16 const idx =
-				gfUIHandleShowMoveGrid == 2 ? FIRSTPOINTERS4 :
-				sel->bStealthMode           ? FIRSTPOINTERS9 :
-				FIRSTPOINTERS2;
+			UINT16 const idx = gfUIHandleShowMoveGrid == 2 ? FIRSTPOINTERS4 :
+						sel->bStealthMode ? FIRSTPOINTERS9 :
+						FIRSTPOINTERS2;
 			LEVELNODE* (&add)(UINT32, UINT16) = gsInterfaceLevel == 0 ? AddTopmostToHead : AddOnRoofToHead;
 			LEVELNODE* const n                = add(gsUIHandleShowMoveGridLocation, GetSnapCursorIndex(idx));
 			n->ubShadeLevel        = DEFAULT_SHADE_LEVEL;
@@ -211,7 +225,8 @@ add_node:
 	}
 
 	if (gfUIShowCurIntTile)
-	{ // Check if we are over an interactive tile
+	{
+		// Check if we are over an interactive tile
 		if (LEVELNODE* const int_tile = GetCurInteractiveTileGridNo(&gsUICurIntTileEffectGridNo))
 		{
 			gusUICurIntTileEffectIndex = int_tile->usIndex;
@@ -380,7 +395,7 @@ void RenderTopmostTacticalInterface()
 	StartViewportOverlays();
 
 	RenderTopmostFlashingItems();
-  RenderTopmostMultiPurposeLocator();
+	RenderTopmostMultiPurposeLocator();
 	RenderAccumulatedBurstLocations();
 
 	FOR_EACH_MERC(i)
@@ -415,7 +430,7 @@ void RenderTopmostTacticalInterface()
 		}
 
 		SetFontAttributes(TINYFONT1, FONT_MCOLOR_WHITE);
-		GDirtyPrintF(x, y, L"-%d", s.sDamage);
+		GDirtyPrint(x, y, ST::format("-{}", s.sDamage));
 	}
 
 	// FOR THE MOST PART, DISABLE INTERFACE STUFF WHEN IT'S ENEMY'S TURN
@@ -475,8 +490,8 @@ void RenderTopmostTacticalInterface()
 		case OPENDOOR_MENU_MODE:
 			RenderOpenDoorMenu();
 			break;
-        default:
-            break;
+		default:
+			break;
 	}
 
 	if (gfInTalkPanel) RenderTalkingMenu();
@@ -485,8 +500,8 @@ void RenderTopmostTacticalInterface()
 
 	if (fRenderRadarScreen)
 	{
-	  RenderClock();
-	  RenderTownIDString();
+		RenderClock();
+		RenderTownIDString();
 		CreateMouseRegionForPauseOfClock();
 	}
 	else
@@ -557,10 +572,14 @@ void EraseInterfaceMenus( BOOLEAN fIgnoreUIUnLock )
 	// Remove item pointer if one active
 	CancelItemPointer( );
 
-  ShutDownQuoteBoxIfActive( );
+	ShutDownQuoteBoxIfActive( );
 	PopDownMovementMenu( );
 	PopDownOpenDoorMenu( );
 	DeleteTalkingMenu( );
+
+	// Cancel Rubberbanding every time a menu is erased/opened
+	EndRubberBanding(true);
+	ResetMultiSelection();
 }
 
 
@@ -576,8 +595,6 @@ void ResetInterfaceAndUI( )
 	EraseInterfaceMenus( FALSE );
 
 	EraseRenderArrows( );
-
-	EndRubberBanding( );
 
 	//ResetMultiSelection( );
 

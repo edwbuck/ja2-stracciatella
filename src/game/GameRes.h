@@ -1,26 +1,19 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
 /* Game resources */
 
 #include "Types.h"
 #include "IEncodingCorrector.h"
+#include "stracciatella.h"
 
 #include "StringEncodingTypes.h"
 
+#include <string_theory/string>
+
+#include <vector>
+
 /** List of supported game versions (localizations). */
-enum GameVersion {
-  GV_DUTCH,
-  GV_ENGLISH,
-  GV_FRENCH,
-  GV_GERMAN,
-  GV_ITALIAN,
-  GV_POLISH,
-  GV_RUSSIAN,
-  GV_RUSSIAN_GOLD,
-};
+using GameVersion = VanillaVersion;
 
 enum MultiLanguageGraphic
 {
@@ -57,7 +50,7 @@ enum MultiLanguageGraphic
 	MLG_TOSTATS,
 	MLG_WARNING,
 	MLG_YOURAD13,
-  MSG__LAST
+	MSG__LAST
 };
 
 char const* GetMLGFilename(MultiLanguageGraphic);
@@ -66,7 +59,7 @@ char const* GetMLGFilename(MultiLanguageGraphic);
 void setGameVersion(GameVersion ver);
 
 /** Get list of resource libraries. */
-std::vector<std::string> GetResourceLibraries(const std::string &dataDir);
+std::vector<ST::string> GetResourceLibraries(const ST::string &dataDir);
 
 /**
  * Get encoding corrector for strings in data files.
@@ -91,7 +84,7 @@ bool isRussianGoldVersion();
 /** Get major map version. */
 FLOAT getMajorMapVersion();
 
-wchar_t getZeroGlyphChar();
+char32_t getZeroGlyphChar();
 
 /*************************************************************
  *

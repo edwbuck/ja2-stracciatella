@@ -31,6 +31,9 @@
 #include "FileMan.h"
 #include "UILayout.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
 
 //#define DEBUG_GAME_CLOCK
 
@@ -66,37 +69,37 @@ static MOUSE_REGION gClockScreenMaskMouseRegion;
 
 //These contain all of the information about the game time, rate of time, etc.
 //All of these get saved and loaded.
-INT32				giTimeCompressMode			=	TIME_COMPRESS_X0;
-static UINT8         gubClockResolution          = 1;
-BOOLEAN			gfGamePaused						= TRUE;
-BOOLEAN			gfTimeInterrupt					= FALSE;
-static BOOLEAN       gfTimeInterruptPause        = FALSE;
-static BOOLEAN       fSuperCompression           = FALSE;
-UINT32			guiGameClock						= STARTING_TIME;
-static UINT32        guiPreviousGameClock        = 0; // used only for error-checking purposes
-static UINT32        guiGameSecondsPerRealSecond;
-static UINT32        guiTimesThisSecondProcessed = 0;
-static MercPopUpBox* g_paused_popup_box;
-UINT32			guiDay;
-UINT32			guiHour;
-UINT32			guiMin;
-wchar_t			gswzWorldTimeStr[20];
-INT32				giTimeCompressSpeeds[ NUM_TIME_COMPRESS_SPEEDS ] = { 0, 1, 5 * 60, 30 * 60, 60 * 60 };
-static UINT16        usPausedActualWidth;
-static UINT16        usPausedActualHeight;
-UINT32			guiTimeOfLastEventQuery = 0;
-BOOLEAN			gfLockPauseState = FALSE;
-BOOLEAN			gfPauseDueToPlayerGamePause = FALSE;
-BOOLEAN			gfResetAllPlayerKnowsEnemiesFlags = FALSE;
-static BOOLEAN       gfTimeCompressionOn = FALSE;
-UINT32			guiLockPauseStateLastReasonId = 0;
+INT32          giTimeCompressMode = TIME_COMPRESS_X0;
+static UINT8   gubClockResolution = 1;
+BOOLEAN        gfGamePaused	= TRUE;
+BOOLEAN        gfTimeInterrupt	= FALSE;
+static BOOLEAN gfTimeInterruptPause = FALSE;
+static BOOLEAN fSuperCompression = FALSE;
+UINT32         guiGameClock = STARTING_TIME;
+static UINT32  guiPreviousGameClock = 0; // used only for error-checking purposes
+static UINT32  guiGameSecondsPerRealSecond;
+static UINT32  guiTimesThisSecondProcessed = 0;
+static         MercPopUpBox* g_paused_popup_box;
+UINT32         guiDay;
+UINT32         guiHour;
+UINT32         guiMin;
+ST::string     gswzWorldTimeStr;
+INT32          giTimeCompressSpeeds[ NUM_TIME_COMPRESS_SPEEDS ] = { 0, 1, 5 * 60, 30 * 60, 60 * 60 };
+static UINT16  usPausedActualWidth;
+static UINT16  usPausedActualHeight;
+UINT32         guiTimeOfLastEventQuery = 0;
+BOOLEAN        gfLockPauseState = FALSE;
+BOOLEAN        gfPauseDueToPlayerGamePause = FALSE;
+BOOLEAN        gfResetAllPlayerKnowsEnemiesFlags = FALSE;
+static BOOLEAN gfTimeCompressionOn = FALSE;
+UINT32         guiLockPauseStateLastReasonId = 0;
 //***When adding new saved time variables, make sure you remove the appropriate amount from the paddingbytes and
 //   more IMPORTANTLY, add appropriate code in Save/LoadGameClock()!
-#define			TIME_PADDINGBYTES		20
+#define TIME_PADDINGBYTES 20
 
 
-extern			UINT32		guiEnvTime;
-extern			UINT32		guiEnvDay;
+extern UINT32 guiEnvTime;
+extern UINT32 guiEnvDay;
 
 
 
@@ -107,7 +110,7 @@ void InitNewGameClock( )
 	guiDay = ( guiGameClock / NUM_SEC_IN_DAY );
 	guiHour = ( guiGameClock - ( guiDay * NUM_SEC_IN_DAY ) ) / NUM_SEC_IN_HOUR;
 	guiMin	= ( guiGameClock - ( ( guiDay * NUM_SEC_IN_DAY ) + ( guiHour * NUM_SEC_IN_HOUR ) ) ) / NUM_SEC_IN_MIN;
-	swprintf(WORLDTIMESTR, lengthof(WORLDTIMESTR), L"%ls %d, %02d:%02d", pDayStrings, guiDay, guiHour, guiMin);
+	WORLDTIMESTR = ST::format("{} {}, {02d}:{02d}", pDayStrings, guiDay, guiHour, guiMin);
 	guiTimeCurrentSectorWasLastLoaded = 0;
 	guiGameSecondsPerRealSecond = 0;
 	gubClockResolution = 1;
@@ -220,7 +223,7 @@ static void AdvanceClock(UINT8 ubWarpCode)
 	guiHour = ( guiGameClock - ( guiDay * NUM_SEC_IN_DAY ) ) / NUM_SEC_IN_HOUR;
 	guiMin	= ( guiGameClock - ( ( guiDay * NUM_SEC_IN_DAY ) + ( guiHour * NUM_SEC_IN_HOUR ) ) ) / NUM_SEC_IN_MIN;
 
-	swprintf(WORLDTIMESTR, lengthof(WORLDTIMESTR), L"%ls %d, %02d:%02d", gpGameClockString, guiDay, guiHour, guiMin);
+	WORLDTIMESTR = ST::format("{} {}, {02d}:{02d}", gpGameClockString, guiDay, guiHour, guiMin);
 
 	if( gfResetAllPlayerKnowsEnemiesFlags && !gTacticalStatus.fEnemyInSector )
 	{
@@ -235,7 +238,7 @@ static void AdvanceClock(UINT8 ubWarpCode)
 
 void AdvanceToNextDay()
 {
-	INT32	 uiDiff;
+	INT32  uiDiff;
 	UINT32 uiTomorrowTimeInSec;
 
 	uiTomorrowTimeInSec = (guiDay+1)*NUM_SEC_IN_DAY + 8*NUM_SEC_IN_HOUR + 15*NUM_SEC_IN_MIN;
@@ -278,7 +281,7 @@ void RenderClock(void)
 	INT16 y = CLOCK_Y;
 	RestoreExternBackgroundRect(x, y, CLOCK_WIDTH, CLOCK_HEIGHT);
 
-	const wchar_t* const str = (gfPauseDueToPlayerGamePause ? pPausedGameText[0] : WORLDTIMESTR);
+	ST::string str = (gfPauseDueToPlayerGamePause ? pPausedGameText[0] : WORLDTIMESTR);
 	FindFontCenterCoordinates(x, y, CLOCK_WIDTH, CLOCK_HEIGHT, str, CLOCK_FONT, &x, &y);
 	MPrint(x, y, str);
 }
@@ -557,7 +560,7 @@ void UnPauseGame(void)
 		// ignore request if locked
 		if ( gfLockPauseState )
 		{
-			SLOGW(DEBUG_TAG_GAMELOOP, "Call to UnPauseGame() while Pause State is LOCKED!");
+			SLOGW("Call to UnPauseGame() while Pause State is LOCKED!");
 			return;
 		}
 
@@ -605,19 +608,19 @@ static void CreateDestroyScreenMaskForPauseGame(void);
 //-Speed:  The speed is the amount of game time passes per real second of time.  The higher this
 //         value, the faster the game time flows.
 //-Resolution:  The higher the resolution, the more often per second the clock is actually updated.
-//				 This value doesn't affect how much game time passes per real second, but allows for
-//				 a more accurate representation of faster time flows.
+//              This value doesn't affect how much game time passes per real second, but allows for
+//              a more accurate representation of faster time flows.
 void UpdateClock()
 {
 	UINT32 uiNewTime;
 	UINT32 uiThousandthsOfThisSecondProcessed;
 	UINT32 uiTimeSlice;
 	UINT32 uiNewTimeProcessed;
-	UINT32 uiAmountToAdvanceTime;
 	static UINT8 ubLastResolution = 1;
 	static UINT32 uiLastSecondTime = 0;
 	static UINT32 uiLastTimeProcessed = 0;
 #ifdef DEBUG_GAME_CLOCK
+	UINT32 uiAmountToAdvanceTime;
 	UINT32 uiOrigNewTime;
 	UINT32 uiOrigLastSecondTime;
 	UINT32 uiOrigThousandthsOfThisSecondProcessed;
@@ -642,7 +645,7 @@ void UpdateClock()
 		return;
 	}
 
-	if( ( gTacticalStatus.uiFlags & TURNBASED && gTacticalStatus.uiFlags & INCOMBAT ) )
+	if(gTacticalStatus.uiFlags & INCOMBAT)
 		return; //time is currently stopped!
 
 
@@ -688,9 +691,9 @@ void UpdateClock()
 
 			uiNewTimeProcessed = MAX( uiNewTimeProcessed, uiLastTimeProcessed );
 
+			#ifdef DEBUG_GAME_CLOCK
 			uiAmountToAdvanceTime = uiNewTimeProcessed - uiLastTimeProcessed;
 
-			#ifdef DEBUG_GAME_CLOCK
 				if( uiAmountToAdvanceTime > 0x80000000 || guiGameClock + uiAmountToAdvanceTime < guiPreviousGameClock )
 				{
 					uiNewTimeProcessed = uiNewTimeProcessed;
@@ -774,10 +777,10 @@ void LoadGameClock(HWFILE const hFile)
 	guiHour = ( guiGameClock - ( guiDay * NUM_SEC_IN_DAY ) ) / NUM_SEC_IN_HOUR;
 	guiMin	= ( guiGameClock - ( ( guiDay * NUM_SEC_IN_DAY ) + ( guiHour * NUM_SEC_IN_HOUR ) ) ) / NUM_SEC_IN_MIN;
 
-	swprintf(WORLDTIMESTR, lengthof(WORLDTIMESTR), L"%ls %d, %02d:%02d", pDayStrings, guiDay, guiHour, guiMin);
+	WORLDTIMESTR = ST::format("{} {}, {02d}:{02d}", pDayStrings, guiDay, guiHour, guiMin);
 
 	if( !gfBasement && !gfCaves )
-		gfDoLighting		 = TRUE;
+		gfDoLighting = TRUE;
 }
 
 
@@ -797,7 +800,7 @@ void CreateMouseRegionForPauseOfClock(void)
 
 		fClockMouseRegionCreated = TRUE;
 
-		wchar_t const* const help = gfGamePaused ?
+		ST::string help = gfGamePaused ?
 			pPausedGameText[1] : pPausedGameText[2];
 		gClockMouseRegion.SetFastHelpText(help);
 	}

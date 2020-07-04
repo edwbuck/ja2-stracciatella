@@ -13,6 +13,8 @@
 #include "Button_System.h"
 #include "Font_Control.h"
 
+#include <string_theory/string>
+
 
 // this is the amount of time, the player waits until booted back to main profileing screen
 
@@ -56,11 +58,11 @@ void EnterIMPPersonalityFinish( void )
 
 void RenderIMPPersonalityFinish( void )
 {
-   // the background
+	// the background
 	RenderProfileBackGround( );
 
 		// indent for text
-  RenderBeginIndent( 110, 93 );
+	RenderBeginIndent( 110, 93 );
 
 	// check confirm flag to decide if we have to display appropriate response to button action
 	if( fConfirmHasBeenSelectedFlag )
@@ -68,13 +70,13 @@ void RenderIMPPersonalityFinish( void )
 		// confirm was yes, display yes string
 		if (fConfirmIsYesFlag)
 		{
-      // display yes string
+			// display yes string
 			PrintImpText( );
 		}
 		else
 		{
 			// display no string
-      PrintImpText( );
+			PrintImpText( );
 		}
 	}
 }
@@ -91,7 +93,7 @@ void ExitIMPPersonalityFinish( void )
 	if( fExitIMPPerFinAtOk )
 	{
 		// destroy the finish ok buttons
-	  DestroyPersonalityFinishOkButton( );
+		DestroyPersonalityFinishOkButton( );
 	}
 
 	if (!fExitIMPPerFinAtOk)
@@ -145,7 +147,7 @@ static void CheckIfConfirmHasBeenSelectedAndTimeDelayHasPassed(void)
 }
 
 
-static void MakeButton(UINT idx, const wchar_t* text, INT16 x, GUI_CALLBACK click)
+static void MakeButton(UINT idx, const ST::string& text, INT16 x, GUI_CALLBACK click)
 {
 	BUTTON_PICS* const img = LoadButtonImage(LAPTOPDIR "/button_5.sti", 0, 1);
 	giIMPPersonalityFinishButtonImage[idx] = img;
@@ -159,7 +161,7 @@ static void MakeButton(UINT idx, const wchar_t* text, INT16 x, GUI_CALLBACK clic
 
 static void CreateIMPPersonalityFinishButtons(void)
 {
-  // this function will create the buttons needed for the IMP personality Finish Page
+	// this function will create the buttons needed for the IMP personality Finish Page
 	MakeButton(0, pImpButtonText[ 9], LAPTOP_SCREEN_UL_X +  90, BtnIMPPersonalityFinishYesCallback); // Yes button
 	MakeButton(1, pImpButtonText[10], LAPTOP_SCREEN_UL_X + 276, BtnIMPPersonalityFinishNoCallback);  // No button
 }
@@ -170,12 +172,12 @@ static void DestroyIMPersonalityFinishButtons(void)
 	// this function will destroy the buttons needed for the IMP personality Finish page
 
 	// the yes button
-  RemoveButton(giIMPPersonalityFinishButton[ 0 ] );
-  UnloadButtonImage(giIMPPersonalityFinishButtonImage[ 0 ] );
+	RemoveButton(giIMPPersonalityFinishButton[ 0 ] );
+	UnloadButtonImage(giIMPPersonalityFinishButtonImage[ 0 ] );
 
-  // the no button
+	// the no button
 	RemoveButton(giIMPPersonalityFinishButton[ 1 ] );
-  UnloadButtonImage(giIMPPersonalityFinishButtonImage[ 1 ] );
+	UnloadButtonImage(giIMPPersonalityFinishButtonImage[ 1 ] );
 }
 
 
@@ -186,12 +188,12 @@ static void BtnIMPPersonalityFinishYesCallback(GUI_BUTTON *btn, INT32 reason)
 	if (reason & MSYS_CALLBACK_REASON_LBUTTON_DWN)
 	{
 		// confirm flag set, get out of HERE!
-	   if (fConfirmHasBeenSelectedFlag)
-		 {
-			 // now set this button off
-       btn->uiFlags&= ~BUTTON_CLICKED_ON;
-			 return;
-		 }
+		if (fConfirmHasBeenSelectedFlag)
+		{
+			// now set this button off
+			btn->uiFlags&= ~BUTTON_CLICKED_ON;
+			return;
+		}
 	}
 	else if (reason & MSYS_CALLBACK_REASON_LBUTTON_UP)
 	{
@@ -215,13 +217,13 @@ static void BtnIMPPersonalityFinishNoCallback(GUI_BUTTON *btn, INT32 reason)
 
 	if (reason & MSYS_CALLBACK_REASON_LBUTTON_DWN)
 	{
-     // confirm flag set, get out of HERE!
-	   if (fConfirmHasBeenSelectedFlag)
-		 {
-			 // now set this button off
-       btn->uiFlags&=~(BUTTON_CLICKED_ON);
-			 return;
-		 }
+		// confirm flag set, get out of HERE!
+		if (fConfirmHasBeenSelectedFlag)
+		{
+			// now set this button off
+			btn->uiFlags&=~(BUTTON_CLICKED_ON);
+			return;
+		}
 	}
 	else if (reason & MSYS_CALLBACK_REASON_LBUTTON_UP)
 	{
@@ -248,8 +250,8 @@ static void CreatePersonalityFinishOkButton(void)
 static void DestroyPersonalityFinishOkButton(void)
 {
 		// the ok button
-  RemoveButton(giIMPPersonalityFinishButton[ 0 ] );
-  UnloadButtonImage(giIMPPersonalityFinishButtonImage[ 0 ] );
+	RemoveButton(giIMPPersonalityFinishButton[ 0 ] );
+	UnloadButtonImage(giIMPPersonalityFinishButtonImage[ 0 ] );
 }
 
 

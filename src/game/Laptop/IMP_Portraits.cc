@@ -15,6 +15,8 @@
 #include "VSurface.h"
 #include "Font_Control.h"
 
+#include <string_theory/string>
+
 
 //current and last pages
 INT32 iCurrentPortrait = 0;
@@ -36,8 +38,7 @@ static void CreateIMPPortraitButtons(void);
 
 void EnterIMPPortraits( void )
 {
-
-		// create buttons
+	// create buttons
 	CreateIMPPortraitButtons( );
 
 	// render background
@@ -50,12 +51,10 @@ static void RenderPortrait(INT16 x, INT16 y);
 
 void RenderIMPPortraits( void )
 {
-
-
-  // render background
+	// render background
 	RenderProfileBackGround( );
 
-		// the Voices frame
+	// the Voices frame
 	RenderPortraitFrame( 191, 167 );
 
 	// render the current portrait
@@ -75,7 +74,7 @@ static void DestroyIMPPortraitButtons(void);
 void ExitIMPPortraits( void )
 {
 	// destroy buttons for IMP portrait page
-  DestroyIMPPortraitButtons( );
+	DestroyIMPPortraitButtons( );
 }
 
 void HandleIMPPortraits( void )
@@ -83,7 +82,7 @@ void HandleIMPPortraits( void )
 	// do we need to re write screen
 	if (fReDrawPortraitScreenFlag)
 	{
-    RenderIMPPortraits( );
+		RenderIMPPortraits( );
 
 		// reset redraw flag
 		fReDrawPortraitScreenFlag = FALSE;
@@ -103,7 +102,6 @@ static void RenderPortrait(INT16 const x, INT16 const y)
 static void IncrementPictureIndex(void)
 {
 	// cycle to next picture
-
 	iCurrentPortrait++;
 
 	// gone too far?
@@ -116,19 +114,18 @@ static void IncrementPictureIndex(void)
 
 static void DecrementPicture(void)
 {
-  // cycle to previous picture
-
+	// cycle to previous picture
 	iCurrentPortrait--;
 
 	// gone too far?
-  if( iCurrentPortrait < 0 )
+	if( iCurrentPortrait < 0 )
 	{
-    iCurrentPortrait = iLastPicture;
+		iCurrentPortrait = iLastPicture;
 	}
 }
 
 
-static void MakeButton(UINT idx, const char* img_file, INT32 off_normal, INT32 on_normal, const wchar_t* text, INT16 x, INT16 y, GUI_CALLBACK click)
+static void MakeButton(UINT idx, const char* img_file, INT32 off_normal, INT32 on_normal, const ST::string& text, INT16 x, INT16 y, GUI_CALLBACK click)
 {
 	BUTTON_PICS* const img = LoadButtonImage(img_file, off_normal, on_normal);
 	giIMPPortraitButtonImage[idx] = img;
@@ -147,9 +144,9 @@ static void BtnIMPPortraitPreviousCallback(GUI_BUTTON* btn, INT32 reason);
 
 static void CreateIMPPortraitButtons(void)
 {
-  // will create buttons need for the IMP portrait screen
-  const INT16 dx = LAPTOP_SCREEN_UL_X;
-  const INT16 dy = LAPTOP_SCREEN_WEB_UL_Y;
+	// will create buttons need for the IMP portrait screen
+	const INT16 dx = LAPTOP_SCREEN_UL_X;
+	const INT16 dy = LAPTOP_SCREEN_WEB_UL_Y;
 	MakeButton(0, LAPTOPDIR "/voicearrows.sti", 1, 3, pImpButtonText[13], dx + 343, dy + 205, BtnIMPPortraitNextCallback);     // Next button
 	MakeButton(1, LAPTOPDIR "/voicearrows.sti", 0, 2, pImpButtonText[12], dx +  93, dy + 205, BtnIMPPortraitPreviousCallback); // Previous button
 	MakeButton(2, LAPTOPDIR "/button_5.sti",    0, 1, pImpButtonText[11], dx + 187, dy + 330, BtnIMPPortraitDoneCallback);     // Done button
@@ -162,16 +159,16 @@ static void DestroyIMPPortraitButtons(void)
 	// will destroy buttons created for IMP Portrait screen
 
 	// the next button
-  RemoveButton(giIMPPortraitButton[ 0 ] );
-  UnloadButtonImage(giIMPPortraitButtonImage[ 0 ] );
+	RemoveButton(giIMPPortraitButton[ 0 ] );
+	UnloadButtonImage(giIMPPortraitButtonImage[ 0 ] );
 
 	// the previous button
-  RemoveButton(giIMPPortraitButton[ 1 ] );
-  UnloadButtonImage(giIMPPortraitButtonImage[ 1 ] );
+	RemoveButton(giIMPPortraitButton[ 1 ] );
+	UnloadButtonImage(giIMPPortraitButtonImage[ 1 ] );
 
 	// the done button
-  RemoveButton(giIMPPortraitButton[ 2 ] );
-  UnloadButtonImage(giIMPPortraitButtonImage[ 2 ] );
+	RemoveButton(giIMPPortraitButton[ 2 ] );
+	UnloadButtonImage(giIMPPortraitButtonImage[ 2 ] );
 }
 
 

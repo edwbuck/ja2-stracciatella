@@ -13,58 +13,63 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
-#define	FLOR_GALLERY_TITLE_FONT								FONT10ARIAL
-#define	FLOR_GALLERY_TITLE_COLOR							FONT_MCOLOR_WHITE
+#include <string_theory/format>
+#include <string_theory/string>
 
-#define	FLOR_GALLERY_FLOWER_TITLE_FONT				FONT14ARIAL
-#define	FLOR_GALLERY_FLOWER_TITLE_COLOR				FONT_MCOLOR_WHITE
+#include <algorithm>
 
-#define	FLOR_GALLERY_FLOWER_PRICE_FONT				FONT12ARIAL
-#define	FLOR_GALLERY_FLOWER_PRICE_COLOR				FONT_MCOLOR_WHITE
+#define FLOR_GALLERY_TITLE_FONT			FONT10ARIAL
+#define FLOR_GALLERY_TITLE_COLOR		FONT_MCOLOR_WHITE
 
-#define	FLOR_GALLERY_FLOWER_DESC_FONT					FONT12ARIAL
-#define	FLOR_GALLERY_FLOWER_DESC_COLOR				FONT_MCOLOR_WHITE
+#define FLOR_GALLERY_FLOWER_TITLE_FONT		FONT14ARIAL
+#define FLOR_GALLERY_FLOWER_TITLE_COLOR		FONT_MCOLOR_WHITE
 
-#define	FLOR_GALLERY_NUMBER_FLORAL_BUTTONS		3
-#define	FLOR_GALLERY_NUMBER_FLORAL_IMAGES			10
+#define FLOR_GALLERY_FLOWER_PRICE_FONT		FONT12ARIAL
+#define FLOR_GALLERY_FLOWER_PRICE_COLOR		FONT_MCOLOR_WHITE
 
-#define	FLOR_GALLERY_FLOWER_DESC_TEXT_FONT		FONT12ARIAL
-#define	FLOR_GALLERY_FLOWER_DESC_TEXT_COLOR		FONT_MCOLOR_WHITE
+#define FLOR_GALLERY_FLOWER_DESC_FONT		FONT12ARIAL
+#define FLOR_GALLERY_FLOWER_DESC_COLOR		FONT_MCOLOR_WHITE
 
-#define FLOR_GALLERY_BACK_BUTTON_X (LAPTOP_SCREEN_UL_X +   8)
-#define FLOR_GALLERY_NEXT_BUTTON_X (LAPTOP_SCREEN_UL_X + 420)
-#define FLOR_GALLERY_BUTTON_Y      (LAPTOP_SCREEN_WEB_UL_Y + 12)
+#define FLOR_GALLERY_NUMBER_FLORAL_BUTTONS	3
+#define FLOR_GALLERY_NUMBER_FLORAL_IMAGES	10
 
-#define FLOR_GALLERY_FLOWER_BUTTON_X					LAPTOP_SCREEN_UL_X + 7
-#define FLOR_GALLERY_FLOWER_BUTTON_Y					LAPTOP_SCREEN_WEB_UL_Y + 74
+#define FLOR_GALLERY_FLOWER_DESC_TEXT_FONT	FONT12ARIAL
+#define FLOR_GALLERY_FLOWER_DESC_TEXT_COLOR	FONT_MCOLOR_WHITE
 
-//#define FLOR_GALLERY_FLOWER_BUTTON_OFFSET_X		250
+#define FLOR_GALLERY_BACK_BUTTON_X		(LAPTOP_SCREEN_UL_X +   8)
+#define FLOR_GALLERY_NEXT_BUTTON_X		(LAPTOP_SCREEN_UL_X + 420)
+#define FLOR_GALLERY_BUTTON_Y			(LAPTOP_SCREEN_WEB_UL_Y + 12)
 
-#define FLOR_GALLERY_FLOWER_BUTTON_OFFSET_Y		112
+#define FLOR_GALLERY_FLOWER_BUTTON_X		LAPTOP_SCREEN_UL_X + 7
+#define FLOR_GALLERY_FLOWER_BUTTON_Y		LAPTOP_SCREEN_WEB_UL_Y + 74
 
-#define FLOR_GALLERY_TITLE_TEXT_X							LAPTOP_SCREEN_UL_X + 0
-#define FLOR_GALLERY_TITLE_TEXT_Y							LAPTOP_SCREEN_WEB_UL_Y + 48
-#define FLOR_GALLERY_TITLE_TEXT_WIDTH					LAPTOP_SCREEN_LR_X - LAPTOP_SCREEN_UL_X
+//#define FLOR_GALLERY_FLOWER_BUTTON_OFFSET_X	250
 
-#define FLOR_GALLERY_FLOWER_TITLE_X						FLOR_GALLERY_FLOWER_BUTTON_X + 88
+#define FLOR_GALLERY_FLOWER_BUTTON_OFFSET_Y	112
 
-#define FLOR_GALLERY_DESC_WIDTH								390
+#define FLOR_GALLERY_TITLE_TEXT_X		LAPTOP_SCREEN_UL_X + 0
+#define FLOR_GALLERY_TITLE_TEXT_Y		LAPTOP_SCREEN_WEB_UL_Y + 48
+#define FLOR_GALLERY_TITLE_TEXT_WIDTH		LAPTOP_SCREEN_LR_X - LAPTOP_SCREEN_UL_X
 
-#define FLOR_GALLERY_FLOWER_TITLE_OFFSET_Y		9
-#define FLOR_GALLERY_FLOWER_PRICE_OFFSET_Y		FLOR_GALLERY_FLOWER_TITLE_OFFSET_Y + 17
-#define FLOR_GALLERY_FLOWER_DESC_OFFSET_Y			FLOR_GALLERY_FLOWER_PRICE_OFFSET_Y + 15
+#define FLOR_GALLERY_FLOWER_TITLE_X		FLOR_GALLERY_FLOWER_BUTTON_X + 88
+
+#define FLOR_GALLERY_DESC_WIDTH			390
+
+#define FLOR_GALLERY_FLOWER_TITLE_OFFSET_Y	9
+#define FLOR_GALLERY_FLOWER_PRICE_OFFSET_Y	FLOR_GALLERY_FLOWER_TITLE_OFFSET_Y + 17
+#define FLOR_GALLERY_FLOWER_DESC_OFFSET_Y	FLOR_GALLERY_FLOWER_PRICE_OFFSET_Y + 15
 
 
 static SGPVObject* guiFlowerImages[3];
 
-UINT32	guiCurrentlySelectedFlower=0;
+UINT32  guiCurrentlySelectedFlower=0;
 
-UINT8		gubCurFlowerIndex=0;
-UINT8		gubCurNumberOfFlowers=0;
-UINT8		gubPrevNumberOfFlowers=0;
+UINT8   gubCurFlowerIndex=0;
+UINT8   gubCurNumberOfFlowers=0;
+UINT8   gubPrevNumberOfFlowers=0;
 BOOLEAN gfRedrawFloristGallery=FALSE;
 
-BOOLEAN		FloristGallerySubPagesVisitedFlag[ 4 ];
+BOOLEAN FloristGallerySubPagesVisitedFlag[ 4 ];
 
 //Floral buttons
 static BUTTON_PICS* guiGalleryButtonImage;
@@ -79,11 +84,11 @@ GUIButtonRef guiFloralGalleryButton[2];
 
 void EnterInitFloristGallery()
 {
-	memset( &FloristGallerySubPagesVisitedFlag, 0, 4);
+	std::fill_n(FloristGallerySubPagesVisitedFlag, 4, 0);
 }
 
 
-static GUIButtonRef MakeButton(const wchar_t* text, INT16 x, GUI_CALLBACK click)
+static GUIButtonRef MakeButton(const ST::string& text, INT16 x, GUI_CALLBACK click)
 {
 	const INT16 shadow_col = FLORIST_BUTTON_TEXT_SHADOW_COLOR;
 	GUIButtonRef const btn = CreateIconAndTextButton(guiFloralGalleryButtonImage, text, FLORIST_BUTTON_TEXT_FONT, FLORIST_BUTTON_TEXT_UP_COLOR, shadow_col, FLORIST_BUTTON_TEXT_DOWN_COLOR, shadow_col, x, FLOR_GALLERY_BUTTON_Y, MSYS_PRIORITY_HIGH, click);
@@ -158,9 +163,9 @@ void RenderFloristGallery()
 
 	DisplayFloralDescriptions();
 
-  MarkButtonsDirty( );
+	MarkButtonsDirty( );
 	RenderWWWProgramTitleBar( );
-  InvalidateRegion(LAPTOP_SCREEN_UL_X,LAPTOP_SCREEN_WEB_UL_Y,LAPTOP_SCREEN_LR_X,LAPTOP_SCREEN_WEB_LR_Y);
+	InvalidateRegion(LAPTOP_SCREEN_UL_X,LAPTOP_SCREEN_WEB_UL_Y,LAPTOP_SCREEN_LR_X,LAPTOP_SCREEN_WEB_LR_Y);
 }
 
 
@@ -237,7 +242,7 @@ static void InitFlowerButtons(void)
 
 	//the buttons with the flower pictures on them
 	usPosY = FLOR_GALLERY_FLOWER_BUTTON_Y;
-//	usPosX = FLOR_GALLERY_FLOWER_BUTTON_X;
+	//usPosX = FLOR_GALLERY_FLOWER_BUTTON_X;
 	count = gubCurFlowerIndex;
 	guiGalleryButtonImage	= LoadButtonImage(LAPTOPDIR "/gallerybuttons.sti", 0, 1);
 	for(j=0; j<gubCurNumberOfFlowers; j++)
@@ -252,7 +257,7 @@ static void InitFlowerButtons(void)
 	}
 
 	//if its the first page, display the 'back' text  in place of the 'prev' text on the top left button
-	wchar_t const* const text = gubCurFlowerIndex == 0 ?
+	ST::string text = gubCurFlowerIndex == 0 ?
 		sFloristGalleryText[FLORIST_GALLERY_HOME] :
 		sFloristGalleryText[FLORIST_GALLERY_PREV];
 	guiFloralGalleryButton[0]->SpecifyText(text);
@@ -296,27 +301,25 @@ static BOOLEAN DisplayFloralDescriptions(void)
 	{
 		{
 			//Display Flower title
-			wchar_t sTemp[FLOR_GALLERY_TEXT_TITLE_SIZE];
 			uiStartLoc = FLOR_GALLERY_TEXT_TOTAL_SIZE * (i + gubCurFlowerIndex);
-			GCM->loadEncryptedString(FLOR_GALLERY_TEXT_FILE, sTemp, uiStartLoc, FLOR_GALLERY_TEXT_TITLE_SIZE);
+			ST::string sTemp = GCM->loadEncryptedString(FLOR_GALLERY_TEXT_FILE, uiStartLoc, FLOR_GALLERY_TEXT_TITLE_SIZE);
 			DrawTextToScreen(sTemp, FLOR_GALLERY_FLOWER_TITLE_X, usPosY + FLOR_GALLERY_FLOWER_TITLE_OFFSET_Y, 0, FLOR_GALLERY_FLOWER_TITLE_FONT, FLOR_GALLERY_FLOWER_TITLE_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 		}
 
 		{
 			//Display Flower Price
-			wchar_t sTemp[FLOR_GALLERY_TEXT_PRICE_SIZE];
+			ST::string sTemp;
 			uiStartLoc += FLOR_GALLERY_TEXT_TITLE_SIZE;
-			GCM->loadEncryptedString(FLOR_GALLERY_TEXT_FILE, sTemp, uiStartLoc, FLOR_GALLERY_TEXT_PRICE_SIZE);
-			swscanf( sTemp, L"%hu", &usPrice);
-			swprintf(sTemp, lengthof(sTemp), L"$%d.00 %ls", usPrice, pMessageStrings[MSG_USDOLLAR_ABBREVIATION]);
+			sTemp = GCM->loadEncryptedString(FLOR_GALLERY_TEXT_FILE, uiStartLoc, FLOR_GALLERY_TEXT_PRICE_SIZE);
+			sscanf(sTemp.c_str(), "%hu", &usPrice);
+			sTemp = ST::format("${}.00 {}", usPrice, pMessageStrings[MSG_USDOLLAR_ABBREVIATION]);
 			DrawTextToScreen(sTemp, FLOR_GALLERY_FLOWER_TITLE_X, usPosY + FLOR_GALLERY_FLOWER_PRICE_OFFSET_Y, 0, FLOR_GALLERY_FLOWER_PRICE_FONT, FLOR_GALLERY_FLOWER_PRICE_COLOR, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 		}
 
 		{
 			//Display Flower Desc
-			wchar_t sTemp[FLOR_GALLERY_TEXT_DESC_SIZE];
 			uiStartLoc += FLOR_GALLERY_TEXT_PRICE_SIZE;
-			GCM->loadEncryptedString(FLOR_GALLERY_TEXT_FILE, sTemp, uiStartLoc, FLOR_GALLERY_TEXT_DESC_SIZE);
+			ST::string sTemp = GCM->loadEncryptedString(FLOR_GALLERY_TEXT_FILE, uiStartLoc, FLOR_GALLERY_TEXT_DESC_SIZE);
 			DisplayWrappedString(FLOR_GALLERY_FLOWER_TITLE_X, usPosY + FLOR_GALLERY_FLOWER_DESC_OFFSET_Y, FLOR_GALLERY_DESC_WIDTH, 2, FLOR_GALLERY_FLOWER_DESC_FONT, FLOR_GALLERY_FLOWER_DESC_COLOR, sTemp, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 		}
 

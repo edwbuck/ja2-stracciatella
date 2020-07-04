@@ -61,11 +61,11 @@
 #include "UILayout.h"
 #include "GameState.h"
 #include "EditScreen.h"
-#include "slog/slog.h"
+#include "Logger.h"
 
-#define	ARE_IN_FADE_IN( )		( gfFadeIn || gfFadeInitialized )
+#define ARE_IN_FADE_IN( )		( gfFadeIn || gfFadeInitialized )
 
-BOOLEAN		gfTacticalDoHeliRun = FALSE;
+BOOLEAN gfTacticalDoHeliRun = FALSE;
 
 
 // VIDEO OVERLAYS
@@ -80,10 +80,10 @@ SOLDIERTYPE* gPreferredInitialSelectedGuy = NULL;
 static BOOLEAN      gfTacticalIsModal             = FALSE;
 static MOUSE_REGION gTacticalDisableRegion;
 static BOOLEAN      gfTacticalDisableRegionActive = FALSE;
-MODAL_HOOK		gModalDoneCallback;
-BOOLEAN				gfBeginEndTurn = FALSE;
-extern				BOOLEAN		gfFirstHeliRun;
-extern				BOOLEAN		gfRenderFullThisFrame;
+MODAL_HOOK          gModalDoneCallback;
+BOOLEAN             gfBeginEndTurn = FALSE;
+extern BOOLEAN      gfFirstHeliRun;
+extern BOOLEAN      gfRenderFullThisFrame;
 
 
 // The InitializeGame function is responsible for setting up all data and Gaming Engine
@@ -99,13 +99,16 @@ static void BlitMFont(VIDEO_OVERLAY* const ovr)
 {
 	SetFontAttributes(ovr->uiFontID, ovr->ubFontFore, DEFAULT_SHADOW, ovr->ubFontBack);
 	SGPVSurface::Lock l(ovr->uiDestBuff);
-	MPrintBuffer(l.Buffer<UINT16>(), l.Pitch(), ovr->sX, ovr->sY, ovr->zText);
+	MPrintBuffer(l.Buffer<UINT16>(), l.Pitch(), ovr->sX, ovr->sY, ovr->codepoints);
 }
 
 
 void MainGameScreenInit(void)
 {
-	gpZBuffer = InitZBuffer(SCREEN_WIDTH, SCREEN_HEIGHT);
+	// all blit functions expect z-buffer pitch to match framebuffer pitch
+	gZBufferPitch = FRAME_BUFFER->surface_->pitch / FRAME_BUFFER->surface_->format->BytesPerPixel;
+	gpZBuffer = InitZBuffer(gZBufferPitch, SCREEN_HEIGHT);
+	gZBufferPitch *= sizeof(*gpZBuffer);
 	InitializeBackgroundRects();
 
 	//EnvSetTimeInHours(ENV_TIME_12);
@@ -115,26 +118,26 @@ void MainGameScreenInit(void)
 	// Init Video Overlays
 	// FIRST, FRAMERATE
 	g_fps_overlay = RegisterVideoOverlay(
-          BlitMFont,
-          DEBUG_PAGE_SCREEN_OFFSET_X,
-          DEBUG_PAGE_SCREEN_OFFSET_Y,
-          DEBUG_PAGE_FONT,
-          DEBUG_PAGE_TEXT_COLOR,
-          0,
-          L"90"
-  );
+					BlitMFont,
+					DEBUG_PAGE_SCREEN_OFFSET_X,
+					DEBUG_PAGE_SCREEN_OFFSET_Y,
+					DEBUG_PAGE_FONT,
+					DEBUG_PAGE_TEXT_COLOR,
+					0,
+					L"90"
+	);
 	EnableVideoOverlay(false, g_fps_overlay);
 
 	// SECOND, PERIOD COUNTER
 	g_counter_period_overlay = RegisterVideoOverlay(
-          BlitMFont,
-          DEBUG_PAGE_SCREEN_OFFSET_X,
-          DEBUG_PAGE_SCREEN_OFFSET_Y+DEBUG_PAGE_LINE_HEIGHT,
-          DEBUG_PAGE_FONT,
-          DEBUG_PAGE_TEXT_COLOR,
-          0,
-          L"Levelnodes: 100000"
-  );
+					BlitMFont,
+					DEBUG_PAGE_SCREEN_OFFSET_X,
+					DEBUG_PAGE_SCREEN_OFFSET_Y+DEBUG_PAGE_LINE_HEIGHT,
+					DEBUG_PAGE_FONT,
+					DEBUG_PAGE_TEXT_COLOR,
+					0,
+					L"Levelnodes: 100000"
+	);
 	EnableVideoOverlay(false, g_counter_period_overlay);
 }
 
@@ -167,7 +170,7 @@ void EnterTacticalScreen(void)
 {
 	guiTacticalLeaveScreen = FALSE;
 
-  SetPositionSndsActive( );
+	SetPositionSndsActive( );
 
 	// Set pending screen
 	SetPendingNewScreen( GAME_SCREEN );
@@ -244,7 +247,7 @@ void EnterTacticalScreen(void)
 		InternalLocateGridNo( 4561, TRUE );
 	}
 
-  // Clear tactical message q
+	// Clear tactical message q
 	ClearTacticalMessageQueue( );
 
 	// ATE: Enable messages again...
@@ -261,15 +264,15 @@ void LeaveTacticalScreen(ScreenID const uiNewScreen)
 
 void InternalLeaveTacticalScreen(ScreenID const uiNewScreen)
 {
-  gpCustomizableTimerCallback = NULL;
+	gpCustomizableTimerCallback = NULL;
 
 	// unload the sector they teleported out of
-  if ( !gfAutomaticallyStartAutoResolve )
-  {
-	  CheckAndHandleUnloadingOfCurrentWorld();
-  }
+	if ( !gfAutomaticallyStartAutoResolve )
+	{
+		CheckAndHandleUnloadingOfCurrentWorld();
+	}
 
-  SetPositionSndsInActive( );
+	SetPositionSndsInActive( );
 
 	// Turn off active flag
 	gTacticalStatus.uiFlags &= ( ~ACTIVE );
@@ -471,19 +474,16 @@ ScreenID MainGameScreenHandle(void)
 	HandleHeliDrop( );
 
 	if ( !ARE_IN_FADE_IN( ) )
-  {
-	  HandleAutoBandagePending( );
-  }
+	{
+		HandleAutoBandagePending( );
+	}
 
 
 	// ATE: CHRIS_C LOOK HERE FOR GETTING AI CONSTANTLY GOING
-	//if ( gTacticalStatus.uiFlags & TURNBASED )
-	//{
 	//	if ( !(gTacticalStatus.uiFlags & ENEMYS_TURN) )
 	//	{
 	//		EndTurn( );
 	//	}
-	//}
 
 
 	if (!ARE_IN_FADE_IN())
@@ -507,8 +507,8 @@ ScreenID MainGameScreenHandle(void)
 		if (uiNewScreen != GAME_SCREEN) return uiNewScreen;
 	}
 	else if (gfIntendOnEnteringEditor && GameState::getInstance()->isEditorMode())
-  {
-		SLOGI(DEBUG_TAG_GAMESCREEN, "Aborting normal game mode and entering editor mode...");
+	{
+		SLOGI("Aborting normal game mode and entering editor mode...");
 		SetPendingNewScreen(NO_PENDING_SCREEN);
 		return EDIT_SCREEN;
 	}
@@ -594,7 +594,7 @@ ScreenID MainGameScreenHandle(void)
 
 	CheckForMeanwhileOKStart( );
 
-  ScrollString( );
+	ScrollString( );
 
 	ExecuteBaseDirtyRectQueue( );
 
@@ -637,7 +637,7 @@ ScreenID MainGameScreenHandle(void)
 		gfEnteringMapScreen++;
 	}
 
- return( GAME_SCREEN );
+	return( GAME_SCREEN );
 
 }
 
@@ -732,7 +732,7 @@ void EndModalTactical( )
 
 	gfTacticalIsModal = FALSE;
 
-  SetRenderFlags( RENDER_FLAG_FULL );
+	SetRenderFlags( RENDER_FLAG_FULL );
 }
 
 
@@ -740,7 +740,7 @@ static void HandleModalTactical(void)
 {
 	RestoreBackgroundRects();
 
-  RenderWorld( );
+	RenderWorld( );
 	RenderRadarScreen( );
 	ExecuteVideoOverlays( );
 
@@ -772,19 +772,8 @@ void InitHelicopterEntranceByMercs( void )
 {
 	if( DidGameJustStart() )
 	{
-		AIR_RAID_DEFINITION	AirRaidDef;
-
 		// Update clock ahead from STARTING_TIME to make mercs arrive!
 		WarpGameTime( FIRST_ARRIVAL_DELAY, WARPTIME_PROCESS_EVENTS_NORMALLY );
-
-		AirRaidDef.sSectorX		= 9;
-		AirRaidDef.sSectorY		= 1;
-		AirRaidDef.sSectorZ		= 0;
-		AirRaidDef.bIntensity = 2;
-		AirRaidDef.uiFlags		=	AIR_RAID_BEGINNING_GAME;
-		AirRaidDef.ubNumMinsFromCurrentTime	= 1;
-
-	//	ScheduleAirRaid( &AirRaidDef );
 
 		gfTacticalDoHeliRun = TRUE;
 		gfFirstHeliRun			= TRUE;

@@ -16,7 +16,7 @@
 #include "ScreenIDs.h"
 
 
-#define	NUM_SEC_PER_STRATEGIC_TURN					( NUM_SEC_IN_MIN * 15 )	// Every fifteen minutes
+#define NUM_SEC_PER_STRATEGIC_TURN ( NUM_SEC_IN_MIN * 15 )	// Every fifteen minutes
 
 
 static UINT32 guiLastTacticalRealTime = 0;
@@ -63,7 +63,7 @@ void HandleStrategicTurn(void)
 		uiTime = GetJA2Clock( );
 
 		// Do not handle turns update if in turnbased combat
-		if ( ( gTacticalStatus.uiFlags & TURNBASED ) && ( gTacticalStatus.uiFlags & INCOMBAT ) )
+		if (gTacticalStatus.uiFlags & INCOMBAT)
 		{
 			guiLastTacticalRealTime = uiTime;
 		}
@@ -78,7 +78,7 @@ void HandleStrategicTurn(void)
 				// OK, if we have compressed time...., adjust our check value to be faster....
 				if( giTimeCompressSpeeds[ giTimeCompressMode ] > 0 )
 				{
-				  uiCheckTime = NUM_REAL_SEC_PER_TACTICAL_TURN / ( giTimeCompressSpeeds[ giTimeCompressMode ] * RT_COMPRESSION_TACTICAL_TURN_MODIFIER );
+					uiCheckTime = NUM_REAL_SEC_PER_TACTICAL_TURN / ( giTimeCompressSpeeds[ giTimeCompressMode ] * RT_COMPRESSION_TACTICAL_TURN_MODIFIER );
 				}
 				else
 				{

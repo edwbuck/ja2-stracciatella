@@ -2,8 +2,12 @@
 #include "Laptop.h"
 #include "CharProfile.h"
 #include "Debug.h"
+#include "GameInstance.h"
+#include "GamePolicy.h"
+#include "ContentManager.h"
 #include "Render_Dirty.h"
 #include "IMP_Portraits.h"
+#include "IMP_SkillTraits.h"
 #include "IMP_Compile_Character.h"
 #include "Soldier_Profile_Type.h"
 #include "Soldier_Profile.h"
@@ -34,8 +38,8 @@ void CreateACharacterFromPlayerEnteredStats(void)
 {
 	MERCPROFILESTRUCT& p = GetProfile(PLAYER_GENERATED_CHARACTER_ID + LaptopSaveInfo.iVoiceId);
 
-	wcscpy(p.zName,     pFullName);
-	wcscpy(p.zNickname, pNickName);
+	p.zName = pFullName;
+	p.zNickname = pNickName;
 
 	p.bSex = fCharacterIsMale ? MALE : FEMALE;
 
@@ -66,7 +70,7 @@ void CreateACharacterFromPlayerEnteredStats(void)
 
 static void CreatePlayerAttitude(void)
 {
-  // this function will 'roll a die' and decide if any attitude does exists
+	// this function will 'roll a die' and decide if any attitude does exists
 	INT32	iAttitudeHits[NUM_ATTITUDES] = { 0 };
 
 	iAttitude = ATT_NORMAL;
@@ -83,8 +87,8 @@ static void CreatePlayerAttitude(void)
 	}
 
 	// find highest # of hits for any attitude
-	INT32	iHighestHits = 0;
-	INT32	iNumAttitudesWithHighestHits = 0;
+	INT32 iHighestHits = 0;
+	INT32 iNumAttitudesWithHighestHits = 0;
 	for (INT32 i = 0; i < NUM_ATTITUDES; i++)
 	{
 		if (iAttitudeHits[i])
@@ -101,7 +105,7 @@ static void CreatePlayerAttitude(void)
 		}
 	}
 
-	INT32 iDiceValue = Random(iNumAttitudesWithHighestHits + 1); // XXX TODO0008
+	INT32 iDiceValue = Random(iNumAttitudesWithHighestHits);
 
 	// find attitude
 	INT32 iCounter2 = 0;
@@ -112,7 +116,7 @@ static void CreatePlayerAttitude(void)
 			if (iCounter2 == iDiceValue)
 			{
 				// this is it!
-				iAttitude = iCounter2;
+				iAttitude = i;
 				break;
 			}
 			else
@@ -147,7 +151,7 @@ void AddSkillToSkillList( INT8 bSkill )
 
 static void RemoveSkillFromSkillsList(INT32 const Skill)
 {
-	for (size_t i = 0; i != iLastElementInSkillsList;)
+	for (INT32 i = 0; i != iLastElementInSkillsList;)
 	{
 		if (SkillsList[i] == Skill)
 		{
@@ -196,6 +200,35 @@ static void CreatePlayerSkills(void)
 {
 	ValidateSkillsList();
 
+	if (gamepolicy(imp_pick_skills_directly))
+	{
+		// the skills selected are distinct and there are at most 2
+		iSkillA = NO_SKILLTRAIT;
+		iSkillB = NO_SKILLTRAIT;
+
+		if (iLastElementInSkillsList == 1)
+		{
+			// grant expert level if only 1 skill is chosen, unless the skill as no expert level
+			iSkillA = SkillsList[0];
+			if (iSkillA != ELECTRONICS && iSkillA != AMBIDEXT && iSkillA != CAMOUFLAGED)
+			{
+				iSkillB = iSkillA;
+			}
+		}
+		else if (iLastElementInSkillsList == 2)
+		{
+			iSkillA = SkillsList[0];
+			iSkillB = SkillsList[1];
+		}
+		else if (iLastElementInSkillsList > 2)
+		{
+			// This should be impossible
+			SLOGA(ST::format("Invalid number ({}) of skills selected", iLastElementInSkillsList));
+		}
+	
+		return;
+	}
+
 	iSkillA = SkillsList[Random(iLastElementInSkillsList)];
 
 	// there is no expert level these skills
@@ -220,8 +253,8 @@ void AddAPersonalityToPersonalityList(INT8 bPersonality)
 	// BUT we can manage this for PSYCHO okay
 	if (bPersonality != PSYCHO) return;
 
-  // will add a persoanlity to persoanlity list
-  if (iLastElementInPersonalityList < ATTITUDE_LIST_SIZE)
+	// will add a persoanlity to persoanlity list
+	if (iLastElementInPersonalityList < ATTITUDE_LIST_SIZE)
 	{
 		PersonalityList[iLastElementInPersonalityList++] = bPersonality;
 	}
@@ -241,17 +274,17 @@ static void CreatePlayerPersonality(void)
 		iPersonality = PSYCHO;
 	}
 
-/*
-  // this function will 'roll a die' and decide if any Personality does exists
-  INT32 iDiceValue = 0;
-  INT32 iCounter = 0;
+	/*
+	// this function will 'roll a die' and decide if any Personality does exists
+	INT32 iDiceValue = 0;
+	INT32 iCounter = 0;
 	INT32 iSecondAttempt = -1;
 
 	// roll dice
 	iDiceValue = Random( iLastElementInPersonalityList + 1 );
 
 	iPersonality = NO_PERSONALITYTRAIT;
-  if( PersonalityList[ iDiceValue ] !=  NO_PERSONALITYTRAIT )
+	if( PersonalityList[ iDiceValue ] !=  NO_PERSONALITYTRAIT )
 	{
 		for( iCounter = 0; iCounter < iLastElementInPersonalityList; iCounter++ )
 		{
@@ -261,11 +294,11 @@ static void CreatePlayerPersonality(void)
 				{
 					if( PersonalityList[ iDiceValue ] != PSYCHO )
 					{
-            iPersonality = PersonalityList[ iDiceValue ];
+						iPersonality = PersonalityList[ iDiceValue ];
 					}
 					else
 					{
-            iSecondAttempt = iCounter;
+						iSecondAttempt = iCounter;
 					}
 					if( iSecondAttempt != iCounter )
 					{
@@ -275,8 +308,7 @@ static void CreatePlayerPersonality(void)
 				}
 			}
 		}
-	}
-*/
+	}*/
 }
 
 
@@ -306,7 +338,7 @@ static void SelectMercFace(void)
 	MERCPROFILESTRUCT& p = GetProfile(PLAYER_GENERATED_CHARACTER_ID + LaptopSaveInfo.iVoiceId);
 
 	// now the offsets
-  p.ubFaceIndex = 200 + iPortraitNumber;
+	p.ubFaceIndex = 200 + iPortraitNumber;
 
 	// eyes
 	p.usEyesX = 0;
@@ -323,16 +355,16 @@ static void SelectMercFace(void)
 
 static void SetMercSkinAndHairColors(void)
 {
-#	define PINKSKIN  "PINKSKIN"
-#	define TANSKIN   "TANSKIN"
-#	define DARKSKIN  "DARKSKIN"
-#	define BLACKSKIN "BLACKSKIN"
+#define PINKSKIN  "PINKSKIN"
+#define TANSKIN   "TANSKIN"
+#define DARKSKIN  "DARKSKIN"
+#define BLACKSKIN "BLACKSKIN"
 
-#	define BROWNHEAD "BROWNHEAD"
-#	define BLACKHEAD "BLACKHEAD" // black skin till here
-#	define WHITEHEAD "WHITEHEAD" // dark skin till here
-#	define BLONDHEAD "BLONDHEAD"
-#	define REDHEAD   "REDHEAD"   // pink/tan skin till here
+#define BROWNHEAD "BROWNHEAD"
+#define BLACKHEAD "BLACKHEAD" // black skin till here
+#define WHITEHEAD "WHITEHEAD" // dark skin till here
+#define BLONDHEAD "BLONDHEAD"
+#define REDHEAD   "REDHEAD"   // pink/tan skin till here
 
 	static const struct
 	{
@@ -358,10 +390,10 @@ static void SetMercSkinAndHairColors(void)
 		{ TANSKIN,   BLONDHEAD }
 	};
 
-	Assert(iPortraitNumber < lengthof(Colors));
+	Assert(iPortraitNumber < static_cast<INT32>(lengthof(Colors)));
 	MERCPROFILESTRUCT& p = GetProfile(PLAYER_GENERATED_CHARACTER_ID + LaptopSaveInfo.iVoiceId);
-	strcpy(p.HAIR, Colors[iPortraitNumber].Hair);
-	strcpy(p.SKIN, Colors[iPortraitNumber].Skin);
+	p.HAIR = Colors[iPortraitNumber].Hair;
+	p.SKIN = Colors[iPortraitNumber].Skin;
 }
 
 
@@ -371,6 +403,8 @@ static BOOLEAN ShouldThisMercHaveABigBody(void);
 void HandleMercStatsForChangesInFace(void)
 {
 	if (fLoadingCharacterForPreviousImpProfile) return;
+
+	AddSelectedSkillsToSkillsList();
 
 	CreatePlayerSkills();
 
@@ -388,7 +422,7 @@ void HandleMercStatsForChangesInFace(void)
 		else
 		{
 			p.ubBodyType = REGMALE;
-    }
+		}
 	}
 	else
 	{

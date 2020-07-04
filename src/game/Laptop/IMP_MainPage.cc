@@ -20,6 +20,9 @@
 #include "Button_System.h"
 #include "ScreenIDs.h"
 #include "Font_Control.h"
+#include "GamePolicy.h"
+#include "GameInstance.h"
+#include "ContentManager.h"
 
 
 #define MAIN_PAGE_BUTTON_TEXT_WIDTH 95
@@ -40,8 +43,8 @@ void BtnIMPMainPageVoiceCallback(GUI_BUTTON *btn, INT32 reason);
 
 
 // this is the current state of profiling the player is in.
-/*
-  0 - Beginning
+	/*
+	0 - Beginning
 	1 - Personnality
 	2 - Attributes and Skills
 	3 - Portrait
@@ -64,7 +67,7 @@ void EnterIMPMainPage( void )
 	fReviewStats = FALSE;
 
 
-  // create buttons
+	// create buttons
 	CreateIMPMainPageButtons( );
 
 	// load portrait for face button, if applicable
@@ -87,7 +90,7 @@ static void DestoryMouseRegionsForIMPMainPageBasedOnCharGenStatus(void);
 
 void ExitIMPMainPage( void )
 {
-  // exit from IMP About us page
+	// exit from IMP About us page
 
 	// delete Buttons
 	DeleteIMPMainPageButtons( );
@@ -97,14 +100,14 @@ void ExitIMPMainPage( void )
 
 void RenderIMPMainPage( void )
 {
-  // rneders the IMP about us page
+	// renders the IMP about us page
 
 	// the background
 	RenderProfileBackGround( );
 
 	// the IMP symbol
 	//RenderIMPSymbol( 106, 1 );
-  // indent
+	// indent
 	RenderMainIndentFrame( 164, 74 );
 }
 
@@ -114,16 +117,16 @@ static BOOLEAN CheckIfFinishedCharacterGeneration(void);
 
 void HandleIMPMainPage( void )
 {
-  // handles the IMP about main page
+	// handles the IMP about main page
 
 	if ( CheckIfFinishedCharacterGeneration( ) )
 	{
-    iCurrentImpPage = IMP_FINISH;
+		iCurrentImpPage = IMP_FINISH;
 	}
 }
 
 
-static void MakeButton(UINT idx, const char* img_file, const wchar_t* text, INT16 x, INT16 y, GUI_CALLBACK click)
+static void MakeButton(UINT idx, const char* img_file, const ST::string& text, INT16 x, INT16 y, GUI_CALLBACK click)
 {
 	BUTTON_PICS* const img = LoadButtonImage(img_file, 0, 1);
 	giIMPMainPageButtonImage[idx] = img;
@@ -148,36 +151,37 @@ static void BtnIMPMainPagePersonalityCallback(GUI_BUTTON* btn, INT32 reason);
 
 static void CreateIMPMainPageButtons(void)
 {
-  // this function will create the buttons needed for th IMP about us page
-  const INT16 dx = LAPTOP_SCREEN_UL_X;
-  const INT16 dy = LAPTOP_SCREEN_WEB_UL_Y;
+	// this function will create the buttons needed for th IMP about us page
+	const INT16 dx = LAPTOP_SCREEN_UL_X;
+	const INT16 dy = LAPTOP_SCREEN_WEB_UL_Y;
 
 	// the back button button
 	MakeButton(0, LAPTOPDIR "/button_3.sti", pImpButtonText[19], dx + 15, dy + 360, BtnIMPMainPageBackCallback);
 	giIMPMainPageButton[0]->SpecifyTextSubOffsets(0, -1, FALSE);
 
 	// the begin profiling button
-	const wchar_t* const profiling_text = (iCurrentProfileMode == 0 || iCurrentProfileMode > 2 ? pImpButtonText[1] : pImpButtonText[22]);
+	ST::string profiling_text = (iCurrentProfileMode == 0 || iCurrentProfileMode > 2 ? pImpButtonText[1] : pImpButtonText[22]);
 	MakeButton(1, LAPTOPDIR "/button_2.sti", profiling_text, dx + 136, dy + 174, BtnIMPMainPageBeginCallback);
 
-	// the personality button
-	MakeButton(2, LAPTOPDIR "/button_8.sti", pImpButtonText[2], dx + 13, dy + 245, BtnIMPMainPagePersonalityCallback);
+	// the personality/specialties button
+	ST::string btnText = gamepolicy(imp_pick_skills_directly) ? pImpButtonText[26] : pImpButtonText[2];
+	MakeButton(2, LAPTOPDIR "/button_8.sti", btnText, dx + 13, dy + 245, BtnIMPMainPagePersonalityCallback);
 
 	// the attribs button
 	MakeButton(3, LAPTOPDIR "/button_8.sti", pImpButtonText[3], dx + 133, dy + 245, BtnIMPMainPageAttributesCallback);
 
-  // the portrait button
+	// the portrait button
 	MakeButton(4, LAPTOPDIR "/button_8.sti", pImpButtonText[4], dx + 253, dy + 245, BtnIMPMainPagePortraitCallback);
 
 	// the voice button
-	wchar_t sString[128];
+	ST::string sString;
 	if (iCurrentProfileMode == 5)
 	{
-		swprintf(sString, lengthof(sString), pImpButtonText[5], iCurrentVoices + 1);
+		sString = st_format_printf(pImpButtonText[5], iCurrentVoices + 1);
 	}
 	else
 	{
-		swprintf(sString, lengthof(sString), pImpButtonText[25]);
+		sString = pImpButtonText[25];
 	}
 	MakeButton(5, LAPTOPDIR "/button_8.sti", sString, dx + 373, dy + 245, BtnIMPMainPageVoiceCallback);
 }
@@ -185,31 +189,31 @@ static void CreateIMPMainPageButtons(void)
 
 static void DeleteIMPMainPageButtons(void)
 {
-  // this function destroys the buttons needed for the IMP about Us Page
+	// this function destroys the buttons needed for the IMP about Us Page
 
-  // the back  button
-  RemoveButton(giIMPMainPageButton[0] );
-  UnloadButtonImage(giIMPMainPageButtonImage[0] );
+	// the back  button
+	RemoveButton(giIMPMainPageButton[0] );
+	UnloadButtonImage(giIMPMainPageButtonImage[0] );
 
 	// begin profiling button
 	RemoveButton(giIMPMainPageButton[1] );
-  UnloadButtonImage(giIMPMainPageButtonImage[1] );
+	UnloadButtonImage(giIMPMainPageButtonImage[1] );
 
 	// begin personna button
 	RemoveButton(giIMPMainPageButton[2] );
-  UnloadButtonImage(giIMPMainPageButtonImage[2] );
+	UnloadButtonImage(giIMPMainPageButtonImage[2] );
 
 	// begin attribs button
 	RemoveButton(giIMPMainPageButton[3] );
-  UnloadButtonImage(giIMPMainPageButtonImage[3] );
+	UnloadButtonImage(giIMPMainPageButtonImage[3] );
 
 	// begin portrait button
 	RemoveButton(giIMPMainPageButton[4] );
-  UnloadButtonImage(giIMPMainPageButtonImage[4] );
+	UnloadButtonImage(giIMPMainPageButtonImage[4] );
 
 	// begin voice button
 	RemoveButton(giIMPMainPageButton[5] );
-  UnloadButtonImage(giIMPMainPageButtonImage[5] );
+	UnloadButtonImage(giIMPMainPageButtonImage[5] );
 }
 
 
@@ -270,7 +274,7 @@ static void BtnIMPMainPagePersonalityCallback(GUI_BUTTON *btn, INT32 reason)
 {
 	// btn callback for Main Page Begin Profiling
 
-  // if not this far in char generation, don't alot ANY action
+	// if not this far in char generation, don't alot ANY action
 	if (iCurrentProfileMode != 1)
 	{
 		btn->uiFlags &= ~BUTTON_CLICKED_ON;
@@ -289,7 +293,7 @@ static void BtnIMPMainPageAttributesCallback(GUI_BUTTON *btn, INT32 reason)
 {
 	// btn callback for Main Page Begin Profiling
 
-  // if not this far in char generation, don't alot ANY action
+	// if not this far in char generation, don't alot ANY action
 	if (iCurrentProfileMode < 2)
 	{
 		btn->uiFlags &= ~BUTTON_CLICKED_ON;
@@ -308,7 +312,7 @@ void BtnIMPMainPagePortraitCallback(GUI_BUTTON *btn, INT32 reason)
 {
 	// btn callback for Main Page Begin Profiling
 
-  // if not this far in char generation, don't alot ANY action
+	// if not this far in char generation, don't alot ANY action
 	if (iCurrentProfileMode != 3 && iCurrentProfileMode != 4 && iCurrentProfileMode > 5)
 	{
 		btn->uiFlags&= ~BUTTON_CLICKED_ON;
@@ -327,7 +331,7 @@ void BtnIMPMainPageVoiceCallback(GUI_BUTTON *btn, INT32 reason)
 {
 	// btn callback for Main Page Begin Profiling
 
-  // if not this far in char generation, don't alot ANY action
+	// if not this far in char generation, don't alot ANY action
 	if (iCurrentProfileMode != 4 && iCurrentProfileMode > 5)
 	{
 		btn->uiFlags&= ~BUTTON_CLICKED_ON;
@@ -344,13 +348,13 @@ void BtnIMPMainPageVoiceCallback(GUI_BUTTON *btn, INT32 reason)
 
 static BOOLEAN CheckIfFinishedCharacterGeneration(void)
 {
-  // this function checks to see if character is done character generation
+	// this function checks to see if character is done character generation
 
 	// are we done character generation
 	if( iCurrentProfileMode == 5 )
 	{
 		// yes
-    return ( TRUE );
+		return ( TRUE );
 	}
 	else
 	{
@@ -363,10 +367,10 @@ static BOOLEAN CheckIfFinishedCharacterGeneration(void)
 static void UpDateIMPMainPageButtons(void)
 {
 	// update mainpage button states
-  INT32 iCount = 0;
+	INT32 iCount = 0;
 
 	// disable all
-  for( iCount = 2; iCount < 6; iCount++)
+	for( iCount = 2; iCount < 6; iCount++)
 	{
 		DisableButton( giIMPMainPageButton[ iCount ] );
 	}
@@ -376,41 +380,40 @@ static void UpDateIMPMainPageButtons(void)
 		pIMPMainPageMouseRegions[iCount].Disable();
 	}
 	// enable
-  switch(  iCurrentProfileMode )
+	switch(  iCurrentProfileMode )
 	{
 		case 0:
-		 pIMPMainPageMouseRegions[0].Enable();
-		 pIMPMainPageMouseRegions[1].Enable();
-		 pIMPMainPageMouseRegions[2].Enable();
-		 pIMPMainPageMouseRegions[3].Enable();
-		break;
-		case( 1 ):
-		 EnableButton( giIMPMainPageButton[2] );
-		 pIMPMainPageMouseRegions[1].Enable();
-		 pIMPMainPageMouseRegions[2].Enable();
-		 pIMPMainPageMouseRegions[3].Enable();
-		break;
-		case( 2 ):
-		  EnableButton( giIMPMainPageButton[3] );
 			pIMPMainPageMouseRegions[0].Enable();
-		  pIMPMainPageMouseRegions[2].Enable();
-		  pIMPMainPageMouseRegions[3].Enable();
-		break;
+			pIMPMainPageMouseRegions[1].Enable();
+			pIMPMainPageMouseRegions[2].Enable();
+			pIMPMainPageMouseRegions[3].Enable();
+			break;
+		case( 1 ):
+			EnableButton( giIMPMainPageButton[2] );
+			pIMPMainPageMouseRegions[1].Enable();
+			pIMPMainPageMouseRegions[2].Enable();
+			pIMPMainPageMouseRegions[3].Enable();
+			break;
+		case( 2 ):
+			EnableButton( giIMPMainPageButton[3] );
+			pIMPMainPageMouseRegions[0].Enable();
+			pIMPMainPageMouseRegions[2].Enable();
+			pIMPMainPageMouseRegions[3].Enable();
+			break;
 		case( 3 ):
 			EnableButton( giIMPMainPageButton[3] );
-		  EnableButton( giIMPMainPageButton[4] );
+			EnableButton( giIMPMainPageButton[4] );
 			pIMPMainPageMouseRegions[0].Enable();
-		  //pIMPMainPageMouseRegions[1].Enable();
-		  pIMPMainPageMouseRegions[3].Enable();
-		break;
-
+			//pIMPMainPageMouseRegions[1].Enable();
+			pIMPMainPageMouseRegions[3].Enable();
+			break;
 		case( 4 ):
-		 //pIMPMainPageMouseRegions[1].Enable();
-		 pIMPMainPageMouseRegions[0].Enable();
-		 EnableButton( giIMPMainPageButton[3] );
-		 EnableButton( giIMPMainPageButton[4] );
-	   EnableButton( giIMPMainPageButton[5] );
-		break;
+			//pIMPMainPageMouseRegions[1].Enable();
+			pIMPMainPageMouseRegions[0].Enable();
+			EnableButton( giIMPMainPageButton[3] );
+			EnableButton( giIMPMainPageButton[4] );
+			EnableButton( giIMPMainPageButton[5] );
+			break;
 	}
 }
 
@@ -418,10 +421,10 @@ static void UpDateIMPMainPageButtons(void)
 static void BeginMessageBoxCallBack(MessageBoxReturnValue const bExitValue)
 {
 	// yes, so start over, else stay here and do nothing for now
-  if( bExitValue == MSG_BOX_RETURN_YES )
+	if( bExitValue == MSG_BOX_RETURN_YES )
 	{
 		iCurrentImpPage = IMP_BEGIN;
-    iCurrentProfileMode = 0;
+		iCurrentProfileMode = 0;
 	}
 
 	else if( bExitValue == MSG_BOX_RETURN_OK )
@@ -437,8 +440,8 @@ static void IMPMainPageNotSelectableBtnCallback(MOUSE_REGION* pRegion, INT32 iRe
 static void CreateMouseRegionsForIMPMainPageBasedOnCharGenStatus(void)
 {
 	// this procedure will create masks for the char generation main page
-	/* create masks for the personality, attrib, portrait and page buttons on the
-	 * character generation main page */
+	// create masks for the personality, attrib, portrait and page buttons on the
+	// character generation main page
 	UINT16       x = LAPTOP_SCREEN_UL_X     +  13;
 	UINT16 const y = LAPTOP_SCREEN_WEB_UL_Y + 245;
 	UINT16 const w = 115;
@@ -462,10 +465,10 @@ static void DestoryMouseRegionsForIMPMainPageBasedOnCharGenStatus(void)
 
 static void IMPMainPageNotSelectableBtnCallback(MOUSE_REGION* pRegion, INT32 iReason)
 {
-  if(iReason & MSYS_CALLBACK_REASON_LBUTTON_UP)
-  {
-   	DoLapTopMessageBox( MSG_BOX_IMP_STYLE, pImpPopUpStrings[ 4 ], LAPTOP_SCREEN, MSG_BOX_FLAG_OK, BeginMessageBoxCallBack);
-  }
+	if(iReason & MSYS_CALLBACK_REASON_LBUTTON_UP)
+	{
+		DoLapTopMessageBox( MSG_BOX_IMP_STYLE, pImpPopUpStrings[ 4 ], LAPTOP_SCREEN, MSG_BOX_FLAG_OK, BeginMessageBoxCallBack);
+	}
 }
 
 
@@ -479,7 +482,7 @@ SGPVObject* LoadIMPPortait()
 
 static void LoadCharacterPortraitForMainPage(void)
 {
-  // this function will load the character's portrait, to be used on portrait button
+	// this function will load the character's portrait, to be used on portrait button
 	if( iCurrentProfileMode >= 4 )
 	{
 		guiCHARACTERPORTRAITFORMAINPAGE = LoadIMPPortait();

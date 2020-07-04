@@ -1,6 +1,3 @@
-#include <stdexcept>
-#include <vector>
-
 #include "Directories.h"
 #include "HImage.h"
 #include "Structure.h"
@@ -11,14 +8,19 @@
 #include "Tile_Cache.h"
 #include "FileMan.h"
 #include "MemMan.h"
-#include <boost/foreach.hpp>
 
 #include "ContentManager.h"
 #include "GameInstance.h"
 
+#include <string_theory/string>
+
+#include <stdexcept>
+#include <vector>
+
+
 struct TILE_CACHE_STRUCT
 {
-  std::string rootName;
+	ST::string rootName;
 	STRUCTURE_FILE_REF* pStructureFileRef;
 };
 
@@ -34,7 +36,7 @@ static std::vector<TILE_CACHE_STRUCT> gpTileCacheStructInfo;
 
 void InitTileCache(void)
 {
-	gpTileCache         = MALLOCN(TILE_CACHE_ELEMENT, guiMaxTileCacheSize);
+	gpTileCache         = new TILE_CACHE_ELEMENT[guiMaxTileCacheSize]{};
 	guiCurTileCacheSize = 0;
 
 	// Zero entries
@@ -45,12 +47,12 @@ void InitTileCache(void)
 	}
 
 	// Look for JSD files in the tile cache directory and load any we find
-  std::vector<std::string> jsdFiles = GCM->getAllTilecache();
+	std::vector<ST::string> jsdFiles = GCM->getAllTilecache();
 
-  BOOST_FOREACH(const std::string &file, jsdFiles)
-  {
+	for (const ST::string &file : jsdFiles)
+	{
 		TILE_CACHE_STRUCT tc;
-    tc.rootName = FileMan::getFileNameWithoutExt(file);
+		tc.rootName = FileMan::getFileNameWithoutExt(file);
 		tc.pStructureFileRef = LoadStructureFile(file.c_str());
 
 		if (strcasecmp(tc.rootName.c_str(), "l_dead1") == 0)
@@ -78,7 +80,7 @@ void DeleteTileCache( )
 				DeleteTileSurface( gpTileCache[ cnt ].pImagery );
 			}
 		}
-		MemFree( gpTileCache );
+		delete[] gpTileCache;
 	}
 
 	gpTileCacheStructInfo.clear();
@@ -101,7 +103,7 @@ INT32 GetCachedTile(const char* const filename)
 			continue;
 		}
 
-		if (strcasecmp(i->zName, filename) != 0) continue;
+		if (i->zName.compare_i(filename) != 0) continue;
 
 		// Found surface, return
 		++i->sHits;
@@ -142,10 +144,10 @@ INT32 GetCachedTile(const char* const filename)
 
 	tce->pImagery = LoadTileSurface(filename);
 
-	strcpy(tce->zName, filename);
+	tce->zName = filename;
 	tce->sHits = 1;
 
-  std::string root_name(FileMan::getFileNameWithoutExt(filename));
+	ST::string root_name(FileMan::getFileNameWithoutExt(filename));
 	STRUCTURE_FILE_REF* const sfr = GetCachedTileStructureRefFromFilename(root_name.c_str());
 	tce->struct_file_ref = sfr;
 	if (sfr) AddZStripInfoToVObject(tce->pImagery->vo, sfr, TRUE, 0);

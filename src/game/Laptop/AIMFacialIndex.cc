@@ -18,6 +18,8 @@
 #include "VSurface.h"
 #include "Font_Control.h"
 
+#include <string_theory/string>
+
 
 extern UINT8			gbCurrentIndex;
 
@@ -27,29 +29,29 @@ static SGPVObject* guiAimFiFace[MAX_NUMBER_MERCS];
 
 
 
-#define		AIM_FI_NUM_MUHSHOTS_X		8
-#define		AIM_FI_NUM_MUHSHOTS_Y		5
+#define AIM_FI_NUM_MUHSHOTS_X		8
+#define AIM_FI_NUM_MUHSHOTS_Y		5
 
-#define		AIM_FI_PORTRAIT_WIDTH		52
-#define		AIM_FI_PORTRAIT_HEIGHT	48
+#define AIM_FI_PORTRAIT_WIDTH		52
+#define AIM_FI_PORTRAIT_HEIGHT		48
 
-#define		AIM_FI_FIRST_MUGSHOT_X	IMAGE_OFFSET_X + 6
-#define		AIM_FI_FIRST_MUGSHOT_Y	IMAGE_OFFSET_Y + 69//67//70 //68 //65
-#define		AIM_FI_MUGSHOT_GAP_X		10
-#define		AIM_FI_MUGSHOT_GAP_Y		13
-#define		AIM_FI_FACE_OFFSET			2
+#define AIM_FI_FIRST_MUGSHOT_X		IMAGE_OFFSET_X + 6
+#define AIM_FI_FIRST_MUGSHOT_Y		IMAGE_OFFSET_Y + 69//67//70 //68 //65
+#define AIM_FI_MUGSHOT_GAP_X		10
+#define AIM_FI_MUGSHOT_GAP_Y		13
+#define AIM_FI_FACE_OFFSET		2
 
-#define		AIM_FI_NNAME_OFFSET_X		2
-#define		AIM_FI_NNAME_OFFSET_Y		AIM_FI_PORTRAIT_HEIGHT+1
-#define		AIM_FI_NNAME_WIDTH			AIM_FI_PORTRAIT_WIDTH+4
+#define AIM_FI_NNAME_OFFSET_X		2
+#define AIM_FI_NNAME_OFFSET_Y		AIM_FI_PORTRAIT_HEIGHT+1
+#define AIM_FI_NNAME_WIDTH		AIM_FI_PORTRAIT_WIDTH+4
 
-#define		AIM_FI_MEMBER_TEXT_X		IMAGE_OFFSET_X + 155
-#define		AIM_FI_MEMBER_TEXT_Y		AIM_SYMBOL_Y + AIM_SYMBOL_SIZE_Y + 1
-#define		AIM_FI_MEMBER_TEXT_WIDTH	190
+#define AIM_FI_MEMBER_TEXT_X		IMAGE_OFFSET_X + 155
+#define AIM_FI_MEMBER_TEXT_Y		AIM_SYMBOL_Y + AIM_SYMBOL_SIZE_Y + 1
+#define AIM_FI_MEMBER_TEXT_WIDTH	190
 
-#define		AIM_FI_AWAY_TEXT_OFFSET_X			3
-#define		AIM_FI_AWAY_TEXT_OFFSET_Y			23//3//36
-#define		AIM_FI_AWAY_TEXT_OFFSET_WIDTH	48
+#define AIM_FI_AWAY_TEXT_OFFSET_X	3
+#define AIM_FI_AWAY_TEXT_OFFSET_Y	23//3//36
+#define AIM_FI_AWAY_TEXT_OFFSET_WIDTH	48
 
 
 //Mouse Regions
@@ -82,8 +84,12 @@ void EnterAimFacialIndex()
 		for(x=0; x<AIM_FI_NUM_MUHSHOTS_X; x++)
 		{
 
-			MSYS_DefineRegion( &gMercFaceMouseRegions[ i ], usPosX, usPosY, (INT16)(usPosX + AIM_FI_PORTRAIT_WIDTH), (INT16)(usPosY + AIM_FI_PORTRAIT_HEIGHT), MSYS_PRIORITY_HIGH,
-								 CURSOR_WWW, SelectMercFaceMoveRegionCallBack, SelectMercFaceRegionCallBack);
+			MSYS_DefineRegion(&gMercFaceMouseRegions[ i ], usPosX, usPosY,
+						(INT16)(usPosX + AIM_FI_PORTRAIT_WIDTH),
+						(INT16)(usPosY + AIM_FI_PORTRAIT_HEIGHT),
+						MSYS_PRIORITY_HIGH,
+						CURSOR_WWW, SelectMercFaceMoveRegionCallBack,
+						SelectMercFaceRegionCallBack);
 			MSYS_SetRegionUserData( &gMercFaceMouseRegions[ i ], 0, i);
 
 			guiAimFiFace[i] = LoadSmallPortrait(GetProfile(AimMercArray[i]));
@@ -95,8 +101,9 @@ void EnterAimFacialIndex()
 		usPosY += AIM_FI_PORTRAIT_HEIGHT + AIM_FI_MUGSHOT_GAP_Y;
 	}
 
-	MSYS_DefineRegion( &gScreenMouseRegions, LAPTOP_SCREEN_UL_X, LAPTOP_SCREEN_WEB_UL_Y, LAPTOP_SCREEN_LR_X, LAPTOP_SCREEN_WEB_LR_Y, MSYS_PRIORITY_HIGH-1,
-						 CURSOR_LAPTOP_SCREEN, MSYS_NO_CALLBACK, SelectScreenRegionCallBack);
+	MSYS_DefineRegion(&gScreenMouseRegions, LAPTOP_SCREEN_UL_X, LAPTOP_SCREEN_WEB_UL_Y,
+				LAPTOP_SCREEN_LR_X, LAPTOP_SCREEN_WEB_LR_Y, MSYS_PRIORITY_HIGH-1,
+				CURSOR_LAPTOP_SCREEN, MSYS_NO_CALLBACK, SelectScreenRegionCallBack);
 
 	InitAimMenuBar();
 	InitAimDefaults();
@@ -125,16 +132,16 @@ static void DrawMercsFaceToScreen(UINT8 ubMercID, UINT16 usPosX, UINT16 usPosY, 
 void RenderAimFacialIndex()
 {
 	UINT16		usPosX, usPosY, x,y;
-	wchar_t		sString[150];
+	ST::string sString;
 	UINT8			i;
 
 	DrawAimDefaults();
 
 	//Display the 'A.I.M. Members Sorted Ascending By Price' type string
 	if( gubCurrentListMode == AIM_ASCEND )
-		swprintf(sString, lengthof(sString), AimFiText[ AIM_FI_AIM_MEMBERS_SORTED_ASCENDING ], AimFiText[gubCurrentSortMode] );
+		sString = st_format_printf(AimFiText[ AIM_FI_AIM_MEMBERS_SORTED_ASCENDING ], AimFiText[gubCurrentSortMode]);
 	else
-		swprintf(sString, lengthof(sString), AimFiText[ AIM_FI_AIM_MEMBERS_SORTED_DESCENDING ], AimFiText[gubCurrentSortMode] );
+		sString = st_format_printf(AimFiText[ AIM_FI_AIM_MEMBERS_SORTED_DESCENDING ], AimFiText[gubCurrentSortMode]);
 
 	DrawTextToScreen(sString, AIM_FI_MEMBER_TEXT_X, AIM_FI_MEMBER_TEXT_Y, AIM_FI_MEMBER_TEXT_WIDTH, AIM_MAINTITLE_FONT, AIM_MAINTITLE_COLOR, FONT_MCOLOR_BLACK, CENTER_JUSTIFIED);
 
@@ -167,9 +174,9 @@ void RenderAimFacialIndex()
 	DrawTextToScreen(AimFiText[AIM_FI_RIGHT_CLICK],        AIM_FI_RIGHT_CLICK_TEXT_X, AIM_FI_LEFT_CLICK_TEXT_Y,                                   AIM_FI_CLICK_TEXT_WIDTH, AIM_FI_HELP_TITLE_FONT, AIM_FONT_MCOLOR_WHITE, FONT_MCOLOR_BLACK, CENTER_JUSTIFIED);
 	DrawTextToScreen(AimFiText[AIM_FI_TO_ENTER_SORT_PAGE], AIM_FI_RIGHT_CLICK_TEXT_X, AIM_FI_LEFT_CLICK_TEXT_Y + AIM_FI_CLICK_DESC_TEXT_Y_OFFSET, AIM_FI_CLICK_TEXT_WIDTH, AIM_FI_HELP_FONT,       AIM_FONT_MCOLOR_WHITE, FONT_MCOLOR_BLACK, CENTER_JUSTIFIED);
 
-  MarkButtonsDirty( );
+	MarkButtonsDirty( );
 
-  RenderWWWProgramTitleBar( );
+	RenderWWWProgramTitleBar( );
 
 	InvalidateRegion(LAPTOP_SCREEN_UL_X,LAPTOP_SCREEN_WEB_UL_Y,LAPTOP_SCREEN_LR_X,LAPTOP_SCREEN_WEB_LR_Y);
 }
@@ -211,7 +218,7 @@ static void SelectMercFaceMoveRegionCallBack(MOUSE_REGION* pRegion, INT32 reason
 	usPosX = ubMercNum % AIM_FI_NUM_MUHSHOTS_X;
 	usPosX = AIM_FI_FIRST_MUGSHOT_X + (AIM_FI_PORTRAIT_WIDTH + AIM_FI_MUGSHOT_GAP_X) * usPosX;
 
-//	fReDrawNewMailFlag = TRUE;
+	//fReDrawNewMailFlag = TRUE;
 
 	if( reason & MSYS_CALLBACK_REASON_LOST_MOUSE )
 	{
@@ -237,7 +244,7 @@ static void DrawMercsFaceToScreen(const UINT8 ubMercID, const UINT16 usPosX, con
 	SGPVObject* const face = guiAimFiFace[ubMercID];
 
 	BOOLEAN                  shaded;
-	wchar_t           const* text;
+	ST::string text;
 	MERCPROFILESTRUCT const& p = GetProfile(id);
 	if (IsMercDead(p))
 	{
@@ -268,7 +275,7 @@ static void DrawMercsFaceToScreen(const UINT8 ubMercID, const UINT16 usPosX, con
 	else
 	{
 		shaded = FALSE;
-		text   = NULL;
+		text   = ST::null;
 	}
 
 	BltVideoObject(FRAME_BUFFER, face, 0, usPosX + AIM_FI_FACE_OFFSET, usPosY + AIM_FI_FACE_OFFSET);

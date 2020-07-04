@@ -41,12 +41,15 @@
 #include "Auto_Resolve.h"
 #include "Map_Screen_Interface_Bottom.h"
 #include "Quests.h"
-#include "slog/slog.h"
+#include "Logger.h"
 
-#define	MIN_FLIGHT_PREP_TIME	6
+#include <string_theory/string>
 
-extern BOOLEAN		gfTacticalDoHeliRun;
-extern BOOLEAN		gfFirstHeliRun;
+
+#define MIN_FLIGHT_PREP_TIME 6
+
+extern BOOLEAN gfTacticalDoHeliRun;
+extern BOOLEAN gfFirstHeliRun;
 
 // ATE: Globals that dictate where the mercs will land once being hired
 // Default to start sector
@@ -83,7 +86,7 @@ INT8 HireMerc(MERC_HIRE_STRUCT& h)
 	}
 
 	SOLDIERCREATE_STRUCT MercCreateStruct;
-	memset(&MercCreateStruct, 0, sizeof(MercCreateStruct));
+	MercCreateStruct = SOLDIERCREATE_STRUCT{};
 	MercCreateStruct.ubProfile             = pid;
 	MercCreateStruct.sSectorX              = h.sSectorX;
 	MercCreateStruct.sSectorY              = h.sSectorY;
@@ -93,7 +96,7 @@ INT8 HireMerc(MERC_HIRE_STRUCT& h)
 	SOLDIERTYPE* const s = TacticalCreateSoldier(MercCreateStruct);
 	if (s == NULL)
 	{
-		SLOGW(DEBUG_TAG_MERCHIRE, "TacticalCreateSoldier in HireMerc():  Failed to Add Merc");
+		SLOGW("TacticalCreateSoldier in HireMerc():  Failed to Add Merc");
 		return MERC_HIRE_FAILED;
 	}
 
@@ -104,7 +107,7 @@ INT8 HireMerc(MERC_HIRE_STRUCT& h)
 		{
 			// OK, give this item to our merc!
 			OBJECTTYPE o;
-			memset(&o, 0, sizeof(o));
+			o = OBJECTTYPE{};
 			o.usItem            = LETTER;
 			o.ubNumberOfObjects = 1;
 			o.bStatus[0]        = 100;
@@ -176,19 +179,19 @@ INT8 HireMerc(MERC_HIRE_STRUCT& h)
 		{
 			case 1:
 				s->bTypeOfLastContract   = CONTRACT_EXTEND_1_DAY;
-      	s->iTimeCanSignElsewhere = GetWorldTotalMin();
-      	break;
+				s->iTimeCanSignElsewhere = GetWorldTotalMin();
+				break;
 
 			case 7:
 				s->bTypeOfLastContract   = CONTRACT_EXTEND_1_WEEK;
-      	s->iTimeCanSignElsewhere = GetWorldTotalMin();
-      	break;
+				s->iTimeCanSignElsewhere = GetWorldTotalMin();
+				break;
 
 			case 14:
 				s->bTypeOfLastContract   = CONTRACT_EXTEND_2_WEEK;
-      	// This fellow needs to stay the whole duration!
-      	s->iTimeCanSignElsewhere = s->iEndofContractTime;
-      	break;
+				// This fellow needs to stay the whole duration!
+				s->iTimeCanSignElsewhere = s->iEndofContractTime;
+				break;
 		}
 
 		// remember the medical deposit we PAID.  The one in his profile can increase when he levels!
@@ -227,15 +230,16 @@ static void CheckForValidArrivalSector(void);
 
 void MercArrivesCallback(SOLDIERTYPE& s)
 {
-	UINT32									uiTimeOfPost;
+	UINT32 uiTimeOfPost;
 
 	if (!DidGameJustStart() && g_merc_arrive_sector == START_SECTOR)
-	{ /* Mercs arriving in start sector. This sector has been deemed as the always
-		 * safe sector. Seeing we don't support entry into a hostile sector (except
-		 * for the beginning), we will nuke any enemies in this sector first. */
-		if (gWorldSectorX  != SECTORX(START_SECTOR) ||
-				gWorldSectorY  != SECTORY(START_SECTOR) ||
-				gbWorldSectorZ != 0)
+	{
+		// Mercs arriving in start sector. This sector has been deemed as the always
+		// safe sector. Seeing we don't support entry into a hostile sector (except
+		// for the beginning), we will nuke any enemies in this sector first.
+		if (gWorldSectorX != SECTORX(START_SECTOR) ||
+			gWorldSectorY != SECTORY(START_SECTOR) ||
+			gbWorldSectorZ != 0)
 		{
 			EliminateAllEnemies(SECTORX(g_merc_arrive_sector), SECTORY(g_merc_arrive_sector));
 		}
@@ -274,7 +278,7 @@ void MercArrivesCallback(SOLDIERTYPE& s)
 			// OK, If we are in mapscreen, get out...
 			if ( guiCurrentScreen == MAP_SCREEN )
 			{
-        // ATE: Make sure the current one is selected!
+				// ATE: Make sure the current one is selected!
 				ChangeSelectedMapSector( gWorldSectorX, gWorldSectorY, 0 );
 
 				RequestTriggerExitFromMapscreen( MAP_EXIT_TO_TACTICAL );
@@ -294,7 +298,7 @@ void MercArrivesCallback(SOLDIERTYPE& s)
 
 	if (s.ubStrategicInsertionCode != INSERTION_CODE_CHOPPER)
 	{
-		ScreenMsg(FONT_MCOLOR_WHITE, MSG_INTERFACE, TacticalStr[MERC_HAS_ARRIVED_STR], s.name);
+		ScreenMsg(FONT_MCOLOR_WHITE, MSG_INTERFACE, st_format_printf(TacticalStr[MERC_HAS_ARRIVED_STR], s.name));
 
 		// ATE: He's going to say something, now that they've arrived...
 		if (!gTacticalStatus.bMercArrivingQuoteBeingUsed && !gfFirstHeliRun)
@@ -356,8 +360,8 @@ void MercArrivesCallback(SOLDIERTYPE& s)
 
 bool IsMercHireable(MERCPROFILESTRUCT const& p)
 {
-	/* If the merc has an .edt file, is not away on assignment, and isn't already
-	 * hired (but not arrived yet), he is not dead and he isn't returning home */
+	// If the merc has an .edt file, is not away on assignment, and isn't already
+	// hired (but not arrived yet), he is not dead and he isn't returning home
 	return
 		p.bMercStatus <= 0                              &&
 		p.bMercStatus != MERC_HAS_NO_TEXT_FILE          &&
@@ -383,7 +387,7 @@ void HandleMercArrivesQuotes(SOLDIERTYPE& s)
 
 	// Player-generated characters issue a comment about arriving in Omerta.
 	if (s.ubWhatKindOfMercAmI == MERC_TYPE__PLAYER_CHARACTER &&
-			gubQuest[QUEST_DELIVER_LETTER] == QUESTINPROGRESS)
+		gubQuest[QUEST_DELIVER_LETTER] == QUESTINPROGRESS)
 	{
 		TacticalCharacterDialogue(&s, QUOTE_PC_DROPPED_OMERTA);
 	}
@@ -405,8 +409,8 @@ void HandleMercArrivesQuotes(SOLDIERTYPE& s)
 
 UINT32 GetMercArrivalTimeOfDay( )
 {
-	UINT32		uiCurrHour;
-	UINT32		uiMinHour;
+	UINT32 uiCurrHour;
+	UINT32 uiMinHour;
 
 	// Pick a time...
 
@@ -414,7 +418,7 @@ UINT32 GetMercArrivalTimeOfDay( )
 	uiCurrHour = GetWorldHour( );
 
 	// Subtract the min time for any arrival....
-	uiMinHour	= uiCurrHour + MIN_FLIGHT_PREP_TIME;
+	uiMinHour = uiCurrHour + MIN_FLIGHT_PREP_TIME;
 
 	// OK, first check if we need to advance a whole day's time...
 	// See if we have missed the last flight for the day...
@@ -477,17 +481,17 @@ static INT16 StrategicPythSpacesAway(INT16 sOrigin, INT16 sDest)
 // if so, search around for nearest non-occupied sector.
 static void CheckForValidArrivalSector(void)
 {
-	INT16  sTop, sBottom;
-	INT16  sLeft, sRight;
-	INT16  cnt1, cnt2;
-	UINT8	 ubRadius = 4;
-	INT32	 leftmost;
-	INT16	 sSectorGridNo, sSectorGridNo2;
-	INT32	 uiRange, uiLowestRange = 999999;
-	BOOLEAN	fFound = FALSE;
-	wchar_t sString[ 1024 ];
-	wchar_t zShortTownIDString1[ 50 ];
-	wchar_t zShortTownIDString2[ 50 ];
+	INT16   sTop, sBottom;
+	INT16   sLeft, sRight;
+	INT16   cnt1, cnt2;
+	UINT8   ubRadius = 4;
+	INT32   leftmost;
+	INT16   sSectorGridNo, sSectorGridNo2;
+	INT32   uiRange, uiLowestRange = 999999;
+	BOOLEAN fFound = FALSE;
+	ST::string sString;
+	ST::string zShortTownIDString1;
+	ST::string zShortTownIDString2;
 
 	sSectorGridNo = SECTOR_INFO_TO_STRATEGIC_INDEX(g_merc_arrive_sector);
 
@@ -497,11 +501,11 @@ static void CheckForValidArrivalSector(void)
 		return;
 	}
 
-	GetShortSectorString(SECTORX(g_merc_arrive_sector), SECTORY(g_merc_arrive_sector), zShortTownIDString1, lengthof(zShortTownIDString1));
+	zShortTownIDString1 = GetShortSectorString(SECTORX(g_merc_arrive_sector), SECTORY(g_merc_arrive_sector));
 
 
 	// If here - we need to do a search!
-	sTop		= ubRadius;
+	sTop    = ubRadius;
 	sBottom = -ubRadius;
 	sLeft   = - ubRadius;
 	sRight  = ubRadius;
@@ -540,9 +544,9 @@ static void CheckForValidArrivalSector(void)
 
 		UpdateAnyInTransitMercsWithGlobalArrivalSector( );
 
-		GetShortSectorString(SECTORX(g_merc_arrive_sector), SECTORY(g_merc_arrive_sector), zShortTownIDString2, lengthof(zShortTownIDString2));
+		zShortTownIDString2 = GetShortSectorString(SECTORX(g_merc_arrive_sector), SECTORY(g_merc_arrive_sector));
 
-		swprintf(sString, lengthof(sString), str_arrival_rerouted, zShortTownIDString2, zShortTownIDString1);
+		sString = st_format_printf(str_arrival_rerouted, zShortTownIDString2, zShortTownIDString1);
 
 		DoScreenIndependantMessageBox(  sString, MSG_BOX_FLAG_OK, NULL );
 

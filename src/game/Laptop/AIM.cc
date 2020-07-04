@@ -19,6 +19,9 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
+#include <string_theory/string>
+
+
 UINT8			AimMercArray[ MAX_NUMBER_MERCS ];
 
 static LaptopMode const gCurrentAimPage[NUM_AIM_SCREENS] =
@@ -37,87 +40,87 @@ static LaptopMode const gCurrentAimPage[NUM_AIM_SCREENS] =
 //
 
 
-#define			BOBBYR_UNDER_CONSTRUCTION_AD_FONT							FONT14HUMANIST//FONT16ARIAL
-#define			BOBBYR_UNDER_CONSTRUCTION_AD_COLOR						FONT_MCOLOR_DKRED//FONT_MCOLOR_WHITE
+#define BOBBYR_UNDER_CONSTRUCTION_AD_FONT	FONT14HUMANIST//FONT16ARIAL
+#define BOBBYR_UNDER_CONSTRUCTION_AD_COLOR	FONT_MCOLOR_DKRED//FONT_MCOLOR_WHITE
 
 
 // Link Images
-#define			LINK_SIZE_X							101
-#define			LINK_SIZE_Y							76
+#define LINK_SIZE_X				101
+#define LINK_SIZE_Y				76
 
-#define			MEMBERCARD_X						IMAGE_OFFSET_X + 118
-#define			MEMBERCARD_Y						IMAGE_OFFSET_Y + 190
+#define MEMBERCARD_X				IMAGE_OFFSET_X + 118
+#define MEMBERCARD_Y				IMAGE_OFFSET_Y + 190
 
-#define			POLICIES_X							IMAGE_OFFSET_X + 284
-#define			POLICIES_Y							MEMBERCARD_Y
+#define POLICIES_X				IMAGE_OFFSET_X + 284
+#define POLICIES_Y				MEMBERCARD_Y
 
-#define			HISTORY_X								MEMBERCARD_X
-#define			HISTORY_Y								IMAGE_OFFSET_Y + 279
+#define HISTORY_X				MEMBERCARD_X
+#define HISTORY_Y				IMAGE_OFFSET_Y + 279
 
-#define			LINKS_X									POLICIES_X
-#define			LINKS_Y									HISTORY_Y
+#define LINKS_X					POLICIES_X
+#define LINKS_Y					HISTORY_Y
 
-#define			WARNING_X								IMAGE_OFFSET_X + 126
-#define			WARNING_Y								IMAGE_OFFSET_Y + 80 -1
+#define WARNING_X				IMAGE_OFFSET_X + 126
+#define WARNING_Y				IMAGE_OFFSET_Y + 80 -1
 
-#define			MEMBERS_TEXT_Y					MEMBERCARD_Y + 77
-#define			HISTORY_TEXT_Y					HISTORY_Y + 77
-#define			POLICIES_TEXT_Y					MEMBERS_TEXT_Y
-#define			LINK_TEXT_Y							HISTORY_TEXT_Y
+#define MEMBERS_TEXT_Y				MEMBERCARD_Y + 77
+#define HISTORY_TEXT_Y				HISTORY_Y + 77
+#define POLICIES_TEXT_Y				MEMBERS_TEXT_Y
+#define LINK_TEXT_Y				HISTORY_TEXT_Y
 
-#define			AIM_WARNING_TEXT_X			WARNING_X + 15
-#define			AIM_WARNING_TEXT_Y			WARNING_Y + 46
-#define			AIM_WARNING_TEXT_WIDTH	220
+#define AIM_WARNING_TEXT_X			WARNING_X + 15
+#define AIM_WARNING_TEXT_Y			WARNING_Y + 46
+#define AIM_WARNING_TEXT_WIDTH			220
 
-#define			AIM_FLOWER_LINK_TEXT_Y	AIM_WARNING_TEXT_Y + 25
+#define AIM_FLOWER_LINK_TEXT_Y			AIM_WARNING_TEXT_Y + 25
 
-#define			AIM_BOBBYR1_LINK_TEXT_X			WARNING_X + 20
-#define			AIM_BOBBYR1_LINK_TEXT_Y			WARNING_Y + 20
+#define AIM_BOBBYR1_LINK_TEXT_X			WARNING_X + 20
+#define AIM_BOBBYR1_LINK_TEXT_Y			WARNING_Y + 20
 
-#define			AIM_BOBBYR2_LINK_TEXT_X			WARNING_X + 50
-#define			AIM_BOBBYR2_LINK_TEXT_Y			WARNING_Y + 58
+#define AIM_BOBBYR2_LINK_TEXT_X			WARNING_X + 50
+#define AIM_BOBBYR2_LINK_TEXT_Y			WARNING_Y + 58
 
-#define			AIM_BOBBYR3_LINK_TEXT_X			WARNING_X + 20
-#define			AIM_BOBBYR3_LINK_TEXT_Y			WARNING_Y + 20
-
-
-
-#define			AIM_AD_TOP_LEFT_X				WARNING_X
-#define			AIM_AD_TOP_LEFT_Y				WARNING_Y
-#define			AIM_AD_BOTTOM_RIGHT_X		AIM_AD_TOP_LEFT_X + 248
-#define			AIM_AD_BOTTOM_RIGHT_Y		AIM_AD_TOP_LEFT_Y + 110
-
-#define			AIM_COPYRIGHT_X					(160 + STD_SCREEN_X)
-#define			AIM_COPYRIGHT_Y					(396 + LAPTOP_SCREEN_WEB_DELTA_Y + STD_SCREEN_Y)
-#define			AIM_COPYRIGHT_WIDTH			400
-#define			AIM_COPYRIGHT_GAP				9
-
-//#define			AIM_WARNING_TIME				100
-#define			AIM_WARNING_TIME				10000
-
-//#define			AIM_FLOWER_AD_DELAY					15
-#define			AIM_FLOWER_AD_DELAY					150
-#define			AIM_FLOWER_NUM_SUBIMAGES		16
+#define AIM_BOBBYR3_LINK_TEXT_X			WARNING_X + 20
+#define AIM_BOBBYR3_LINK_TEXT_Y			WARNING_Y + 20
 
 
-#define			AIM_AD_FOR_ADS_DELAY					150
-//#define			AIM_AD_FOR_ADS_DELAY					15
-#define			AIM_AD_FOR_ADS__NUM_SUBIMAGES	13
 
-#define			AIM_AD_INSURANCE_AD_DELAY					150
-#define			AIM_AD_INSURANCE_AD__NUM_SUBIMAGES	10
+#define AIM_AD_TOP_LEFT_X			WARNING_X
+#define AIM_AD_TOP_LEFT_Y			WARNING_Y
+#define AIM_AD_BOTTOM_RIGHT_X			AIM_AD_TOP_LEFT_X + 248
+#define AIM_AD_BOTTOM_RIGHT_Y			AIM_AD_TOP_LEFT_Y + 110
 
-#define			AIM_AD_FUNERAL_AD_DELAY					250
-#define			AIM_AD_FUNERAL_AD__NUM_SUBIMAGES	9
+#define AIM_COPYRIGHT_X				(160 + STD_SCREEN_X)
+#define AIM_COPYRIGHT_Y				(396 + LAPTOP_SCREEN_WEB_DELTA_Y + STD_SCREEN_Y)
+#define AIM_COPYRIGHT_WIDTH			400
+#define AIM_COPYRIGHT_GAP			9
 
-#define			AIM_AD_BOBBYR_AD_STARTS								2
-#define			AIM_AD_DAY_FUNERAL_AD_STARTS					4
-#define			AIM_AD_DAY_FLOWER_AD_STARTS						7
-#define			AIM_AD_DAY_INSURANCE_AD_STARTS				12
+//#define AIM_WARNING_TIME			100
+#define AIM_WARNING_TIME			10000
 
-#define			AIM_AD_BOBBYR_AD_DELAY								300
-#define			AIM_AD_BOBBYR_AD__NUM_SUBIMAGES				21
-#define			AIM_AD_BOBBYR_AD_NUM_DUCK_SUBIMAGES		6
+//#define AIM_FLOWER_AD_DELAY			15
+#define AIM_FLOWER_AD_DELAY			150
+#define AIM_FLOWER_NUM_SUBIMAGES		16
+
+
+#define AIM_AD_FOR_ADS_DELAY			150
+//#define AIM_AD_FOR_ADS_DELAY			15
+#define AIM_AD_FOR_ADS__NUM_SUBIMAGES		13
+
+#define AIM_AD_INSURANCE_AD_DELAY		150
+#define AIM_AD_INSURANCE_AD__NUM_SUBIMAGES	10
+
+#define AIM_AD_FUNERAL_AD_DELAY	250
+#define AIM_AD_FUNERAL_AD__NUM_SUBIMAGES	9
+
+#define AIM_AD_BOBBYR_AD_STARTS			2
+#define AIM_AD_DAY_FUNERAL_AD_STARTS		4
+#define AIM_AD_DAY_FLOWER_AD_STARTS		7
+#define AIM_AD_DAY_INSURANCE_AD_STARTS		12
+
+#define AIM_AD_BOBBYR_AD_DELAY			300
+#define AIM_AD_BOBBYR_AD__NUM_SUBIMAGES		21
+#define AIM_AD_BOBBYR_AD_NUM_DUCK_SUBIMAGES	6
 
 
 //#define
@@ -247,24 +250,34 @@ void EnterAIM()
 	//** Mouse Regions **
 
 	//Mouse region for the MebershipCard
-	MSYS_DefineRegion( &gSelectedMemberCardRegion, MEMBERCARD_X, MEMBERCARD_Y , (MEMBERCARD_X + LINK_SIZE_X), (MEMBERCARD_Y + LINK_SIZE_Y), MSYS_PRIORITY_HIGH,
-							 CURSOR_WWW, MSYS_NO_CALLBACK, SelectMemberCardRegionCallBack );
+	MSYS_DefineRegion(&gSelectedMemberCardRegion, MEMBERCARD_X, MEMBERCARD_Y,
+				(MEMBERCARD_X + LINK_SIZE_X), (MEMBERCARD_Y + LINK_SIZE_Y),
+				MSYS_PRIORITY_HIGH, CURSOR_WWW, MSYS_NO_CALLBACK,
+				SelectMemberCardRegionCallBack);
 
 	//Mouse region for the Policies
-	MSYS_DefineRegion( &gSelectedPoliciesRegion, POLICIES_X, POLICIES_Y , (POLICIES_X + LINK_SIZE_X), (POLICIES_Y + LINK_SIZE_Y), MSYS_PRIORITY_HIGH,
-							 CURSOR_WWW, MSYS_NO_CALLBACK, SelectPoliciesRegionCallBack );
+	MSYS_DefineRegion(&gSelectedPoliciesRegion, POLICIES_X, POLICIES_Y,
+				(POLICIES_X + LINK_SIZE_X), (POLICIES_Y + LINK_SIZE_Y),
+				MSYS_PRIORITY_HIGH, CURSOR_WWW, MSYS_NO_CALLBACK,
+				SelectPoliciesRegionCallBack);
 
 	//Mouse region for the History
-	MSYS_DefineRegion( &gSelectedHistoryRegion, HISTORY_X, HISTORY_Y , (HISTORY_X + LINK_SIZE_X), (HISTORY_Y + LINK_SIZE_Y), MSYS_PRIORITY_HIGH,
-							 CURSOR_WWW, MSYS_NO_CALLBACK, SelectHistoryRegionCallBack );
+	MSYS_DefineRegion(&gSelectedHistoryRegion, HISTORY_X, HISTORY_Y,
+				(HISTORY_X + LINK_SIZE_X), (HISTORY_Y + LINK_SIZE_Y),
+				MSYS_PRIORITY_HIGH, CURSOR_WWW, MSYS_NO_CALLBACK,
+				SelectHistoryRegionCallBack);
 
 	//Mouse region for the Links
-	MSYS_DefineRegion( &gSelectedLinksRegion, LINKS_X, LINKS_Y , (LINKS_X + LINK_SIZE_X), (LINKS_Y + LINK_SIZE_Y), MSYS_PRIORITY_HIGH,
-							 CURSOR_WWW, MSYS_NO_CALLBACK, SelectLinksRegionCallBack );
+	MSYS_DefineRegion(&gSelectedLinksRegion, LINKS_X, LINKS_Y ,
+				(LINKS_X + LINK_SIZE_X), (LINKS_Y + LINK_SIZE_Y),
+				MSYS_PRIORITY_HIGH, CURSOR_WWW, MSYS_NO_CALLBACK,
+				SelectLinksRegionCallBack);
 
 	//Mouse region for the Links
-	MSYS_DefineRegion( &gSelectedBannerRegion, AIM_AD_TOP_LEFT_X, AIM_AD_TOP_LEFT_Y, AIM_AD_BOTTOM_RIGHT_X, AIM_AD_BOTTOM_RIGHT_Y, MSYS_PRIORITY_HIGH,
-							 CURSOR_WWW, MSYS_NO_CALLBACK, SelectBannerRegionCallBack);
+	MSYS_DefineRegion(&gSelectedBannerRegion, AIM_AD_TOP_LEFT_X, AIM_AD_TOP_LEFT_Y,
+				AIM_AD_BOTTOM_RIGHT_X, AIM_AD_BOTTOM_RIGHT_Y,
+				MSYS_PRIORITY_HIGH, CURSOR_WWW, MSYS_NO_CALLBACK,
+				SelectBannerRegionCallBack);
 
 	// disable the region because only certain banners will be 'clickable'
 	gSelectedBannerRegion.Disable();
@@ -296,11 +309,11 @@ void ExitAIM()
 	DeleteVideoObject(guiBobbyRAdImages);
 
 	// Remove Mouse Regions
-  MSYS_RemoveRegion( &gSelectedMemberCardRegion);
-  MSYS_RemoveRegion( &gSelectedPoliciesRegion);
-  MSYS_RemoveRegion( &gSelectedLinksRegion);
-  MSYS_RemoveRegion( &gSelectedHistoryRegion);
-  MSYS_RemoveRegion( &gSelectedBannerRegion);
+	MSYS_RemoveRegion( &gSelectedMemberCardRegion);
+	MSYS_RemoveRegion( &gSelectedPoliciesRegion);
+	MSYS_RemoveRegion( &gSelectedLinksRegion);
+	MSYS_RemoveRegion( &gSelectedHistoryRegion);
+	MSYS_RemoveRegion( &gSelectedBannerRegion);
 }
 
 
@@ -343,7 +356,7 @@ void RenderAIM()
 
 	RenderWWWProgramTitleBar( );
 
-  InvalidateRegion(LAPTOP_SCREEN_UL_X,LAPTOP_SCREEN_WEB_UL_Y,LAPTOP_SCREEN_LR_X,LAPTOP_SCREEN_WEB_LR_Y);
+	InvalidateRegion(LAPTOP_SCREEN_UL_X,LAPTOP_SCREEN_WEB_UL_Y,LAPTOP_SCREEN_LR_X,LAPTOP_SCREEN_WEB_LR_Y);
 }
 
 
@@ -397,8 +410,10 @@ void InitAimDefaults()
 	guiAimSymbol = AddVideoObjectFromFile(ImageFile);
 
 	//Mouse region for the Links
-	MSYS_DefineRegion( &gSelectedAimLogo, AIM_SYMBOL_X, AIM_SYMBOL_Y, AIM_SYMBOL_X+AIM_SYMBOL_WIDTH, AIM_SYMBOL_Y+AIM_SYMBOL_HEIGHT, MSYS_PRIORITY_HIGH,
-							 CURSOR_WWW, MSYS_NO_CALLBACK, SelectAimLogoRegionCallBack);
+	MSYS_DefineRegion(&gSelectedAimLogo, AIM_SYMBOL_X, AIM_SYMBOL_Y,
+				AIM_SYMBOL_X+AIM_SYMBOL_WIDTH, AIM_SYMBOL_Y+AIM_SYMBOL_HEIGHT,
+				MSYS_PRIORITY_HIGH, CURSOR_WWW, MSYS_NO_CALLBACK,
+				SelectAimLogoRegionCallBack);
 }
 
 
@@ -406,7 +421,7 @@ void RemoveAimDefaults()
 {
 	DeleteVideoObject(guiRustBackGround);
 	DeleteVideoObject(guiAimSymbol);
-  MSYS_RemoveRegion( &gSelectedAimLogo);
+	MSYS_RemoveRegion( &gSelectedAimLogo);
 }
 
 
@@ -420,7 +435,7 @@ void DrawAimDefaults()
 		uiPosX = RUSTBACKGROUND_1_X;
 		for(x=0; x<4; x++)
 		{
-		  BltVideoObject(FRAME_BUFFER, guiRustBackGround, 0, uiPosX, uiPosY);
+			BltVideoObject(FRAME_BUFFER, guiRustBackGround, 0, uiPosX, uiPosY);
 			uiPosX += RUSTBACKGROUND_SIZE_X;
 		}
 		uiPosY += RUSTBACKGROUND_SIZE_Y;
@@ -439,16 +454,15 @@ static void SelectAimLogoRegionCallBack(MOUSE_REGION* pRegion, INT32 iReason)
 }
 
 
-static void LoadAIMText(wchar_t buf[], UINT32 entry)
+static ST::string LoadAIMText(UINT32 entry)
 {
-	GCM->loadEncryptedString(AIMHISTORYFILE, buf, AIM_HISTORY_LINE_SIZE * entry, AIM_HISTORY_LINE_SIZE);
+	return GCM->loadEncryptedString(AIMHISTORYFILE, AIM_HISTORY_LINE_SIZE * entry, AIM_HISTORY_LINE_SIZE);
 }
 
 
 void DisplayAimSlogan()
 {
-	wchar_t	sSlogan[AIM_HISTORY_LINE_SIZE];
-	LoadAIMText(sSlogan, 0);
+	ST::string sSlogan = LoadAIMText(0);
 	//Display Aim Text under the logo
 	DisplayWrappedString(AIM_LOGO_TEXT_X, AIM_LOGO_TEXT_Y, AIM_LOGO_TEXT_WIDTH, 2, AIM_LOGO_FONT, AIM_FONT_MCOLOR_WHITE, sSlogan, FONT_MCOLOR_BLACK, CENTER_JUSTIFIED);
 }
@@ -456,17 +470,17 @@ void DisplayAimSlogan()
 
 void DisplayAimCopyright()
 {
-	wchar_t	sSlogan[AIM_HISTORY_LINE_SIZE];
+	ST::string sSlogan;
 
 	//Load and Display the copyright notice
 
-	LoadAIMText(sSlogan, AIM_COPYRIGHT_1);
+	sSlogan = LoadAIMText(AIM_COPYRIGHT_1);
 	DrawTextToScreen(sSlogan, AIM_COPYRIGHT_X, AIM_COPYRIGHT_Y, AIM_COPYRIGHT_WIDTH, AIM_COPYRIGHT_FONT, FONT_MCOLOR_DKWHITE, FONT_MCOLOR_BLACK, CENTER_JUSTIFIED);
 
-	LoadAIMText(sSlogan, AIM_COPYRIGHT_2);
+	sSlogan = LoadAIMText(AIM_COPYRIGHT_2);
 	DrawTextToScreen(sSlogan, AIM_COPYRIGHT_X, AIM_COPYRIGHT_Y + AIM_COPYRIGHT_GAP, AIM_COPYRIGHT_WIDTH, AIM_COPYRIGHT_FONT, FONT_MCOLOR_DKWHITE, FONT_MCOLOR_BLACK, CENTER_JUSTIFIED);
 
-	LoadAIMText(sSlogan, AIM_COPYRIGHT_3);
+	sSlogan = LoadAIMText(AIM_COPYRIGHT_3);
 	DrawTextToScreen(sSlogan, AIM_COPYRIGHT_X, AIM_COPYRIGHT_Y + AIM_COPYRIGHT_GAP * 2, AIM_COPYRIGHT_WIDTH, AIM_COPYRIGHT_FONT, FONT_MCOLOR_DKWHITE, FONT_MCOLOR_BLACK, CENTER_JUSTIFIED);
 }
 
@@ -481,7 +495,7 @@ void InitAimMenuBar()
 
 	UINT16             x    = BOTTOM_BUTTON_START_X;
 	UINT16     const   y    = BOTTOM_BUTTON_START_Y;
-	const StrPointer * text = AimBottomMenuText;
+	const ST::string* text = AimBottomMenuText;
 	LaptopMode const*  page = gCurrentAimPage;
 	FOR_EACHX(GUIButtonRef, i, guiBottomButtons, x += BOTTOM_BUTTON_START_WIDTH)
 	{
@@ -516,7 +530,7 @@ static void BtnAimBottomButtonsCallback(GUI_BUTTON *btn, INT32 reason)
 
 static void ResetAimButtons(GUIButtonRef* const Buttons, UINT16 const uNumberOfButtons)
 {
-  UINT32 cnt;
+	UINT32 cnt;
 
 	for ( cnt = 0; cnt < uNumberOfButtons; cnt++ )
 	{
@@ -630,18 +644,18 @@ static void HandleAdAndWarningArea(BOOLEAN fInit, BOOLEAN fRedraw)
 			break;
 
 		case AIM_AD_INSURANCE_AD:
-		  gSelectedBannerRegion.Enable();
+			gSelectedBannerRegion.Enable();
 			ubPreviousAdvertisment = DisplayAd( fInit, fRedraw, AIM_AD_INSURANCE_AD_DELAY, AIM_AD_INSURANCE_AD__NUM_SUBIMAGES, guiInsuranceAdImages );
 			break;
 
 		case AIM_AD_FUNERAL_ADS:
-		  gSelectedBannerRegion.Enable();
+			gSelectedBannerRegion.Enable();
 			ubPreviousAdvertisment = DisplayAd( fInit, fRedraw, AIM_AD_FUNERAL_AD_DELAY, AIM_AD_FUNERAL_AD__NUM_SUBIMAGES, guiFuneralAdImages );
 			break;
 
 		case AIM_AD_BOBBY_RAY_AD:
-		  gSelectedBannerRegion.Enable();
-//			ubPreviousAdvertisment = DisplayAd( fInit, fRedraw, AIM_AD_BOBBYR_AD_DELAY, AIM_AD_BOBBYR_AD__NUM_SUBIMAGES, guiBobbyRAdImages );
+			gSelectedBannerRegion.Enable();
+			//ubPreviousAdvertisment = DisplayAd( fInit, fRedraw, AIM_AD_BOBBYR_AD_DELAY, AIM_AD_BOBBYR_AD__NUM_SUBIMAGES, guiBobbyRAdImages );
 			ubPreviousAdvertisment = DisplayBobbyRAd( fInit, fRedraw );
 			break;
 	}
@@ -660,7 +674,7 @@ static BOOLEAN DisplayFlowerAd(BOOLEAN fInit, BOOLEAN fRedraw)
 		uiLastTime = 0;
 		ubSubImage = 0;
 		ubCount = 0;
-	  gSelectedBannerRegion.Enable();
+		gSelectedBannerRegion.Enable();
 	}
 
 	if( ((uiCurTime - uiLastTime) > AIM_FLOWER_AD_DELAY) || fRedraw)
@@ -707,7 +721,7 @@ static BOOLEAN DisplayFlowerAd(BOOLEAN fInit, BOOLEAN fRedraw)
 		}
 
 		uiLastTime = GetJA2Clock();
-	  InvalidateRegion(AIM_AD_TOP_LEFT_X,AIM_AD_TOP_LEFT_Y, AIM_AD_BOTTOM_RIGHT_X	,AIM_AD_BOTTOM_RIGHT_Y);
+		InvalidateRegion(AIM_AD_TOP_LEFT_X,AIM_AD_TOP_LEFT_Y, AIM_AD_BOTTOM_RIGHT_X	,AIM_AD_BOTTOM_RIGHT_Y);
 	}
 	return( AIM_AD_NOT_DONE );
 }
@@ -724,8 +738,7 @@ static BOOLEAN DrawWarningBox(BOOLEAN fInit, BOOLEAN fRedraw)
 		BltVideoObject(FRAME_BUFFER, guiWarning, 0, WARNING_X, WARNING_Y);
 
 		//Display Aim Warning Text
-		wchar_t sText[AIM_HISTORY_LINE_SIZE];
-		LoadAIMText(sText, AIM_WARNING_1);
+		ST::string sText = LoadAIMText(AIM_WARNING_1);
 		DisplayWrappedString(AIM_WARNING_TEXT_X, AIM_WARNING_TEXT_Y, AIM_WARNING_TEXT_WIDTH, 2, AIM_WARNING_FONT, FONT_RED, sText, FONT_MCOLOR_BLACK, CENTER_JUSTIFIED);
 
 		InvalidateRegion(AIM_AD_TOP_LEFT_X,AIM_AD_TOP_LEFT_Y, AIM_AD_BOTTOM_RIGHT_X	,AIM_AD_BOTTOM_RIGHT_Y);
@@ -844,7 +857,7 @@ static BOOLEAN DisplayAd(const BOOLEAN fInit, const BOOLEAN fRedraw, const UINT1
 		HandleTextOnAimAdd( ubSubImage );
 
 		uiLastTime = GetJA2Clock();
-	  InvalidateRegion(AIM_AD_TOP_LEFT_X,AIM_AD_TOP_LEFT_Y, AIM_AD_BOTTOM_RIGHT_X	,AIM_AD_BOTTOM_RIGHT_Y);
+		InvalidateRegion(AIM_AD_TOP_LEFT_X,AIM_AD_TOP_LEFT_Y, AIM_AD_BOTTOM_RIGHT_X	,AIM_AD_BOTTOM_RIGHT_Y);
 	}
 	return( ubRetVal );
 }
@@ -972,7 +985,7 @@ static BOOLEAN DisplayBobbyRAd(BOOLEAN fInit, BOOLEAN fRedraw)
 
 
 		uiLastTime = GetJA2Clock();
-	  InvalidateRegion(AIM_AD_TOP_LEFT_X,AIM_AD_TOP_LEFT_Y, AIM_AD_BOTTOM_RIGHT_X	,AIM_AD_BOTTOM_RIGHT_Y);
+		InvalidateRegion(AIM_AD_TOP_LEFT_X,AIM_AD_TOP_LEFT_Y, AIM_AD_BOTTOM_RIGHT_X	,AIM_AD_BOTTOM_RIGHT_Y);
 	}
 
 	return( ubRetVal );

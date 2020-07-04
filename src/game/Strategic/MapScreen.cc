@@ -96,6 +96,12 @@
 #include "GameInstance.h"
 #include "policy/GamePolicy.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <algorithm>
+#include <iterator>
+
 #define MAX_SORT_METHODS					6
 
 // Cursors
@@ -111,35 +117,35 @@
 #define CHAR_TITLE_FONT_COLOR 6
 #define CHAR_TEXT_FONT_COLOR 5
 
-#define STARTING_COLOR_NUM	5
+#define STARTING_COLOR_NUM 5
 
-#define	MAP_TIME_UNDER_THIS_DISPLAY_AS_HOURS			( 3 * 24 * 60 )
+#define MAP_TIME_UNDER_THIS_DISPLAY_AS_HOURS ( 3 * 24 * 60 )
 
 
 #define DELAY_PER_FLASH_FOR_DEPARTING_PERSONNEL 500
 #define GLOW_DELAY 70
-#define ASSIGNMENT_DONE_FLASH_TIME	500
+#define ASSIGNMENT_DONE_FLASH_TIME 500
 
-#define	MINS_TO_FLASH_CONTRACT_TIME	(4 * 60)
+#define MINS_TO_FLASH_CONTRACT_TIME (4 * 60)
 
 // Coordinate defines
 
-#define     TOWN_INFO_X           (STD_SCREEN_X + 0)
-#define     TOWN_INFO_Y           (STD_SCREEN_Y + 1)
+#define TOWN_INFO_X           (STD_SCREEN_X + 0)
+#define TOWN_INFO_Y           (STD_SCREEN_Y + 1)
 
-#define     PLAYER_INFO_X         (STD_SCREEN_X + 0)
-#define     PLAYER_INFO_Y         (STD_SCREEN_Y + 107)
+#define PLAYER_INFO_X         (STD_SCREEN_X + 0)
+#define PLAYER_INFO_Y         (STD_SCREEN_Y + 107)
 
 // item description
-#define			MAP_ITEMDESC_START_X		  PLAYER_INFO_X
-#define			MAP_ITEMDESC_START_Y			PLAYER_INFO_Y
+#define MAP_ITEMDESC_START_X PLAYER_INFO_X
+#define MAP_ITEMDESC_START_Y PLAYER_INFO_Y
 
-#define     INV_REGION_X PLAYER_INFO_X
-#define     INV_REGION_Y PLAYER_INFO_Y
-#define     INV_REGION_WIDTH 261
-#define     INV_REGION_HEIGHT 359-94
-#define     INV_BTN_X PLAYER_INFO_X + 217
-#define     INV_BTN_Y PLAYER_INFO_Y + 210
+#define INV_REGION_X PLAYER_INFO_X
+#define INV_REGION_Y PLAYER_INFO_Y
+#define INV_REGION_WIDTH 261
+#define INV_REGION_HEIGHT 359-94
+#define INV_BTN_X PLAYER_INFO_X + 217
+#define INV_BTN_Y PLAYER_INFO_Y + 210
 
 #define MAP_BG_WIDTH      (640 - 261)
 
@@ -164,20 +170,20 @@
 #define MAP_CAMO_W        28
 #define MAP_CAMO_H        10
 
-#define			MAP_INV_STATS_TITLE_FONT_COLOR				6
+#define MAP_INV_STATS_TITLE_FONT_COLOR 6
 
-#define     PLAYER_INFO_FACE_START_X    (STD_SCREEN_X + 9)
-#define     PLAYER_INFO_FACE_START_Y    (STD_SCREEN_Y + 17)
-#define     PLAYER_INFO_FACE_END_X			(STD_SCREEN_X + 60)
-#define     PLAYER_INFO_FACE_END_Y			(STD_SCREEN_Y + 76)
+#define PLAYER_INFO_FACE_START_X    (STD_SCREEN_X + 9)
+#define PLAYER_INFO_FACE_START_Y    (STD_SCREEN_Y + 17)
+#define PLAYER_INFO_FACE_END_X			(STD_SCREEN_X + 60)
+#define PLAYER_INFO_FACE_END_Y			(STD_SCREEN_Y + 76)
 
-#define     PLAYER_INFO_HAND_START_X    (STD_SCREEN_X + 4)
-#define     PLAYER_INFO_HAND_START_Y    (STD_SCREEN_Y + 81)
-#define     PLAYER_INFO_HAND_END_X      (STD_SCREEN_X + 62)
-#define     PLAYER_INFO_HAND_END_Y      (STD_SCREEN_Y + 103)
+#define PLAYER_INFO_HAND_START_X    (STD_SCREEN_X + 4)
+#define PLAYER_INFO_HAND_START_Y    (STD_SCREEN_Y + 81)
+#define PLAYER_INFO_HAND_END_X      (STD_SCREEN_X + 62)
+#define PLAYER_INFO_HAND_END_Y      (STD_SCREEN_Y + 103)
 
-#define     INV_BODY_X (UINT16)(STD_SCREEN_X + 71)
-#define     INV_BODY_Y (UINT16)(STD_SCREEN_Y + 116)
+#define INV_BODY_X (UINT16)(STD_SCREEN_X + 71)
+#define INV_BODY_Y (UINT16)(STD_SCREEN_Y + 116)
 
 //Text offsets
 #define Y_OFFSET 2
@@ -216,12 +222,12 @@
 #define CHAR_NAME_Y (STD_SCREEN_Y + 2 + 3)
 #define CHAR_NAME_WID (STD_SCREEN_X + 164 - CHAR_NAME_X)
 #define CHAR_NAME_HEI (STD_SCREEN_Y + 11 - CHAR_NAME_Y)
-#define CHAR_TIME_REMAINING_X		(STD_SCREEN_X + 207)
-#define CHAR_TIME_REMAINING_Y		(STD_SCREEN_Y + 65)
+#define CHAR_TIME_REMAINING_X (STD_SCREEN_X + 207)
+#define CHAR_TIME_REMAINING_Y (STD_SCREEN_Y + 65)
 #define CHAR_TIME_REMAINING_WID (STD_SCREEN_X + 258 - CHAR_TIME_REMAINING_X)
 #define CHAR_TIME_REMAINING_HEI GetFontHeight(CHAR_FONT)
-#define CHAR_SALARY_X						CHAR_TIME_REMAINING_X
-#define CHAR_SALARY_Y						(STD_SCREEN_Y + 79)
+#define CHAR_SALARY_X					CHAR_TIME_REMAINING_X
+#define CHAR_SALARY_Y					(STD_SCREEN_Y + 79)
 #define CHAR_SALARY_WID					CHAR_TIME_REMAINING_WID - 8		// for right justify
 #define CHAR_SALARY_HEI					CHAR_TIME_REMAINING_HEI
 #define CHAR_MEDICAL_X					CHAR_TIME_REMAINING_X
@@ -251,8 +257,8 @@
 #define CLOCK_Y (STD_SCREEN_Y + 459)
 
 
-#define RGB_WHITE				( FROMRGB( 255, 255, 255 ) )
-#define RGB_YELLOW			( FROMRGB( 255, 255,   0 ) )
+#define RGB_WHITE	( FROMRGB( 255, 255, 255 ) )
+#define RGB_YELLOW	( FROMRGB( 255, 255,   0 ) )
 #define RGB_NEAR_BLACK	( FROMRGB(   0,   0,   1 ) )
 
 
@@ -435,10 +441,10 @@ void SetInfoChar(SOLDIERTYPE const* const s)
 
 static void ContractListRegionBoxGlow(UINT16 usCount)
 {
- static INT32 iColorNum =10;
- static BOOLEAN fDelta=FALSE;
- INT16 usY = 0;
- INT16 sYAdd = 0;
+	static INT32 iColorNum =10;
+	static BOOLEAN fDelta=FALSE;
+	INT16 usY = 0;
+	INT16 sYAdd = 0;
 
 
 	// if not glowing right now, leave
@@ -457,7 +463,7 @@ static void ContractListRegionBoxGlow(UINT16 usCount)
 	// change direction of glow?
 	if((iColorNum==0)||(iColorNum==10))
 	{
-	 fDelta=!fDelta;
+		fDelta=!fDelta;
 	}
 
 	// increment color
@@ -493,9 +499,9 @@ static void RenderHandPosItem();
 
 static void GlowItem(void)
 {
- static INT32 iColorNum =10;
- static BOOLEAN fDelta=FALSE;
- static BOOLEAN fOldItemGlow = FALSE;
+	static INT32 iColorNum =10;
+	static BOOLEAN fDelta=FALSE;
+	static BOOLEAN fOldItemGlow = FALSE;
 
 	// not glowing right now, leave
 	if (!fShowItemHighLight)
@@ -522,7 +528,7 @@ static void GlowItem(void)
 	// change direction of glow?
 	if((iColorNum==0)||(iColorNum==10))
 	{
-	 fDelta=!fDelta;
+		fDelta=!fDelta;
 	}
 
 	// increment color
@@ -549,8 +555,8 @@ static void GlowItem(void)
 
 static void GlowTrashCan(void)
 {
- static INT32 iColorNum =10;
- static BOOLEAN fOldTrashCanGlow = FALSE;
+	static INT32 iColorNum =10;
+	static BOOLEAN fOldTrashCanGlow = FALSE;
 
 	if (!fShowInventoryFlag) fShowTrashCanHighLight = FALSE;
 
@@ -622,7 +628,7 @@ void DrawFace(void)
 static void RenderHandPosItem()
 {
 	/* ARM: if already in the inventory panel, don't show the item again here,
-	 * seeing it twice is confusing */
+		* seeing it twice is confusing */
 	if (fShowInventoryFlag) return;
 
 	SOLDIERTYPE const* const s = GetSelectedInfoChar();
@@ -656,21 +662,22 @@ static void RenderIconsForUpperLeftCornerPiece(const SOLDIERTYPE* const s)
 	}
 }
 
-static void PrintStat(UINT32 change_time, UINT16 const stat_gone_up_bit, INT8 stat_val, INT16 x, INT16 y, INT32 progress)
+static void PrintStat(UINT32 change_time, UINT16 const stat_gone_up_bit, INT8 stat_val, INT16 x, INT16 y, INT16 w, INT32 progress)
 {
 	UINT8 const colour =
 		change_time == 0 ||
 		GetJA2Clock() >= CHANGE_STAT_RECENTLY_DURATION + change_time ? CHAR_TEXT_FONT_COLOR :
 		stat_gone_up_bit != 0                                        ? FONT_LTGREEN         :
 		FONT_RED;
+
 	SetFontForeground(colour);
 
-	wchar_t str[4];
-	swprintf(str, lengthof(str), L"%3d", stat_val);
+	ST::string str = ST::format("{3d}", stat_val);
 	if (gamepolicy(gui_extras))
 	{
-		ProgressBarBackgroundRect(x+1,y-2,15*progress/100,10,0x514A05,progress);
+		ProgressBarBackgroundRect(x + 1, y - 2, w * progress / 100, 10, 0x514A05, progress);
 	}
+
 	DrawStringRight(str, x, y, STAT_WID, STAT_HEI, CHAR_FONT);
 }
 
@@ -678,22 +685,24 @@ static void PrintStat(UINT32 change_time, UINT16 const stat_gone_up_bit, INT8 st
 static void DrawCharStats(SOLDIERTYPE const& s)
 {
 	SetFontAttributes(CHAR_FONT, CHAR_TEXT_FONT_COLOR);
+
 	UINT16 const up = s.usValueGoneUp;
 	MERCPROFILESTRUCT& p = GetProfile(s.ubProfile);
-	PrintStat(s.uiChangeAgilityTime,      up & AGIL_INCREASE,     s.bAgility,      AGL_X,   AGL_Y,   p.sAgilityGain*2);
-	PrintStat(s.uiChangeDexterityTime,    up & DEX_INCREASE,      s.bDexterity,    DEX_X,   DEX_Y,   p.sDexterityGain*2);
-	PrintStat(s.uiChangeStrengthTime,     up & STRENGTH_INCREASE, s.bStrength,     STR_X,   STR_Y,   p.sStrengthGain*2);
-	PrintStat(s.uiChangeLeadershipTime,   up & LDR_INCREASE,      s.bLeadership,   LDR_X,   LDR_Y,   p.sLeadershipGain*2);
-	PrintStat(s.uiChangeWisdomTime,       up & WIS_INCREASE,      s.bWisdom,       WIS_X,   WIS_Y,   p.sWisdomGain*2);
-	PrintStat(s.uiChangeLevelTime,        up & LVL_INCREASE,      s.bExpLevel,     LVL_X,   LVL_Y,   p.sExpLevelGain*100/(350*p.bExpLevel));
-	PrintStat(s.uiChangeMarksmanshipTime, up & MRK_INCREASE,      s.bMarksmanship, MRK_X,   MRK_Y,   p.sMarksmanshipGain*4);
-	PrintStat(s.uiChangeExplosivesTime,   up & EXP_INCREASE,      s.bExplosive,    EXP_X,   EXP_Y,   p.sExplosivesGain*4);
-	PrintStat(s.uiChangeMechanicalTime,   up & MECH_INCREASE,     s.bMechanical,   MEC_X,   MEC_Y,   p.sMechanicGain*4);
-	PrintStat(s.uiChangeMedicalTime,      up & MED_INCREASE,      s.bMedical,      MED_X,   MED_Y,   p.sMedicalGain*4);
+
+	PrintStat(s.uiChangeLevelTime,        up & LVL_INCREASE,      s.bExpLevel,     LVL_X,   LVL_Y,   STAT_WID,  (100 * p.sExpLevelGain) / (350 * p.bExpLevel));
+	PrintStat(s.uiChangeAgilityTime,      up & AGIL_INCREASE,     s.bAgility,      AGL_X,   AGL_Y,   STAT_WID,   2 * p.sAgilityGain);
+	PrintStat(s.uiChangeDexterityTime,    up & DEX_INCREASE,      s.bDexterity,    DEX_X,   DEX_Y,   STAT_WID,   2 * p.sDexterityGain);
+	PrintStat(s.uiChangeStrengthTime,     up & STRENGTH_INCREASE, s.bStrength,     STR_X,   STR_Y,   STAT_WID,   2 * p.sStrengthGain);
+	PrintStat(s.uiChangeLeadershipTime,   up & LDR_INCREASE,      s.bLeadership,   LDR_X,   LDR_Y,   STAT_WID,   2 * p.sLeadershipGain);
+	PrintStat(s.uiChangeWisdomTime,       up & WIS_INCREASE,      s.bWisdom,       WIS_X,   WIS_Y,   STAT_WID,   2 * p.sWisdomGain);
+	PrintStat(s.uiChangeMarksmanshipTime, up & MRK_INCREASE,      s.bMarksmanship, MRK_X,   MRK_Y,   STAT_WID,   4 * p.sMarksmanshipGain);
+	PrintStat(s.uiChangeExplosivesTime,   up & EXP_INCREASE,      s.bExplosive,    EXP_X,   EXP_Y,   STAT_WID,   4 * p.sExplosivesGain);
+	PrintStat(s.uiChangeMechanicalTime,   up & MECH_INCREASE,     s.bMechanical,   MEC_X,   MEC_Y,   STAT_WID,   4 * p.sMechanicGain);
+	PrintStat(s.uiChangeMedicalTime,      up & MED_INCREASE,      s.bMedical,      MED_X,   MED_Y,   STAT_WID,   4 * p.sMedicalGain);
 }
 
-static void DrawString(const wchar_t *pString, UINT16 uiX, UINT16 uiY, SGPFont);
-static void DrawStringCentered(const wchar_t* str, UINT16 x, UINT16 y, UINT16 w, UINT16 h, SGPFont);
+static void DrawString(const ST::string& str, UINT16 uiX, UINT16 uiY, SGPFont);
+static void DrawStringCentered(const ST::string& str, UINT16 x, UINT16 y, UINT16 w, UINT16 h, SGPFont);
 
 static void DrawCharHealth(SOLDIERTYPE const& s)
 {
@@ -701,11 +710,10 @@ static void DrawCharHealth(SOLDIERTYPE const& s)
 	{
 		INT8 const life     = s.bLife;
 		INT8 const life_max = s.bLifeMax;
-		wchar_t    buf[9];
 
 		/* Find starting X coordinate by centering all 3 substrings together, then
-		 * print them separately (different colors) */
-		swprintf(buf, lengthof(buf), L"%d/%d", life, life_max);
+			* print them separately (different colors) */
+		ST::string buf = ST::format("{}/{}", life, life_max);
 		INT16 x;
 		INT16 y;
 		FindFontCenterCoordinates(CHAR_HP_X, CHAR_HP_Y, CHAR_HP_WID, CHAR_HP_HEI, buf, CHAR_FONT, &x, &y);
@@ -719,14 +727,20 @@ static void DrawCharHealth(SOLDIERTYPE const& s)
 			CHAR_TEXT_FONT_COLOR;                   // Ok
 		SetFontForeground(cur_colour);
 
+		if (gamepolicy(gui_extras))
+		{
+			INT32 progress = 2 * GetProfile(s.ubProfile).sLifeGain;
+			ProgressBarBackgroundRect(CHAR_HP_X + 1, CHAR_HP_Y - 2, CHAR_HP_WID * progress / 100, 10, 0x514A05, progress);
+		}
+
 		// Current life
-		swprintf(buf, lengthof(buf), L"%d", life);
+		buf = ST::format("{}", life);
 		DrawString(buf, x, CHAR_HP_Y, CHAR_FONT);
 		x += StringPixLength(buf, CHAR_FONT);
 
 		// Slash
 		SetFontForeground(CHAR_TEXT_FONT_COLOR);
-		wchar_t const* const slash = L"/";
+		ST::string slash = "/";
 		DrawString(slash, x, CHAR_HP_Y, CHAR_FONT);
 		x += StringPixLength(slash, CHAR_FONT);
 
@@ -740,7 +754,7 @@ static void DrawCharHealth(SOLDIERTYPE const& s)
 		SetFontForeground(max_colour);
 
 		// Maximum life
-		swprintf(buf, lengthof(buf), L"%d", life_max);
+		buf = ST::format("{}", life_max);
 		DrawString(buf, x, CHAR_HP_Y, CHAR_FONT);
 	}
 	else
@@ -751,13 +765,13 @@ static void DrawCharHealth(SOLDIERTYPE const& s)
 }
 
 
-static void ConvertMinTimeToETADayHourMinString(UINT32 uiTimeInMin, wchar_t* sString, size_t Length);
+static ST::string ConvertMinTimeToETADayHourMinString(UINT32 uiTimeInMin);
 
 
 // "character" refers to hired people AND vehicles
 static void DrawCharacterInfo(SOLDIERTYPE const& s)
 {
-	wchar_t buf[80];
+	ST::string buf;
 
 	ProfileID const pid = s.ubProfile;
 	if (pid == NO_PROFILE) return;
@@ -766,8 +780,8 @@ static void DrawCharacterInfo(SOLDIERTYPE const& s)
 	// Draw particular info about a character that are neither attributes nor skills
 	SetFontAttributes(CHAR_FONT, CHAR_TEXT_FONT_COLOR);
 
-	wchar_t const* nickname; // Nickname (beneath picture)
-	wchar_t const* name;     // Full name (top box)
+	ST::string nickname; // Nickname (beneath picture)
+	ST::string name;     // Full name (top box)
 	if (s.uiStatusFlags & SOLDIER_VEHICLE)
 	{
 		VEHICLETYPE const& v = GetVehicle(s.bVehicleID);
@@ -782,13 +796,13 @@ static void DrawCharacterInfo(SOLDIERTYPE const& s)
 	DrawStringCentered(nickname, PIC_NAME_X,  PIC_NAME_Y,  PIC_NAME_WID,  PIC_NAME_HEI,  CHAR_FONT);
 	DrawStringCentered(name,     CHAR_NAME_X, CHAR_NAME_Y, CHAR_NAME_WID, CHAR_NAME_HEI, CHAR_FONT);
 
-	wchar_t const* const assignment =
+	ST::string assignment =
 		s.bAssignment == VEHICLE ? pShortVehicleStrings[GetVehicle(s.iVehicleId).ubVehicleType] : // Show vehicle type
 		pAssignmentStrings[s.bAssignment];
 	DrawStringCentered(assignment, CHAR_ASSIGN_X, CHAR_ASSIGN1_Y, CHAR_ASSIGN_WID, CHAR_ASSIGN_HEI, CHAR_FONT);
 
 	// Second assignment line
-	wchar_t const* assignment2;
+	ST::string assignment2;
 	switch (s.bAssignment)
 	{
 		case TRAIN_SELF:
@@ -798,7 +812,7 @@ static void DrawCharacterInfo(SOLDIERTYPE const& s)
 			break;
 
 		case TRAIN_TOWN:
-			assignment2 = pTownNames[GetTownIdForSector(SECTOR(s.sSectorX, s.sSectorY))];
+			assignment2 = GCM->getTownName(GetTownIdForSector(SECTOR(s.sSectorX, s.sSectorY)));
 			break;
 
 		case REPAIR:
@@ -813,7 +827,7 @@ static void DrawCharacterInfo(SOLDIERTYPE const& s)
 
 		case IN_TRANSIT:
 			// Show ETA
-			ConvertMinTimeToETADayHourMinString(s.uiTimeSoldierWillArrive, buf, lengthof(buf));
+			buf = ConvertMinTimeToETADayHourMinString(s.uiTimeSoldierWillArrive);
 			assignment2 = buf;
 			break;
 
@@ -823,11 +837,11 @@ static void DrawCharacterInfo(SOLDIERTYPE const& s)
 			if (g && PlayerGroupInMotion(g))
 			{ // Show ETA
 				UINT32 const arrival_time = GetWorldTotalMin() + CalculateTravelTimeOfGroup(g);
-				ConvertMinTimeToETADayHourMinString(arrival_time, buf, lengthof(buf));
+				buf = ConvertMinTimeToETADayHourMinString(arrival_time);
 			}
 			else
 			{ // Show location
-				GetMapscreenMercLocationString(s, buf, lengthof(buf));
+				buf = GetMapscreenMercLocationString(s);
 			}
 			assignment2 = buf;
 			break;
@@ -843,7 +857,7 @@ static void DrawCharacterInfo(SOLDIERTYPE const& s)
 	DrawCharStats(s);
 
 	// Remaining contract length
-	wchar_t const* contract = gpStrategicString[STR_PB_NOTAPPLICABLE_ABBREVIATION];
+	ST::string contract = gpStrategicString[STR_PB_NOTAPPLICABLE_ABBREVIATION];
 	if (s.bLife > 0)
 	{
 		if (s.ubWhatKindOfMercAmI == MERC_TYPE__AIM_MERC || s.ubProfile == SLAY)
@@ -854,7 +868,7 @@ static void DrawCharacterInfo(SOLDIERTYPE const& s)
 			if (s.bAssignment == IN_TRANSIT &&
 					time_remaining > (INT32)(s.iTotalContractLength * NUM_MIN_IN_DAY))
 			{ /* If the merc is in transit and if the time left on the contract is
-				 * greater than the contract time */
+				* greater than the contract time */
 				time_remaining = s.iTotalContractLength * NUM_MIN_IN_DAY;
 			}
 
@@ -862,24 +876,24 @@ static void DrawCharacterInfo(SOLDIERTYPE const& s)
 			{ // More than a day, display in green
 				// Calculate the exact time left on the contract (e.g. 1.8 days)
 				float          const time_left = time_remaining / (60 * 24.0);
-				wchar_t const* const days      = gpStrategicString[STR_PB_DAYS_ABBREVIATION];
-				swprintf(buf, lengthof(buf), L"%.1f%ls/%d%ls", time_left, days, s.iTotalContractLength, days);
+				ST::string days      = gpStrategicString[STR_PB_DAYS_ABBREVIATION];
+				buf = ST::format("{.1f}{}/{}{}", time_left, days, s.iTotalContractLength, days);
 			}
 			else
 			{ // Less than a day, display hours left in red
 				if (time_remaining > 5) time_remaining += 59;
 				time_remaining /= 60;
-				wchar_t const* const hours = gpStrategicString[STR_PB_HOURS_ABBREVIATION];
-				wchar_t const* const days  = gpStrategicString[STR_PB_DAYS_ABBREVIATION];
-				swprintf(buf, lengthof(buf), L"%d%ls/%d%ls", time_remaining, hours, s.iTotalContractLength, days);
+				ST::string hours = gpStrategicString[STR_PB_HOURS_ABBREVIATION];
+				ST::string days  = gpStrategicString[STR_PB_DAYS_ABBREVIATION];
+				buf = ST::format("{}{}/{}{}", time_remaining, hours, s.iTotalContractLength, days);
 			}
 			contract = buf;
 		}
 		else if (s.ubWhatKindOfMercAmI == MERC_TYPE__MERC)
 		{
 			INT32          const been_hired_for = GetWorldTotalMin() / NUM_MIN_IN_DAY - s.iStartContractTime;
-			wchar_t const* const days           = gpStrategicString[STR_PB_DAYS_ABBREVIATION];
-			swprintf(buf, lengthof(buf), L"%d%ls/%d%ls", p.iMercMercContractLength, days, been_hired_for, days);
+			ST::string days = gpStrategicString[STR_PB_DAYS_ABBREVIATION];
+			buf = ST::format("{}{}/{}{}", p.iMercMercContractLength, days, been_hired_for, days);
 			contract = buf;
 		}
 	}
@@ -901,19 +915,19 @@ static void DrawCharacterInfo(SOLDIERTYPE const& s)
 	{
 		daily_cost = p.sSalary;
 	}
-	SPrintMoney(buf, daily_cost);
+	buf = SPrintMoney(daily_cost);
 	DrawStringRight(buf, CHAR_SALARY_X, CHAR_SALARY_Y, CHAR_SALARY_WID, CHAR_SALARY_HEI, CHAR_FONT);
 
 	// Medical deposit
 	if (p.sMedicalDepositAmount > 0)
 	{
-		SPrintMoney(buf, p.sMedicalDepositAmount);
+		buf = SPrintMoney(p.sMedicalDepositAmount);
 		DrawStringRight(buf, CHAR_MEDICAL_X, CHAR_MEDICAL_Y, CHAR_MEDICAL_WID, CHAR_MEDICAL_HEI, CHAR_FONT);
 	}
 
-	wchar_t const* const morale =
+	ST::string morale =
 		s.bAssignment == ASSIGNMENT_POW ? pPOWStrings[1] : // POW - morale unknown
-		s.bLife == 0                    ? L""            :
+		s.bLife == 0                    ? ST::null :
 		GetMoraleString(s);
 	DrawStringCentered(morale, CHAR_MORALE_X, CHAR_MORALE_Y, CHAR_MORALE_WID, CHAR_MORALE_HEI, CHAR_FONT);
 }
@@ -1086,16 +1100,16 @@ static void DisplayGroundEta(void)
 		// show hours and minutes
 		UINT Minutes = iTotalTime % 60;
 		UINT Hours   = iTotalTime / 60;
-		mprintf(CLOCK_MIN_X_START  - 5, CLOCK_Y_START, L"%2u%ls", Minutes, gsTimeStrings[1]);
-		mprintf(CLOCK_HOUR_X_START - 8, CLOCK_Y_START, L"%2u%ls", Hours,   gsTimeStrings[0]);
+		MPrint(CLOCK_MIN_X_START  - 5, CLOCK_Y_START, ST::format("{2d}{}", Minutes, gsTimeStrings[1]));
+		MPrint(CLOCK_HOUR_X_START - 8, CLOCK_Y_START, ST::format("{2d}{}", Hours,   gsTimeStrings[0]));
 	}
 	else
 	{
 		// show days and hours
 		UINT Hours = iTotalTime / 60 % 24;
 		UINT Days  = iTotalTime / (60 * 24);
-		mprintf(CLOCK_MIN_X_START  - 5, CLOCK_Y_START, L"%2u%ls", Hours, gsTimeStrings[0]);
-		mprintf(CLOCK_HOUR_X_START - 9, CLOCK_Y_START, L"%2u%ls", Days,  gsTimeStrings[3]);
+		MPrint(CLOCK_MIN_X_START  - 5, CLOCK_Y_START, ST::format("{2d}{}", Hours, gsTimeStrings[0]));
+		MPrint(CLOCK_HOUR_X_START - 9, CLOCK_Y_START, ST::format("{2d}{}", Days,  gsTimeStrings[3]));
 	}
 }
 
@@ -1273,14 +1287,14 @@ static void DisplayCharacterList(void)
 		// Name
 		DrawStringCentered(s.name, NAME_X + 1, y, NAME_WIDTH, Y_SIZE, MAP_SCREEN_FONT);
 
-		wchar_t str[32];
+		ST::string str;
 
 		// Location
-		GetMapscreenMercLocationString(s, str, lengthof(str));
+		str = GetMapscreenMercLocationString(s);
 		DrawStringCentered(str, LOC_X + 1, y, LOC_WIDTH, Y_SIZE, MAP_SCREEN_FONT);
 
 		// Destination
-		GetMapscreenMercDestinationString(s, str, lengthof(str));
+		str = GetMapscreenMercDestinationString(s);
 		if (str[0] != '\0')
 		{
 			DrawStringCentered(str, DEST_ETA_X + 1, y, DEST_ETA_WIDTH, Y_SIZE, MAP_SCREEN_FONT);
@@ -1291,11 +1305,11 @@ static void DisplayCharacterList(void)
 		{
 			SetFontForeground(FONT_RED);
 		}
-		wchar_t const* const assignment = GetMapscreenMercAssignmentString(s);
+		ST::string assignment = GetMapscreenMercAssignmentString(s);
 		DrawStringCentered(assignment, ASSIGN_X + 1, y, ASSIGN_WIDTH, Y_SIZE, MAP_SCREEN_FONT);
 
 		// Remaining contract time
-		GetMapscreenMercDepartureString(s, str, lengthof(str), foreground != FONT_WHITE ? &foreground : 0);
+		str = GetMapscreenMercDepartureString(s, foreground != FONT_WHITE ? &foreground : 0);
 		SetFontForeground(foreground);
 		DrawStringCentered(str, TIME_REMAINING_X + 1, y, TIME_REMAINING_WIDTH, Y_SIZE, MAP_SCREEN_FONT);
 	}
@@ -1306,7 +1320,7 @@ static void DisplayCharacterList(void)
 	EnableDisableTeamListRegionsAndHelpText();
 
 	/* Mark all pop ups as dirty, so that any open assigment menus get reblitted
-	 * over top of the team list */
+		* over top of the team list */
 	MarkAllBoxesAsAltered();
 }
 
@@ -1317,7 +1331,7 @@ void MapScreenInit(void)
 	// init palettes for big map
 	InitializePalettesForMap( );
 
-  InitMapScreenInterfaceMap();
+	InitMapScreenInterfaceMap();
 
 	// set up leave list arrays for dismissed mercs
 	InitLeaveList( );
@@ -1483,12 +1497,12 @@ try
 		// we are in fact in the map, do not repeat this sequence
 		fInMapMode = TRUE;
 
-    // Refreshing the whole screen, otherwise user could see remnants of
-    // the tactical screen.
-    if(g_ui.isBigScreen())
-    {
-      InvalidateRegion(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    }
+		// Refreshing the whole screen, otherwise user could see remnants of
+		// the tactical screen.
+		if(g_ui.isBigScreen())
+		{
+			InvalidateRegion(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		}
 
 		// dirty map
 		fMapPanelDirty=TRUE;
@@ -1526,16 +1540,16 @@ try
 
 		// set up regions
 		MSYS_DefineRegion( &gMapViewRegion, MAP_VIEW_START_X + MAP_GRID_X, MAP_VIEW_START_Y + MAP_GRID_Y,MAP_VIEW_START_X + MAP_VIEW_WIDTH+MAP_GRID_X-1, MAP_VIEW_START_Y + MAP_VIEW_HEIGHT-1 + 8, MSYS_PRIORITY_HIGH - 3,
-							 MSYS_NO_CURSOR, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK );
+					MSYS_NO_CURSOR, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK );
 
 		MSYS_DefineRegion( &gCharInfoHandRegion,
-                       PLAYER_INFO_HAND_START_X, PLAYER_INFO_HAND_START_Y,
-                       PLAYER_INFO_HAND_END_X, PLAYER_INFO_HAND_END_Y,
-                       MSYS_PRIORITY_HIGH, MSYS_NO_CURSOR,
-                       ItemRegionMvtCallback , ItemRegionBtnCallback );
+					PLAYER_INFO_HAND_START_X, PLAYER_INFO_HAND_START_Y,
+					PLAYER_INFO_HAND_END_X, PLAYER_INFO_HAND_END_Y,
+					MSYS_PRIORITY_HIGH, MSYS_NO_CURSOR,
+					ItemRegionMvtCallback , ItemRegionBtnCallback );
 
 		MSYS_DefineRegion( &gCharInfoFaceRegion, (INT16) PLAYER_INFO_FACE_START_X, (INT16) PLAYER_INFO_FACE_START_Y, (INT16) PLAYER_INFO_FACE_END_X, (INT16) PLAYER_INFO_FACE_END_Y, MSYS_PRIORITY_HIGH,
-							 MSYS_NO_CURSOR, MSYS_NO_CALLBACK, FaceRegionBtnCallback );
+					MSYS_NO_CURSOR, MSYS_NO_CALLBACK, FaceRegionBtnCallback );
 
 		MSYS_DefineRegion(&gMPanelRegion, INV_REGION_X, INV_REGION_Y, INV_REGION_X + INV_REGION_WIDTH, INV_REGION_Y + INV_REGION_HEIGHT, MSYS_PRIORITY_HIGH, MSYS_NO_CURSOR, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK);
 		// screen mask for animated cursors
@@ -1563,10 +1577,10 @@ try
 		// create status bar region
 		CreateMapStatusBarsRegion( );
 
-    if ( !gfFadeOutDone && !gfFadeIn )
-    {
-		  MSYS_SetCurrentCursor(SCREEN_CURSOR);
-    }
+		if ( !gfFadeOutDone && !gfFadeIn )
+		{
+			MSYS_SetCurrentCursor(SCREEN_CURSOR);
+		}
 		gMPanelRegion.Disable();
 
 		// create contract box
@@ -1627,23 +1641,22 @@ try
 	HandleStrategicTurn( );
 
 
-/*
+	/*
 	// update cursor based on state
 	if (bSelectedDestChar == -1 && !fPlotForHelicopter && !gfInChangeArrivalSectorMode)
 	{
 		// reset cursor
-    if ( !gfFadeIn )
-    {
-		  ChangeMapScreenMaskCursor( CURSOR_NORMAL );
-    }
-	}
-*/
+		if ( !gfFadeIn )
+		{
+			ChangeMapScreenMaskCursor( CURSOR_NORMAL );
+		}
+	}*/
 
 	// check if we are going to create or destroy map border graphics?
 	CreateDestroyMapInventoryPoolButtons( FALSE );
 
 	// set up buttons for mapscreen scroll
-//	HandleMapScrollButtonStates( );
+	//HandleMapScrollButtonStates( );
 
 
 	// don't process any input until we've been through here once
@@ -1776,16 +1789,16 @@ try
 
 	if (!fDisableDueToBattleRoster)
 	{
-/*
+		/*
 		// ATE: OK mark is rendering the item every frame - which isn't good
-    // however, don't want to break the world here..
-    // this line was added so that when the ItemGlow() is on,
-    // we're not rendering also, else glow looks bad
-    if ( !fShowItemHighLight )
-    {
-		  RenderHandPosItem();
-    }
-*/
+		// however, don't want to break the world here..
+		// this line was added so that when the ItemGlow() is on,
+		// we're not rendering also, else glow looks bad
+		if ( !fShowItemHighLight )
+		{
+			RenderHandPosItem();
+		}
+		*/
 
 		if( fDrawCharacterList )
 		{
@@ -1842,7 +1855,7 @@ try
 	}
 
 	if (!fDisableDueToBattleRoster &&
-			(fShowAssignmentMenu || fShowContractMenu))
+		(fShowAssignmentMenu || fShowContractMenu))
 	{
 		// highlight lines?
 		HandleHighLightingOfLinesInTeamPanel( );
@@ -1862,9 +1875,8 @@ try
 		// handle autofaces
 		HandleAutoFaces( );
 		HandleTalkingAutoFaces( );
-/*
-		GlowItem( );
-*/
+
+		//GlowItem( );
 
 	}
 
@@ -1916,7 +1928,7 @@ try
 
 
 	// now the border corner piece
-//	RenderMapBorderCorner( );
+	//RenderMapBorderCorner( );
 
 
 	// Display Framerate
@@ -1946,10 +1958,10 @@ try
 	}
 
 	// handle animated cursor update
-  if ( !gfFadeIn )
-  {
-	  HandleAnimatedCursorsForMapScreen( );
-  }
+	if ( !gfFadeIn )
+	{
+		HandleAnimatedCursorsForMapScreen( );
+	}
 
 	// if inventory is being manipulated, update cursor
 	HandleMapInventoryCursor();
@@ -2101,15 +2113,15 @@ try
 catch (...) { return ERROR_SCREEN; /* XXX TODO001A originally returned FALSE */ }
 
 
-static void DrawString(const wchar_t *pString, UINT16 uiX, UINT16 uiY, SGPFont const font)
+static void DrawString(const ST::string& str, UINT16 uiX, UINT16 uiY, SGPFont font)
 {
 	// draw monochrome string
 	SetFont(font);
-	GDirtyPrint(uiX, uiY, pString);
+	GDirtyPrint(uiX, uiY, str);
 }
 
 
-static void DrawStringCentered(const wchar_t* str, UINT16 x, UINT16 y, UINT16 w, UINT16 h, SGPFont const font)
+static void DrawStringCentered(const ST::string& str, UINT16 x, UINT16 y, UINT16 w, UINT16 h, SGPFont font)
 {
 	INT16 cx;
 	INT16 cy;
@@ -2118,7 +2130,7 @@ static void DrawStringCentered(const wchar_t* str, UINT16 x, UINT16 y, UINT16 w,
 }
 
 
-void DrawStringRight(const wchar_t* str, UINT16 x, UINT16 y, UINT16 w, UINT16 h, SGPFont const font)
+void DrawStringRight(const ST::string& str, UINT16 x, UINT16 y, UINT16 w, UINT16 h, SGPFont font)
 {
 	INT16 rx;
 	INT16 ry;
@@ -2278,23 +2290,23 @@ static void StartConfirmMapMoveMode(INT16 sMapY);
 
 static void OpenSectorInventory()
 {
-  if(!fShowMapInventoryPool)
-  {
-    fShowMapInventoryPool = TRUE;
-    CreateDestroyMapInventoryPoolButtons( TRUE );
-  }
+	if(!fShowMapInventoryPool)
+	{
+		fShowMapInventoryPool = TRUE;
+		CreateDestroyMapInventoryPoolButtons( TRUE );
+	}
 }
 
 static void ToggleSectorInventory()
 {
-  if(!fShowMapInventoryPool)
-  {
-    OpenSectorInventory();
-  }
-  else
-  {
-    CancelSectorInventoryDisplayIfOn(FALSE);
-  }
+	if(!fShowMapInventoryPool)
+	{
+		OpenSectorInventory();
+	}
+	else
+	{
+		CancelSectorInventoryDisplayIfOn(FALSE);
+	}
 }
 
 // Drawing the Map
@@ -2324,67 +2336,66 @@ static UINT32 HandleMapUI(void)
 			break;
 
 		case MAP_EVENT_PLOT_PATH:
-		         GetMouseMapXY(&sMapX, &sMapY);
+			GetMouseMapXY(&sMapX, &sMapY);
 
-/*
-						 // translate screen values to map grid values for zoomed in
-						 if(fZoomFlag)
-						 {
-								 sMapX=(UINT16)iZoomX/MAP_GRID_X+sMapX;
-								 sMapX=sMapX/2;
-								 sMapY=(UINT16)iZoomY/MAP_GRID_Y+sMapY;
-								 sMapY=sMapY/2;
-						 }
-*/
+			/*
+			// translate screen values to map grid values for zoomed in
+			if(fZoomFlag)
+			{
+					sMapX=(UINT16)iZoomX/MAP_GRID_X+sMapX;
+					sMapX=sMapX/2;
+					sMapY=(UINT16)iZoomY/MAP_GRID_Y+sMapY;
+					sMapY=sMapY/2;
+			}*/
 
 
-						 // plotting for the chopper?
+			// plotting for the chopper?
 			if (fPlotForHelicopter)
-						 {
-							 PlotPathForHelicopter( sMapX, sMapY );
-							 fTeamPanelDirty = TRUE;
-						 }
-						 else
-						 {
-							 // plot for character
+			{
+					PlotPathForHelicopter( sMapX, sMapY );
+					fTeamPanelDirty = TRUE;
+			}
+			else
+			{
+				// plot for character
 
-							 // check for valid character
-							 Assert ( bSelectedDestChar != -1 );
-							 if ( bSelectedDestChar == -1 )
-								 break;
+				// check for valid character
+				Assert ( bSelectedDestChar != -1 );
+				if ( bSelectedDestChar == -1 )
+					break;
 
-							 // check if last sector in character's path is same as where mouse is
-							 SOLDIERTYPE* const s = gCharactersList[bSelectedDestChar].merc;
-							 const INT16 dst_sector = GetLastSectorIdInCharactersPath(s);
-							 if (dst_sector != sMapX + sMapY * MAP_WORLD_X)
-							 {
-								 sX = dst_sector % MAP_WORLD_X;
-								 sY = dst_sector / MAP_WORLD_X;
-								 RestoreBackgroundForMapGrid( sX, sY );
-								// fMapPanelDirty = TRUE;
-							 }
+				// check if last sector in character's path is same as where mouse is
+				SOLDIERTYPE* const s = gCharactersList[bSelectedDestChar].merc;
+				const INT16 dst_sector = GetLastSectorIdInCharactersPath(s);
+				if (dst_sector != sMapX + sMapY * MAP_WORLD_X)
+				{
+					sX = dst_sector % MAP_WORLD_X;
+					sY = dst_sector / MAP_WORLD_X;
+					RestoreBackgroundForMapGrid( sX, sY );
+					// fMapPanelDirty = TRUE;
+				}
 
-							if (SectorIsPassable(SECTOR(sMapX, sMapY)))
-							{
-								// Can we get go there?  (NULL temp character path)
-								if ( GetLengthOfPath( pTempCharacterPath ) > 0 )
-								{
-									PlotPathForCharacter(*s, sMapX, sMapY, false);
+				if (SectorIsPassable(SECTOR(sMapX, sMapY)))
+				{
+					// Can we get go there?  (NULL temp character path)
+					if ( GetLengthOfPath( pTempCharacterPath ) > 0 )
+					{
+						PlotPathForCharacter(*s, sMapX, sMapY, false);
 
-									// copy the path to every other selected character
-									CopyPathToAllSelectedCharacters(GetSoldierMercPathPtr(s));
+						// copy the path to every other selected character
+						CopyPathToAllSelectedCharacters(GetSoldierMercPathPtr(s));
 
-									StartConfirmMapMoveMode( sMapY );
-									fMapPanelDirty = TRUE;
-									fTeamPanelDirty = TRUE;	// update team panel desinations
-								}
-								else
-								{
-									// means it's a vehicle and we've clicked an off-road sector
-									BeginMapUIMessage(0, pMapErrorString[40]);
-								}
-							}
-						}
+						StartConfirmMapMoveMode( sMapY );
+						fMapPanelDirty = TRUE;
+						fTeamPanelDirty = TRUE;	// update team panel desinations
+					}
+					else
+					{
+						// means it's a vehicle and we've clicked an off-road sector
+						BeginMapUIMessage(0, pMapErrorString[40]);
+					}
+				}
+			}
 			break;
 
 
@@ -2397,21 +2408,20 @@ static UINT32 HandleMapUI(void)
 			// Get Current mouse position
 			if ( GetMouseMapXY( &sMapX, &sMapY) )
 			{
-/*
+				/*
 				if (fZoomFlag)
 				{
 					// convert to zoom out coords from screen coords
-		      sMapX = ( INT16 )( iZoomX / MAP_GRID_X + sMapX ) / 2;
-		      sMapY = ( INT16 )( iZoomY / MAP_GRID_Y + sMapY ) / 2;
+					sMapX = ( INT16 )( iZoomX / MAP_GRID_X + sMapX ) / 2;
+					sMapY = ( INT16 )( iZoomY / MAP_GRID_Y + sMapY ) / 2;
 					//sMapX = ( INT16 ) ( ( ( iZoomX ) / ( MAP_GRID_X * 2) ) + sMapX / 2 );
 					//sMapX = ( INT16 ) ( ( ( iZoomY ) / ( MAP_GRID_Y * 2) ) + sMapY / 2 );
-				}
-*/
+				}*/
 
 				// not zoomed out, make sure this is a valid sector
 				if (!IsTheCursorAllowedToHighLightThisSector(sMapX, sMapY))
 				{
-          // do nothing, return
+					// do nothing, return
 					return( MAP_SCREEN );
 				}
 
@@ -2431,8 +2441,8 @@ static UINT32 HandleMapUI(void)
 					{
 						// make sure it's the owner's sector that's selected
 						if ( ( gpItemPointerSoldier->sSectorX != sSelMapX ) ||
-								 ( gpItemPointerSoldier->sSectorY != sSelMapY ) ||
-								 ( gpItemPointerSoldier->bSectorZ != iCurrentMapSectorZ ) )
+							( gpItemPointerSoldier->sSectorY != sSelMapY ) ||
+							( gpItemPointerSoldier->bSectorZ != iCurrentMapSectorZ ) )
 						{
 							ChangeSelectedMapSector( gpItemPointerSoldier->sSectorX, gpItemPointerSoldier->sSectorY, gpItemPointerSoldier->bSectorZ );
 						}
@@ -2442,7 +2452,7 @@ static UINT32 HandleMapUI(void)
 					if ( !fShowMapInventoryPool )
 					{
 						// start it up ( NOTE: for the item OWNER'S sector, regardless of which sector player clicks )
-            OpenSectorInventory();
+						OpenSectorInventory();
 					}
 
 					return( MAP_SCREEN );
@@ -2461,7 +2471,8 @@ static UINT32 HandleMapUI(void)
 						// if it's not enemy air controlled
 						if (!StrategicMap[CALCULATE_STRATEGIC_INDEX(sMapX, sMapY)].fEnemyAirControlled)
 						{
-							wchar_t sMsgString[ 128 ], sMsgSubString[ 64 ];
+							ST::string sMsgString;
+							ST::string sMsgSubString;
 
 							// move the landing zone over here
 							g_merc_arrive_sector = SECTOR(sMapX, sMapY);
@@ -2473,10 +2484,10 @@ static UINT32 HandleMapUI(void)
 							CancelChangeArrivalSectorMode();
 
 							// get the name of the sector
-							GetSectorIDString( sMapX, sMapY, 0, sMsgSubString, lengthof(sMsgSubString), FALSE );
+							sMsgSubString = GetSectorIDString(sMapX, sMapY, 0, FALSE);
 
 							// now build the string
-							swprintf( sMsgString, lengthof(sMsgString), pBullseyeStrings[ 1 ], sMsgSubString );
+							sMsgString = st_format_printf(pBullseyeStrings[ 1 ], sMsgSubString);
 
 							// confirm the change with overlay message
 							BeginMapUIMessage(0, sMsgString);
@@ -2533,7 +2544,7 @@ static UINT32 HandleMapUI(void)
 					// show sector inventory for this clicked sector
 					ChangeSelectedMapSector( sMapX, sMapY, ( INT8 ) iCurrentMapSectorZ );
 
-          OpenSectorInventory();
+					OpenSectorInventory();
 
 					return( MAP_SCREEN );
 				}
@@ -2996,21 +3007,21 @@ static void HandleModCtrl(UINT const key)
 				gfAutoAmbush ^= 1;
 				if(gfAutoAmbush)
 				{
-					SLOGD(DEBUG_TAG_SMAP, "Enemy ambush test mode enabled.");
+					SLOGD("Enemy ambush test mode enabled.");
 				}
 				else
 				{
-					SLOGD(DEBUG_TAG_SMAP, "Enemy ambush test mode disabled.");
+					SLOGD("Enemy ambush test mode disabled.");
 				}
 			}
 			break;
 
 	case 'i':
-    if (gamepolicy(isHotkeyEnabled(UI_Map, HKMOD_CTRL, 'i')))
-    {
-      ToggleSectorInventory();
-    }
-    break;
+		if (gamepolicy(isHotkeyEnabled(UI_Map, HKMOD_CTRL, 'i')))
+		{
+			ToggleSectorInventory();
+		}
+		break;
 
 		case 'l':
 			// go to LOAD screen
@@ -3028,9 +3039,9 @@ static void HandleModCtrl(UINT const key)
 
 #if defined SGP_VIDEO_DEBUGGING
 		case 'v':
-			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, L"VObjects:  %d",  guiVObjectSize);
-			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, L"VSurfaces:  %d", guiVSurfaceSize);
-			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, L"SGPVideoDump.txt updated...");
+			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, ST::format("VObjects:  {}", guiVObjectSize));
+			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, ST::format("VSurfaces:  {}", guiVSurfaceSize));
+			ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, "SGPVideoDump.txt updated...");
 			PerformVideoInfoDumpIntoFile("SGPVideoDump.txt", TRUE);
 			break;
 #endif
@@ -3041,11 +3052,11 @@ static void HandleModCtrl(UINT const key)
 				gfAutoAIAware ^= 1;
 				if(gfAutoAIAware)
 				{
-					SLOGD(DEBUG_TAG_SMAP, "Strategic AI awareness maxed.");
+					SLOGD("Strategic AI awareness maxed.");
 				}
 				else
 				{
-					SLOGD(DEBUG_TAG_SMAP, "Strategic AI awareness normal.");
+					SLOGD("Strategic AI awareness normal.");
 				}
 			}
 			break;
@@ -3114,8 +3125,8 @@ static void HandleModAlt(UINT32 const key)
 
 static void GetMapKeyboardInput(MapEvent& new_event)
 {
-  InputAtom InputEvent;
-  while (DequeueEvent(&InputEvent))
+	InputAtom InputEvent;
+	while (DequeueEvent(&InputEvent))
 	{
 		SGPPoint MousePos;
 		GetMousePos(&MousePos);
@@ -3188,7 +3199,7 @@ void EndMapScreen( BOOLEAN fDuringFade )
 	DestroyMouseRegionsForTeamList( );
 
 	MSYS_RemoveRegion( &gMapViewRegion );
-  MSYS_RemoveRegion( &gCharInfoFaceRegion);
+	MSYS_RemoveRegion( &gCharInfoFaceRegion);
 	MSYS_RemoveRegion( &gCharInfoHandRegion );
 	MSYS_RemoveRegion( &gMPanelRegion);
 	MSYS_RemoveRegion( &gMapScreenMaskRegion );
@@ -3207,7 +3218,7 @@ void EndMapScreen( BOOLEAN fDuringFade )
 
 	HandleShutDownOfMapScreenWhileExternfaceIsTalking( );
 
-  fShowInventoryFlag = FALSE;
+	fShowInventoryFlag = FALSE;
 	CreateDestroyMapInvButton();
 
 	// no longer can we show assignments menu
@@ -3228,7 +3239,7 @@ void EndMapScreen( BOOLEAN fDuringFade )
 	RemoveBox(ghContractBox);
 	ghContractBox = NO_POPUP_BOX;
 
-  CreateDestroyAssignmentPopUpBoxes( );
+	CreateDestroyAssignmentPopUpBoxes( );
 
 	// shutdown movement box
 	if ( fShowMapScreenMovementList )
@@ -3265,17 +3276,17 @@ void EndMapScreen( BOOLEAN fDuringFade )
 
 	if(fShowDescriptionFlag)
 	{
-    DeleteItemDescriptionBox( );
+		DeleteItemDescriptionBox( );
 	}
 
 
 	fShowInventoryFlag = FALSE;
 	CreateDestroyTrashCanRegion( );
 
-  if ( !fDuringFade )
-  {
-    MSYS_SetCurrentCursor(SCREEN_CURSOR);
-  }
+	if ( !fDuringFade )
+	{
+		MSYS_SetCurrentCursor(SCREEN_CURSOR);
+	}
 
 	RemoveMapStatusBarsRegion( );
 
@@ -3308,11 +3319,11 @@ void EndMapScreen( BOOLEAN fDuringFade )
 	if(fLapTop)
 	{
 		StopAnyCurrentlyTalkingSpeech( );
-	  guiCurrentScreen=LAPTOP_SCREEN;
+		guiCurrentScreen=LAPTOP_SCREEN;
 	}
 	else
 	{
-	  guiCurrentScreen = GAME_SCREEN;
+		guiCurrentScreen = GAME_SCREEN;
 
 		// remove the progress bar
 		RemoveProgressBar( 0 );
@@ -3348,7 +3359,7 @@ void EndMapScreen( BOOLEAN fDuringFade )
 	}
 
 	//Kris:  Removes the pre battle interface, but only if it exists.
-	//		   It is internally considered.
+	//       It is internally considered.
 	KillPreBattleInterface();
 
 	// cancel request if we somehow leave first
@@ -3387,7 +3398,7 @@ static BOOLEAN GetMapXY(INT16 sX, INT16 sY, INT16* psMapWorldX, INT16* psMapWorl
 
 	if(!fZoomFlag)
 	{
-   	if ( sMapX < MAP_GRID_X || sMapY < MAP_GRID_Y )
+		if ( sMapX < MAP_GRID_X || sMapY < MAP_GRID_Y )
 	{
 		return( FALSE );
 	}
@@ -3407,7 +3418,7 @@ static BOOLEAN GetMapXY(INT16 sX, INT16 sY, INT16* psMapWorldX, INT16* psMapWorl
 	}
 
 	*psMapWorldX = ( sMapX / MAP_GRID_X );
- 	*psMapWorldY = ( sMapY / MAP_GRID_Y );
+	*psMapWorldY = ( sMapY / MAP_GRID_Y );
 
 	return( TRUE );
 }
@@ -3420,38 +3431,35 @@ static void RenderMapHighlight(INT16 sMapX, INT16 sMapY, UINT16 usLineColor, BOO
 	Assert( ( sMapX >= 1 ) && ( sMapX <= 16 ) );
 	Assert( ( sMapY >= 1 ) && ( sMapY <= 16 ) );
 
-/*
+	/*
 	if((fZoomFlag)&&((sMapX > MAP_WORLD_X-1)||(sMapY> MAP_WORLD_Y-1)))
-   return;
-*/
+	return;*/
 
 	// if we are not allowed to highlight, leave
 	if (!IsTheCursorAllowedToHighLightThisSector(sMapX, sMapY) && !fZoomFlag)
 	{
 		return;
 	}
-/*
+	/*
 	else if (!IsTheCursorAllowedToHighLightThisSector(sMapX , sMapY) && fZoomFlag && fStationary)
 	{
 		return;
 	}
 	else if (!IsTheCursorAllowedToHighLightThisSector(iZoomX / (MAP_GRID_X * 2) + sMapX / 2, iZoomY / (MAP_GRID_Y * 2) + sMapY / 2) && fZoomFlag && !fStationary)
-  {
+	{
 		return;
-	}
-*/
+	}*/
 
 
-//	if((!fStationary)||(!fZoomFlag))
+	//if((!fStationary)||(!fZoomFlag))
 	{
-	  GetScreenXYFromMapXY( sMapX, sMapY, &sScreenX, &sScreenY );
+		GetScreenXYFromMapXY( sMapX, sMapY, &sScreenX, &sScreenY );
 	}
-/*
-  else
+	/*
+	else
 	{
-    GetScreenXYFromMapXYStationary( sMapX, sMapY, &sScreenX, &sScreenY );
-	}
-*/
+		GetScreenXYFromMapXYStationary( sMapX, sMapY, &sScreenX, &sScreenY );
+	}*/
 
 	// blit in the highlighted sector
 	SGPVSurface::Lock l(FRAME_BUFFER);
@@ -3461,15 +3469,14 @@ static void RenderMapHighlight(INT16 sMapX, INT16 sMapY, UINT16 usLineColor, BOO
 	// clip to view region
 	ClipBlitsToMapViewRegionForRectangleAndABit( uiDestPitchBYTES );
 
-/*
+	/*
 	if (fZoomFlag)
 	{
 		// draw rectangle for zoom in
 		RectangleDraw( TRUE, sScreenX-MAP_GRID_X,     sScreenY-MAP_GRID_Y - 1, sScreenX +  MAP_GRID_ZOOM_X - MAP_GRID_X, sScreenY +  MAP_GRID_ZOOM_Y - MAP_GRID_Y - 1, usLineColor, pDestBuf );
 		InvalidateRegion(    sScreenX-MAP_GRID_X - 3, sScreenY-MAP_GRID_Y - 4, sScreenX + DMAP_GRID_ZOOM_X - MAP_GRID_X, sScreenY + DMAP_GRID_ZOOM_Y - MAP_GRID_Y - 1 );
 	}
-	else
-*/
+	else*/
 	{
 		// draw rectangle for zoom out
 		RectangleDraw( TRUE, sScreenX, sScreenY - 1, sScreenX +  MAP_GRID_X, sScreenY +  MAP_GRID_Y - 1, usLineColor, pDestBuf );
@@ -3487,10 +3494,10 @@ static void DestinationPlottingCompleted(void);
 static void PollLeftButtonInMapView(MapEvent& new_event)
 {
 	static BOOLEAN	fLBBeenPressedInMapView = FALSE;
-  INT16 sMapX, sMapY;
+	INT16 sMapX, sMapY;
 
 	// if the mouse is currently over the MAP area
-  if ( gMapViewRegion.uiFlags & MSYS_MOUSE_IN_AREA )
+	if ( gMapViewRegion.uiFlags & MSYS_MOUSE_IN_AREA )
 	{
 		// if L-button is down at the moment
 		if ( gMapViewRegion.ButtonState & MSYS_LEFT_BUTTON )
@@ -3541,7 +3548,7 @@ static void PollLeftButtonInMapView(MapEvent& new_event)
 
 					GetMouseMapXY(&sMapX, &sMapY);
 
-/*
+					/*
 					// translate screen values to map grid values for zoomed in
 					if(fZoomFlag)
 					{
@@ -3549,8 +3556,7 @@ static void PollLeftButtonInMapView(MapEvent& new_event)
 						sMapX=sMapX/2;
 						sMapY=(UINT16)iZoomY/MAP_GRID_Y+sMapY;
 						sMapY=sMapY/2;
-					}
-*/
+					}*/
 
 					// if he clicked on the last sector in his current path
 					if( CheckIfClickOnLastSectorInPath( sMapX, sMapY ) )
@@ -3563,7 +3569,7 @@ static void PollLeftButtonInMapView(MapEvent& new_event)
 						new_event = MAP_EVENT_PLOT_PATH;
 					}
 				}
-	      else	// not plotting movement
+				else	// not plotting movement
 				{
 					// if not plotting a path
 					if (!fEndPlotting && !fJustFinishedPlotting)
@@ -3591,10 +3597,10 @@ static void HandleMilitiaRedistributionClick(void);
 static void PollRightButtonInMapView(MapEvent& new_event)
 {
 	static BOOLEAN	fRBBeenPressedInMapView = FALSE;
-  INT16 sMapX, sMapY;
+	INT16 sMapX, sMapY;
 
 	// if the mouse is currently over the MAP area
-  if ( gMapViewRegion.uiFlags & MSYS_MOUSE_IN_AREA )
+	if ( gMapViewRegion.uiFlags & MSYS_MOUSE_IN_AREA )
 	{
 		// if R-button is down at the moment
 		if ( gMapViewRegion.ButtonState & MSYS_RIGHT_BUTTON )
@@ -3711,54 +3717,54 @@ static void MAPInvMoveCamoCallback(MOUSE_REGION* pRegion, INT32 iReason);
 
 void CreateDestroyMapInvButton()
 {
- static BOOLEAN fOldShowInventoryFlag=FALSE;
+	static BOOLEAN fOldShowInventoryFlag=FALSE;
 
- if( fShowInventoryFlag && !fOldShowInventoryFlag )
- {
-	 // create inventory button
-  fOldShowInventoryFlag=TRUE;
-  // disable allmouse regions in this space
-  fTeamPanelDirty=TRUE;
+	if( fShowInventoryFlag && !fOldShowInventoryFlag )
+	{
+		// create inventory button
+		fOldShowInventoryFlag=TRUE;
+		// disable allmouse regions in this space
+		fTeamPanelDirty=TRUE;
 
-  INV_REGION_DESC gSCamoXY = {INV_BODY_X, INV_BODY_Y};
+		INV_REGION_DESC gSCamoXY = {INV_BODY_X, INV_BODY_Y};
 
-	InitInvSlotInterface(g_ui.m_invSlotPositionMap, &gSCamoXY, MAPInvMoveCallback, MAPInvClickCallback, MAPInvMoveCamoCallback, MAPInvClickCamoCallback);
-  gMPanelRegion.Enable();
+		InitInvSlotInterface(g_ui.m_invSlotPositionMap, &gSCamoXY, MAPInvMoveCallback, MAPInvClickCallback, MAPInvMoveCamoCallback, MAPInvClickCamoCallback);
+		gMPanelRegion.Enable();
 
-	// switch hand region help text to "Exit Inventory"
-	gCharInfoHandRegion.SetFastHelpText(pMiscMapScreenMouseRegionHelpText[2]);
+		// switch hand region help text to "Exit Inventory"
+		gCharInfoHandRegion.SetFastHelpText(pMiscMapScreenMouseRegionHelpText[2]);
 
-	// dirty character info panel  ( Why? ARM )
-	fCharacterInfoPanelDirty=TRUE;
- }
- else if( !fShowInventoryFlag && fOldShowInventoryFlag )
- {
-	 // destroy inventory button
-	 ShutdownInvSlotInterface( );
-	 fOldShowInventoryFlag=FALSE;
-   fTeamPanelDirty=TRUE;
-   gMPanelRegion.Disable();
+		// dirty character info panel  ( Why? ARM )
+		fCharacterInfoPanelDirty=TRUE;
+	}
+	else if( !fShowInventoryFlag && fOldShowInventoryFlag )
+	{
+		// destroy inventory button
+		ShutdownInvSlotInterface( );
+		fOldShowInventoryFlag=FALSE;
+		fTeamPanelDirty=TRUE;
+		gMPanelRegion.Disable();
 
-	// switch hand region help text to "Enter Inventory"
-	gCharInfoHandRegion.SetFastHelpText(pMiscMapScreenMouseRegionHelpText[0]);
+		// switch hand region help text to "Enter Inventory"
+		gCharInfoHandRegion.SetFastHelpText(pMiscMapScreenMouseRegionHelpText[0]);
 
-	// force immediate reblit of item in HANDPOS now that it's not blitted while in inventory mode
-	fCharacterInfoPanelDirty=TRUE;
- }
+		// force immediate reblit of item in HANDPOS now that it's not blitted while in inventory mode
+		fCharacterInfoPanelDirty=TRUE;
+	}
 }
 
 
 static void BltCharInvPanel(void)
 {
-	wchar_t sString[ 32 ];
+	ST::string sString;
 
 	const SOLDIERTYPE* const pSoldier = GetSelectedInfoChar();
 	Assert(MapCharacterHasAccessibleInventory(*pSoldier));
 
 	BltVideoObject(guiSAVEBUFFER, guiMAPINV, 0, PLAYER_INFO_X, PLAYER_INFO_Y);
 
-  Assert( pSoldier );
-  CreateDestroyMapInvButton();
+	Assert( pSoldier );
+	CreateDestroyMapInvButton();
 
 	if( gbCheckForMouseOverItemPos != -1 )
 	{
@@ -3776,7 +3782,7 @@ static void BltCharInvPanel(void)
 		}
 	}
 
-  RenderInvBodyPanel(pSoldier, INV_BODY_X, INV_BODY_Y );
+	RenderInvBodyPanel(pSoldier, INV_BODY_X, INV_BODY_Y );
 
 	// reset font destination buffer to the save buffer
 	SetFontDestBuffer(guiSAVEBUFFER);
@@ -3792,19 +3798,19 @@ static void BltCharInvPanel(void)
 
 	// Display armor
 	MPrint(MAP_ARMOR_LABEL_X, MAP_ARMOR_LABEL_Y, pInvPanelTitleStrings[0]);
-	swprintf(sString, lengthof(sString), L"%3d%%", ArmourPercent(pSoldier));
+	sString = ST::format("{3d}%", ArmourPercent(pSoldier));
 	FindFontRightCoordinates(MAP_ARMOR_X, MAP_ARMOR_Y, MAP_ARMOR_W, MAP_ARMOR_H, sString, BLOCKFONT2, &usX, &usY);
 	MPrint(usX, usY, sString);
 
 	// Display weight
 	MPrint(MAP_WEIGHT_LABEL_X, MAP_WEIGHT_LABEL_Y, pInvPanelTitleStrings[1]);
-	swprintf(sString, lengthof(sString), L"%d%%", CalculateCarriedWeight(pSoldier));
+	sString = ST::format("{}%", CalculateCarriedWeight(pSoldier));
 	FindFontRightCoordinates(MAP_WEIGHT_X, MAP_WEIGHT_Y, MAP_WEIGHT_W, MAP_WEIGHT_H, sString, BLOCKFONT2, &usX, &usY);
 	MPrint(usX, usY, sString);
 
 	// Display camouflage
 	MPrint(MAP_CAMO_LABEL_X, MAP_CAMO_LABEL_Y, pInvPanelTitleStrings[2]);
-	swprintf(sString, lengthof(sString), L"%d%%", pSoldier->bCamo);
+	sString = ST::format("{}%", pSoldier->bCamo);
 	FindFontRightCoordinates(MAP_CAMO_X, MAP_CAMO_Y, MAP_CAMO_W, MAP_CAMO_H, sString, BLOCKFONT2, &usX, &usY);
 	MPrint(usX, usY, sString);
 
@@ -3871,7 +3877,7 @@ static void MAPInvMoveCallback(MOUSE_REGION* pRegion, INT32 iReason)
 		return;
 
 	if (iReason == MSYS_CALLBACK_REASON_GAIN_MOUSE )
-//  if( ( iReason == MSYS_CALLBACK_REASON_MOVE ) || ( iReason == MSYS_CALLBACK_REASON_GAIN_MOUSE ) )
+	//if( ( iReason == MSYS_CALLBACK_REASON_MOVE ) || ( iReason == MSYS_CALLBACK_REASON_GAIN_MOUSE ) )
 	{
 		guiMouseOverItemTime = GetJA2Clock( );
 		gfCheckForMouseOverItem = TRUE;
@@ -3883,7 +3889,7 @@ static void MAPInvMoveCallback(MOUSE_REGION* pRegion, INT32 iReason)
 		HandleCompatibleAmmoUI( pSoldier, (INT8)uiHandPos, FALSE );
 		gfCheckForMouseOverItem = FALSE;
 		fTeamPanelDirty = TRUE;
-	  gbCheckForMouseOverItemPos = -1;
+		gbCheckForMouseOverItemPos = -1;
 	}
 }
 
@@ -3946,7 +3952,7 @@ static void MAPInvClickCallback(MOUSE_REGION* pRegion, INT32 iReason)
 
 			HandleTacticalEffectsOfEquipmentChange( pSoldier, uiHandPos, usOldItemIndex, NOTHING );
 
-		  fInterfacePanelDirty = DIRTYLEVEL2;
+			fInterfacePanelDirty = DIRTYLEVEL2;
 			fCharacterInfoPanelDirty = TRUE;
 		}
 		else	// item in cursor
@@ -4046,7 +4052,7 @@ static void MAPInvClickCallback(MOUSE_REGION* pRegion, INT32 iReason)
 				// if item came from another merc
 				if ( gpItemPointerSoldier != pSoldier )
 				{
-					ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, pMessageStrings[ MSG_ITEM_PASSED_TO_MERC ], ShortItemNames[ usNewItemIndex ], pSoldier->name );
+					ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(pMessageStrings[ MSG_ITEM_PASSED_TO_MERC ], ShortItemNames[ usNewItemIndex ], pSoldier->name) );
 				}
 
 			}
@@ -4080,8 +4086,8 @@ static void MAPInvClickCallback(MOUSE_REGION* pRegion, INT32 iReason)
 			if ( !InItemStackPopup( ) )
 			{
 				InitItemStackPopup( pSoldier, (UINT8)uiHandPos, INV_REGION_X, INV_REGION_Y, 261, 248 );
-			  fTeamPanelDirty=TRUE;
-			  fInterfacePanelDirty = DIRTYLEVEL2;
+				fTeamPanelDirty=TRUE;
+				fInterfacePanelDirty = DIRTYLEVEL2;
 			}
 		}
 		else
@@ -4089,9 +4095,9 @@ static void MAPInvClickCallback(MOUSE_REGION* pRegion, INT32 iReason)
 			if ( !InItemDescriptionBox( ) )
 			{
 				InitItemDescriptionBox( pSoldier, (UINT8)uiHandPos, MAP_ITEMDESC_START_X, MAP_ITEMDESC_START_Y, 0 );
-			  fShowDescriptionFlag=TRUE;
+				fShowDescriptionFlag=TRUE;
 				fTeamPanelDirty=TRUE;
-			  fInterfacePanelDirty = DIRTYLEVEL2;
+				fInterfacePanelDirty = DIRTYLEVEL2;
 			}
 		}
 	}
@@ -4145,7 +4151,7 @@ static void MAPBeginItemPointer(SOLDIERTYPE* pSoldier, UINT8 ubHandPos)
 
 	if ( fOk )
 	{
-    InternalMAPBeginItemPointer( pSoldier );
+		InternalMAPBeginItemPointer( pSoldier );
 	}
 }
 
@@ -4178,7 +4184,7 @@ void MAPEndItemPointer(void)
 static void HandleMapInventoryCursor(void)
 {
 	if(fMapInventoryItem)
-   MSYS_SetCurrentCursor( EXTERN_CURSOR );
+		MSYS_SetCurrentCursor( EXTERN_CURSOR );
 }
 
 
@@ -4225,14 +4231,14 @@ static void DisplayThePotentialPathForCurrentDestinationCharacterForMapScreenInt
 {
 	// simply check if we want to refresh the screen to display path
 	static INT8 bOldDestChar = -1;
-  static INT16  sPrevMapX, sPrevMapY;
+	static INT16  sPrevMapX, sPrevMapY;
 	INT32 iDifference = 0;
 
 
 	if( bOldDestChar != bSelectedDestChar )
 	{
 		bOldDestChar = bSelectedDestChar;
-	  giPotCharPathBaseTime = GetJA2Clock( );
+		giPotCharPathBaseTime = GetJA2Clock( );
 
 		sPrevMapX = sMapX;
 		sPrevMapY = sMapY;
@@ -4316,7 +4322,7 @@ static void HandleAnimatedCursorsForMapScreen(void)
 	if ( COUNTERDONE( CURSORCOUNTER ) )
 	{
 		RESETCOUNTER( CURSORCOUNTER );
-	  UpdateAnimatedCursorFrames( gMapScreenMaskRegion.Cursor );
+		UpdateAnimatedCursorFrames( gMapScreenMaskRegion.Cursor );
 		SetCurrentCursorFromDatabase(  gMapScreenMaskRegion.Cursor  );
 	}
 }
@@ -4382,14 +4388,14 @@ static void CheckToSeeIfMouseHasLeftMapRegionDuringPathPlotting(void)
 
 			// plotting path, clean up
 			if (fTempPathAlreadyDrawn &&
-					(
-						bSelectedDestChar != -1 ||
-						fPlotForHelicopter      ||
-						fDrawTempHeliPath
-					))
+				(
+					bSelectedDestChar != -1 ||
+					fPlotForHelicopter      ||
+					fDrawTempHeliPath
+				))
 			{
 				fDrawTempHeliPath = FALSE;
-			  fMapPanelDirty = TRUE;
+				fMapPanelDirty = TRUE;
 				gfRenderPBInterface = TRUE;
 
 				// clear the temp path
@@ -4413,15 +4419,15 @@ static void RenderCharacterInfoBackground(void);
 static void BlitBackgroundToSaveBuffer(void)
 {
 	// render map
-  RenderMapRegionBackground( );
+	RenderMapRegionBackground( );
 
 	if (!fDisableDueToBattleRoster)
 	{
-	  // render team
-	  RenderTeamRegionBackground( );
+		// render team
+		RenderTeamRegionBackground( );
 
-	  // render character info
-	  RenderCharacterInfoBackground( );
+		// render character info
+		RenderCharacterInfoBackground( );
 	}
 	else if( gfPreBattleInterfaceActive )
 	{
@@ -4436,7 +4442,7 @@ static void BlitBackgroundToSaveBuffer(void)
 }
 
 
-static void MakeRegion(MOUSE_REGION* const r, const UINT idx, const UINT16 x, const UINT16 y, const UINT16 w, MOUSE_CALLBACK const move, MOUSE_CALLBACK const click, const wchar_t* const help)
+static void MakeRegion(MOUSE_REGION* r, UINT idx, UINT16 x, UINT16 y, UINT16 w, MOUSE_CALLBACK move, MOUSE_CALLBACK click, const ST::string& help)
 {
 	MSYS_DefineRegion(r, x, y, x + w, y + Y_SIZE + 1, MSYS_PRIORITY_NORMAL + 1, MSYS_NO_CURSOR, move, click);
 	MSYS_SetRegionUserData(r, 0, idx);
@@ -4484,7 +4490,7 @@ static void DestroyMouseRegionsForTeamList(void)
 	for (UINT i = 0; i < MAX_CHARACTER_COUNT; ++i)
 	{
 		CharacterRegions& r = g_character_regions[i];
-	  MSYS_RemoveRegion(&r.name);
+		MSYS_RemoveRegion(&r.name);
 		MSYS_RemoveRegion(&r.assignment);
 		MSYS_RemoveRegion(&r.sleep);
 		MSYS_RemoveRegion(&r.location);
@@ -4527,7 +4533,7 @@ static void ContractButtonCallback(GUI_BUTTON* btn, INT32 reason)
 		if (btn->Area.uiFlags & MSYS_HAS_BACKRECT) fCharacterInfoPanelDirty = TRUE;
 	}
 	else if (reason & MSYS_CALLBACK_REASON_LBUTTON_UP)
-  {
+	{
 		RequestContractMenu();
 	}
 }
@@ -4686,7 +4692,7 @@ static void TeamListAssignmentRegionBtnCallBack(MOUSE_REGION* pRegion, INT32 iRe
 			giContractHighLine = -1;
 
 			// can't highlight line, anymore..if we were
-		  giDestHighLine = -1;
+			giDestHighLine = -1;
 
 			// dirty team and map regions
 			fTeamPanelDirty = TRUE;
@@ -4777,7 +4783,7 @@ static void TeamListAssignmentRegionMvtCallBack(MOUSE_REGION* pRegion, INT32 iRe
 		if (s != NULL && !(s->uiStatusFlags & SOLDIER_VEHICLE))
 		{
 			// play click
-		  PlayGlowRegionSound( );
+			PlayGlowRegionSound( );
 		}
 	}
 }
@@ -4916,7 +4922,7 @@ static void TeamListDestinationRegionMvtCallBack(MOUSE_REGION* pRegion, INT32 iR
 
 		if( bSelectedDestChar == -1 )
 		{
-		  giDestHighLine = -1;
+			giDestHighLine = -1;
 		}
 
 		// restore background
@@ -5158,7 +5164,7 @@ static void HandleHighLightingOfLinesInTeamPanel(void)
 	// contracts?
 	if( giContractHighLine != -1 )
 	{
-	  ContractListRegionBoxGlow( ( UINT16 ) giContractHighLine );
+		ContractListRegionBoxGlow( ( UINT16 ) giContractHighLine );
 	}
 }
 
@@ -5171,7 +5177,7 @@ static void PlotPermanentPaths(void)
 	}
 	else if( bSelectedDestChar != -1 )
 	{
-	  DisplaySoldierPath(gCharactersList[bSelectedDestChar].merc);
+		DisplaySoldierPath(gCharactersList[bSelectedDestChar].merc);
 	}
 }
 
@@ -5187,7 +5193,7 @@ static void PlotTemporaryPaths(void)
 		if (fPlotForHelicopter)
 		{
 			Assert(fShowAircraftFlag);
-/*
+			/*
 			if( fZoomFlag )
 			{
 				sMapX =  ( INT16 )( ( ( iZoomX ) / ( WORLD_MAP_X ) ) + sMapX );
@@ -5195,8 +5201,7 @@ static void PlotTemporaryPaths(void)
 
 				sMapY =  ( INT16 )( ( ( iZoomY ) / ( WORLD_MAP_X ) ) + sMapY );
 				sMapY /= 2;
-			}
-*/
+			}*/
 
 			// plot temp path
 			PlotATemporaryPathForHelicopter( sMapX, sMapY);
@@ -5218,7 +5223,7 @@ static void PlotTemporaryPaths(void)
 		// dest char has been selected,
 		if( bSelectedDestChar != -1 )
 		{
-/*
+			/*
 			if( fZoomFlag )
 			{
 				sMapX =  ( INT16 )( ( ( iZoomX ) / ( MAP_GRID_X ) ) + sMapX );
@@ -5226,13 +5231,12 @@ static void PlotTemporaryPaths(void)
 
 				sMapY =  ( INT16 )( ( ( iZoomY ) / ( MAP_GRID_Y ) ) + sMapY );
 				sMapY /= 2;
-			}
-*/
+			}*/
 
 			PlotATemporaryPathForCharacter(gCharactersList[bSelectedDestChar].merc, sMapX, sMapY);
 
 			// check to see if we are drawing path
-		  DisplayThePotentialPathForCurrentDestinationCharacterForMapScreenInterface( sMapX, sMapY );
+			DisplayThePotentialPathForCurrentDestinationCharacterForMapScreenInterface( sMapX, sMapY );
 
 			// if we need to draw path, do it
 			if (fDrawTempPath)
@@ -5378,7 +5382,7 @@ static void DetermineIfContractMenuCanBeShown(void)
 		// destroy menus for contract region
 		CreateDestroyMouseRegionsForContractMenu( );
 
-			// hide all boxes
+		// hide all boxes
 		HideBox( ghContractBox );
 
 		// make sure, absolutly sure we want to hide this box
@@ -5528,7 +5532,7 @@ void ReBuildCharactersList( void )
 
 	// add in characters
 	for (INT16 sCount = 0; sCount < MAX_CHARACTER_COUNT; ++sCount)
-  {
+	{
 		// clear this slot
 		gCharactersList[sCount].merc = NULL;
 	}
@@ -5640,7 +5644,7 @@ static void EnableDisableTeamListRegionsAndHelpText(void)
 				{
 					// "Remove Merc"
 					r.assignment.SetFastHelpText(pRemoveMercStrings[0]);
-					r.destination.SetFastHelpText(L"");
+					r.destination.SetFastHelpText(ST::null);
 				}
 				else
 				{
@@ -5687,7 +5691,7 @@ static void ResetAllSelectedCharacterModes(void)
 
 
 	// cancel destination line highlight
- 	giDestHighLine = -1;
+	giDestHighLine = -1;
 
 	// cancel assign line highlight
 	giAssignHighLine = -1;
@@ -5710,10 +5714,10 @@ static void ResetAllSelectedCharacterModes(void)
 
 
 	// reset map cursor to normal
-  if ( !gfFadeOutDone && !gfFadeIn )
-  {
-	  SetUpCursorForStrategicMap( );
-  }
+	if ( !gfFadeOutDone && !gfFadeIn )
+	{
+		SetUpCursorForStrategicMap( );
+	}
 }
 
 
@@ -5924,7 +5928,7 @@ static void RebuildWayPointsForAllSelectedCharsGroups(void)
 	UINT8 ubGroupId;
 
 
-	memset( fGroupIDRebuilt, FALSE, sizeof( fGroupIDRebuilt ) );
+	std::fill(std::begin(fGroupIDRebuilt), std::end(fGroupIDRebuilt), FALSE);
 
 	CFOR_EACH_SELECTED_IN_CHAR_LIST(c)
 	{
@@ -6175,7 +6179,7 @@ static void TrashCanBtnCallback(MOUSE_REGION*, INT32 const reason)
 		// Check if an item is in the cursor, if so, warn player
 		if (OBJECTTYPE* const o = gpItemPointer)
 		{
-			wchar_t const* const msg = o->ubMission ? pTrashItemText[1] : pTrashItemText[0];
+			ST::string msg = o->ubMission ? pTrashItemText[1] : pTrashItemText[0];
 			DoMapMessageBox(MSG_BOX_BASIC_STYLE, msg, MAP_SCREEN, MSG_BOX_FLAG_YESNO, TrashItemMessageBoxCallBack);
 		}
 	}
@@ -6254,7 +6258,7 @@ static void CreateDestroyTrashCanRegion(void)
 
 		// trash can
 		MSYS_DefineRegion( &gTrashCanRegion, 	TRASH_CAN_X, TRASH_CAN_Y, TRASH_CAN_X + TRASH_CAN_WIDTH, TRASH_CAN_Y + TRASH_CAN_HEIGHT , MSYS_PRIORITY_HIGHEST - 4 ,
-							 MSYS_NO_CURSOR, TrashCanMoveCallback, TrashCanBtnCallback );
+					MSYS_NO_CURSOR, TrashCanMoveCallback, TrashCanBtnCallback );
 
 		// done inventory button define
 		giMapInvDoneButton = QuickCreateButtonImg(INTERFACEDIR "/done_button2.sti", 0, 1, INV_BTN_X, INV_BTN_Y, MSYS_PRIORITY_HIGHEST - 1, DoneInventoryMapBtnCallback);
@@ -6552,7 +6556,7 @@ static void UpdateTheStateOfTheNextPrevMapScreenCharacterButtons(void)
 static void PrevInventoryMapBtnCallback(GUI_BUTTON *btn, INT32 reason)
 {
 	if (reason & MSYS_CALLBACK_REASON_LBUTTON_UP)
-  {
+	{
 		GoToPrevCharacterInList();
 	}
 }
@@ -6561,7 +6565,7 @@ static void PrevInventoryMapBtnCallback(GUI_BUTTON *btn, INT32 reason)
 static void NextInventoryMapBtnCallback(GUI_BUTTON *btn, INT32 reason)
 {
 	if (reason & MSYS_CALLBACK_REASON_LBUTTON_UP)
-  {
+	{
 		GoToNextCharacterInList();
 	}
 }
@@ -6600,9 +6604,9 @@ void TellPlayerWhyHeCantCompressTime( void )
 	// if we're locked into paused time compression by some event that enforces that
 	if ( PauseStateLocked() )
 	{
-		SLOGW(DEBUG_TAG_SMAP, "Can't compress time, pause state locked (reason %d). OK unless permanent.\n\
-													 If permanent, take screenshot now, send with *previous* save & describe what happened since.",
-													 guiLockPauseStateLastReasonId);
+		SLOGW("Can't compress time, pause state locked (reason %d). OK unless permanent.\n\
+			If permanent, take screenshot now, send with *previous* save & describe what happened since.",
+			guiLockPauseStateLastReasonId);
 	}
 	else if (!gfAtLeastOneMercWasHired)
 	{
@@ -6621,19 +6625,19 @@ void TellPlayerWhyHeCantCompressTime( void )
 	}
 	else if ( gfContractRenewalSquenceOn )
 	{
-		SLOGD(DEBUG_TAG_SMAP, "Can't compress time while contract renewal sequence is on.");
+		SLOGD("Can't compress time while contract renewal sequence is on.");
 	}
 	else if( fDisableMapInterfaceDueToBattle )
 	{
-		SLOGD(DEBUG_TAG_SMAP, "Can't compress time while disabled due to battle.");
+		SLOGD("Can't compress time while disabled due to battle.");
 	}
 	else if( fDisableDueToBattleRoster )
 	{
-		SLOGD(DEBUG_TAG_SMAP, "Can't compress time while in battle roster.");
+		SLOGD("Can't compress time while in battle roster.");
 	}
 	else if ( fMapInventoryItem )
 	{
-		SLOGD(DEBUG_TAG_SMAP, "Can't compress time while still holding an inventory item.");
+		SLOGD("Can't compress time while still holding an inventory item.");
 	}
 	else if( fShowMapInventoryPool )
 	{
@@ -6645,10 +6649,10 @@ void TellPlayerWhyHeCantCompressTime( void )
 	{
 		if( OnlyHostileCivsInSector() )
 		{
-			wchar_t str[ 256 ];
-			wchar_t pSectorString[ 128 ];
-			GetSectorIDString( gWorldSectorX, gWorldSectorY, gbWorldSectorZ, pSectorString, lengthof(pSectorString), TRUE );
-			swprintf(str, lengthof(str), gzLateLocalizedString[STR_LATE_27], pSectorString);
+			ST::string str;
+			ST::string pSectorString;
+			pSectorString = GetSectorIDString(gWorldSectorX, gWorldSectorY, gbWorldSectorZ, TRUE);
+			str = st_format_printf(gzLateLocalizedString[STR_LATE_27], pSectorString);
 			DoMapMessageBox( MSG_BOX_BASIC_STYLE, str, MAP_SCREEN, MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback );
 		}
 		else
@@ -6666,7 +6670,7 @@ void TellPlayerWhyHeCantCompressTime( void )
 
 void MapScreenDefaultOkBoxCallback(MessageBoxReturnValue const bExitValue)
 {
-  if( bExitValue == MSG_BOX_RETURN_OK )
+	if( bExitValue == MSG_BOX_RETURN_OK )
 	{
 		fMapPanelDirty = TRUE;
 		fTeamPanelDirty = TRUE;
@@ -6681,7 +6685,7 @@ static void MapSortBtnCallback(GUI_BUTTON *btn, INT32 reason)
 	INT32 const iValue = btn->GetUserData();
 
 	if (reason & MSYS_CALLBACK_REASON_LBUTTON_UP)
-  {
+	{
 		ChangeCharacterListSortMethod( iValue );
 	}
 }
@@ -6731,7 +6735,7 @@ static void SortListOfMercsInTeamPanel(BOOLEAN fRetainSelectedMercs)
 					const SOLDIERTYPE* const b = gCharactersList[iCounterA].merc;
 					if (b == NULL) break;
 
-					if (wcscmp(b->name, a->name) > 0 && iCounterA < iCounter)
+					if (b->name.compare(a->name) > 0 && iCounterA < iCounter)
 					{
 						SwapCharactersInList( iCounter, iCounterA );
 					}
@@ -6849,7 +6853,7 @@ static void SortListOfMercsInTeamPanel(BOOLEAN fRetainSelectedMercs)
 				break;
 
 			default:
-				SLOGE(DEBUG_TAG_ASSERTS, "Invalid sorting mode for Merc List");
+				SLOGA("Invalid sorting mode for Merc List");
 				return;
 		}
 	}
@@ -6862,7 +6866,7 @@ static void SortListOfMercsInTeamPanel(BOOLEAN fRetainSelectedMercs)
 			const SOLDIERTYPE* const s = gCharactersList[i].merc;
 			if (s == NULL || !s->bActive) continue;
 
-			if (prev_selected_char == s) ChangeSelectedInfoChar(i, FALSE);
+			if (prev_selected_char == s) ChangeSelectedInfoChar(static_cast<INT8>(i), FALSE);
 		}
 	}
 	else
@@ -7031,9 +7035,9 @@ static bool CanToggleSelectedCharInventory()
 	{
 		// make sure he's in that sector
 		if ( ( pSoldier->sSectorX != sSelMapX ) ||
-				 ( pSoldier->sSectorY != sSelMapY ) ||
-				 ( pSoldier->bSectorZ != iCurrentMapSectorZ ) ||
-				 pSoldier->fBetweenSectors )
+			( pSoldier->sSectorY != sSelMapY ) ||
+			( pSoldier->bSectorZ != iCurrentMapSectorZ ) ||
+			pSoldier->fBetweenSectors )
 		{
 			return(FALSE);
 		}
@@ -7187,11 +7191,11 @@ static void ChangeMapScreenMaskCursor(UINT16 usCursor)
 
 	if ( usCursor == CURSOR_NORMAL )
 	{
-    if ( !InItemStackPopup( ) )
-    {
-		  // cancel mouse restriction
-		  FreeMouseCursor();
-    }
+		if ( !InItemStackPopup( ) )
+		{
+			// cancel mouse restriction
+			FreeMouseCursor();
+		}
 	}
 	else
 	{
@@ -7212,7 +7216,7 @@ static void CancelOrShortenPlottedPath(void)
 
 	GetMouseMapXY(&sMapX, &sMapY);
 
-/*
+	/*
 	// translate zoom in to zoom out coords
 	if(fZoomFlag)
 	{
@@ -7220,8 +7224,7 @@ static void CancelOrShortenPlottedPath(void)
 		sMapX=sMapX/2;
 		sMapY=(UINT16)iZoomY/MAP_GRID_Y+sMapY;
 		sMapY=sMapY/2;
-	 }
-*/
+	}*/
 
 	// check if we are in aircraft mode
 	if (fShowAircraftFlag)
@@ -7491,18 +7494,18 @@ void CancelPathsOfAllSelectedCharacters()
 }
 
 
-static void ConvertMinTimeToETADayHourMinString(const UINT32 uiTimeInMin, wchar_t* const sString, const size_t Length)
+static ST::string ConvertMinTimeToETADayHourMinString(const UINT32 uiTimeInMin)
 {
 	UINT32 uiDay, uiHour, uiMin;
 
 	uiDay  = ( uiTimeInMin / NUM_MIN_IN_DAY );
 	uiHour = ( uiTimeInMin - ( uiDay * NUM_MIN_IN_DAY ) ) / NUM_MIN_IN_HOUR;
-	uiMin	 = uiTimeInMin - ( ( uiDay * NUM_MIN_IN_DAY ) + ( uiHour * NUM_MIN_IN_HOUR ) );
+	uiMin  = uiTimeInMin - ( ( uiDay * NUM_MIN_IN_DAY ) + ( uiHour * NUM_MIN_IN_HOUR ) );
 
 	// there ain't enough room to show both the day and ETA: and without ETA it's confused as the current time
-//	swprintf(sString, L"%ls %ls %d, %02d:%02d", pEtaString, pDayStrings, uiDay, uiHour, uiMin);
-//	swprintf(sString, L"%ls %d, %02d:%02d", pDayStrings, uiDay, uiHour, uiMin);
-	swprintf(sString, Length, L"%ls %02d:%02d", pEtaString, uiHour, uiMin);
+	//return ST::format("{} {} {}, {02d}:{02d}", pEtaString, pDayStrings, uiDay, uiHour, uiMin);
+	//return ST::format("{} {}, {02d}:{02d}", pDayStrings, uiDay, uiHour, uiMin);
+	return ST::format("{} {02d}:{02d}", pEtaString, uiHour, uiMin);
 }
 
 
@@ -7581,9 +7584,9 @@ static BOOLEAN AnyMovableCharsInOrBetweenThisSector(INT16 sSectorX, INT16 sSecto
 	{
 		// POWs, dead guys, guys in transit can't move
 		if ( ( pSoldier->bAssignment == IN_TRANSIT ) ||
-				 ( pSoldier->bAssignment == ASSIGNMENT_POW ) ||
-				 ( pSoldier->bAssignment == ASSIGNMENT_DEAD ) ||
-				 ( pSoldier->bLife == 0 ) )
+			( pSoldier->bAssignment == ASSIGNMENT_POW ) ||
+			( pSoldier->bAssignment == ASSIGNMENT_DEAD ) ||
+			( pSoldier->bLife == 0 ) )
 		{
 			continue;
 		}
@@ -7622,8 +7625,8 @@ static BOOLEAN RequestGiveSkyriderNewDestination(void)
 	{
 		// if not warned already, and chopper empty, but mercs are in this sector
 		if ( !gfSkyriderEmptyHelpGiven &&
-			 ( GetNumberInVehicle(GetHelicopter()) == 0 ) &&
-			 ( PlayerMercsInHelicopterSector() > 0 ) )
+			( GetNumberInVehicle(GetHelicopter()) == 0 ) &&
+			( PlayerMercsInHelicopterSector() > 0 ) )
 		{
 			DoMapMessageBox(MSG_BOX_BASIC_STYLE, pSkyriderText[2], MAP_SCREEN, MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback);
 			gfSkyriderEmptyHelpGiven = TRUE;
@@ -7716,7 +7719,7 @@ static void HandleNewDestConfirmation(INT16 sMapX, INT16 sMapY)
 	{
 		// if there are no enemies in destination sector, or we don't know
 		if ( ( NumEnemiesInSector( sMapX, sMapY ) == 0 ) ||
-				 (	WhatPlayerKnowsAboutEnemiesInSector( sMapX, sMapY ) == KNOWS_NOTHING ) )
+			(	WhatPlayerKnowsAboutEnemiesInSector( sMapX, sMapY ) == KNOWS_NOTHING ) )
 		{
 			// no problem
 
@@ -7725,7 +7728,7 @@ static void HandleNewDestConfirmation(INT16 sMapX, INT16 sMapY)
 
 			// if we're doing a lot better than last time he said anything
 			if ( ( ubCurrentProgress > gubPlayerProgressSkyriderLastCommentedOn ) &&
-					 ( ( ubCurrentProgress - gubPlayerProgressSkyriderLastCommentedOn ) >= MIN_PROGRESS_FOR_SKYRIDER_QUOTE_DOING_WELL ) )
+				( ( ubCurrentProgress - gubPlayerProgressSkyriderLastCommentedOn ) >= MIN_PROGRESS_FOR_SKYRIDER_QUOTE_DOING_WELL ) )
 			{
 				// kicking ass!
 				SkyRiderTalk( THINGS_ARE_GOING_WELL );
@@ -7734,7 +7737,7 @@ static void HandleNewDestConfirmation(INT16 sMapX, INT16 sMapY)
 			}
 			// if we're doing noticably worse than last time he said anything
 			else if ( ( ubCurrentProgress < gubPlayerProgressSkyriderLastCommentedOn ) &&
-					 ( ( gubPlayerProgressSkyriderLastCommentedOn - ubCurrentProgress ) >= MIN_REGRESS_FOR_SKYRIDER_QUOTE_DOING_BADLY ) )
+					( ( gubPlayerProgressSkyriderLastCommentedOn - ubCurrentProgress ) >= MIN_REGRESS_FOR_SKYRIDER_QUOTE_DOING_BADLY ) )
 			{
 				// sucking rocks!
 				SkyRiderTalk( THINGS_ARE_GOING_BADLY );
@@ -7829,7 +7832,7 @@ static void DestinationPlottingCompleted(void)
 static void HandleMilitiaRedistributionClick(void)
 {
 	BOOLEAN fTownStillHidden;
-	wchar_t sString[ 128 ];
+	ST::string sString;
 
 
 	// if on the surface
@@ -7860,7 +7863,7 @@ static void HandleMilitiaRedistributionClick(void)
 			else
 			{
 				// can't have militia in this town
-				swprintf( sString, lengthof(sString), pMapErrorString[ 31 ], pTownNames [ bTownId ] );
+				sString = st_format_printf(pMapErrorString[ 31 ], GCM->getTownName(bTownId));
 				DoScreenIndependantMessageBox( sString, MSG_BOX_FLAG_OK, NULL );
 			}
 		}
@@ -7918,8 +7921,8 @@ static void BullsEyeOrChopperSelectionPopupCallback(MessageBoxReturnValue);
 
 static void CreateBullsEyeOrChopperSelectionPopup(void)
 {
-	wcscpy( gzUserDefinedButton1, pHelicopterEtaStrings[ 8 ] );
-	wcscpy( gzUserDefinedButton2, pHelicopterEtaStrings[ 9 ] );
+	gzUserDefinedButton1 = pHelicopterEtaStrings[ 8 ];
+	gzUserDefinedButton2 = pHelicopterEtaStrings[ 9 ];
 
 	// do a BULLSEYE/CHOPPER message box
 	DoScreenIndependantMessageBox( pHelicopterEtaStrings[ 7 ], MSG_BOX_FLAG_GENERIC, BullsEyeOrChopperSelectionPopupCallback );
@@ -7956,7 +7959,7 @@ static void WakeUpAnySleepingSelectedMercsOnFootOrDriving()
 		if (s.bAssignment >= ON_DUTY && (s.bAssignment != VEHICLE || !SoldierMustDriveVehicle(s, false))) continue;
 
 		/* We should be guaranteed that he CAN wake up to get this far, so report
-		 * errors, but don't force it */
+			* errors, but don't force it */
 		bool const success = SetMercAwake(&s, TRUE, FALSE);
 		(void)success;
 		Assert(success);
@@ -7976,8 +7979,8 @@ static void HandlePostAutoresolveMessages(void)
 	if( gsCiviliansEatenByMonsters >= 1 )
 	{
 		AdjustLoyaltyForCivsEatenByMonsters( (UINT8)SECTORX( gsEnemyGainedControlOfSectorID ),
-																				 (UINT8)SECTORY( gsEnemyGainedControlOfSectorID ),
-																				 (UINT8)gsCiviliansEatenByMonsters );
+							(UINT8)SECTORY( gsEnemyGainedControlOfSectorID ),
+							(UINT8)gsCiviliansEatenByMonsters );
 		gsCiviliansEatenByMonsters = -2;
 	}
 	else if( gsCiviliansEatenByMonsters == -2 )
@@ -7998,14 +8001,13 @@ static void HandlePostAutoresolveMessages(void)
 	}
 	else if( gbMilitiaPromotions )
 	{
-		wchar_t str[ 512 ];
-		BuildMilitiaPromotionsString(str, lengthof(str));
+		ST::string str = BuildMilitiaPromotionsString();
 		DoScreenIndependantMessageBox( str, MSG_BOX_FLAG_OK, MapScreenDefaultOkBoxCallback );
 	}
 }
 
 
-wchar_t const* GetMapscreenMercAssignmentString(SOLDIERTYPE const& s)
+ST::string GetMapscreenMercAssignmentString(SOLDIERTYPE const& s)
 {
 	return
 		s.bAssignment == VEHICLE ? pShortVehicleStrings[GetVehicle(s.iVehicleId).ubVehicleType] :
@@ -8013,27 +8015,27 @@ wchar_t const* GetMapscreenMercAssignmentString(SOLDIERTYPE const& s)
 }
 
 
-void GetMapscreenMercLocationString(SOLDIERTYPE const& s, wchar_t* const buf, size_t const n)
+ST::string GetMapscreenMercLocationString(SOLDIERTYPE const& s)
 {
 	if (s.bAssignment == IN_TRANSIT)
 	{ // Show blank
-		wcslcpy(buf, L"--", n);
+		return "--";
 	}
 	else if (s.bAssignment == ASSIGNMENT_POW)
 	{ // POW - location unknown
-		wcslcpy(buf, pPOWStrings[1], n);
+		return pPOWStrings[1];
 	}
 	else
 	{ // Put parentheses around it when he's between sectors
-		swprintf(buf, n, s.fBetweenSectors ? L"(%ls%ls%ls)" : L"%ls%ls%ls", pMapVertIndex[s.sSectorY], pMapHortIndex[s.sSectorX], pMapDepthIndex[s.bSectorZ]);
+		return ST::format(s.fBetweenSectors ? "({}{}{})" : "{}{}{}", pMapVertIndex[s.sSectorY], pMapHortIndex[s.sSectorX], pMapDepthIndex[s.bSectorZ]);
 	}
 }
 
 
-void GetMapscreenMercDestinationString(SOLDIERTYPE const& s, wchar_t* const buf, size_t n)
+ST::string GetMapscreenMercDestinationString(SOLDIERTYPE const& s)
 {
 	/* If dead or POW - has no destination (no longer part of a group, for that
-	 * matter) */
+		* matter) */
 	if (s.bAssignment != ASSIGNMENT_DEAD &&
 			s.bAssignment != ASSIGNMENT_POW  &&
 			s.bLife != 0)
@@ -8062,23 +8064,22 @@ void GetMapscreenMercDestinationString(SOLDIERTYPE const& s, wchar_t* const buf,
 			x = g.ubNextX;
 			y = g.ubNextY;
 		}
-		swprintf(buf, n, L"%ls%ls", pMapVertIndex[y], pMapHortIndex[x]);
+		return ST::format("{}{}", pMapVertIndex[y], pMapHortIndex[x]);
 	}
 	else
 	{
 no_destination:
-		wcscpy(buf, L"");
+		return ST::null;
 	}
 }
 
 
-void GetMapscreenMercDepartureString(SOLDIERTYPE const& s, wchar_t* const buf, size_t const n, UINT8* const text_colour)
+ST::string GetMapscreenMercDepartureString(SOLDIERTYPE const& s, UINT8* text_colour)
 {
 	if ((s.ubWhatKindOfMercAmI != MERC_TYPE__AIM_MERC && s.ubProfile != SLAY) ||
 			s.bLife == 0)
 	{
-		wcslcpy(buf, gpStrategicString[STR_PB_NOTAPPLICABLE_ABBREVIATION], n);
-		return;
+		return gpStrategicString[STR_PB_NOTAPPLICABLE_ABBREVIATION];
 	}
 
 	INT32 mins_remaining = s.iEndofContractTime - GetWorldTotalMin();
@@ -8094,14 +8095,12 @@ void GetMapscreenMercDepartureString(SOLDIERTYPE const& s, wchar_t* const buf, s
 	if (mins_remaining >= MAP_TIME_UNDER_THIS_DISPLAY_AS_HOURS)
 	{ // 3 or more days remain
 		INT32 const days_remaining = mins_remaining / (24*60);
-		swprintf(buf, n, L"%d%ls", days_remaining, gpStrategicString[STR_PB_DAYS_ABBREVIATION]);
 		if (text_colour) *text_colour = FONT_LTGREEN;
-		return;
+		return ST::format("{}{}", days_remaining, gpStrategicString[STR_PB_DAYS_ABBREVIATION]);
 	}
 
 	// less than 3 days
 	INT32 const hours_remaining = mins_remaining > 5 ?  (mins_remaining + 59) / 60 : 0;
-	swprintf(buf, n, L"%d%ls", hours_remaining, gpStrategicString[STR_PB_HOURS_ABBREVIATION]);
 
 	// last 3 days is Red, last 4 hours start flashing red/white!
 	if (text_colour)
@@ -8109,6 +8108,7 @@ void GetMapscreenMercDepartureString(SOLDIERTYPE const& s, wchar_t* const buf, s
 		*text_colour = mins_remaining <= MINS_TO_FLASH_CONTRACT_TIME && fFlashContractFlag ?
 			FONT_WHITE : FONT_RED;
 	}
+	return ST::format("{}{}", hours_remaining, gpStrategicString[STR_PB_HOURS_ABBREVIATION]);
 }
 
 
@@ -8191,7 +8191,7 @@ static void RestorePreviousPaths(void)
 			else
 			{
 				// invalid pSoldier - that guy can't possibly be moving, he's on a non-vehicle assignment!
-				SLOGE(DEBUG_TAG_ASSERTS, "RestorePreviousPaths: invalid pSoldier: %d", pSoldier->ubID);
+				SLOGA("RestorePreviousPaths: invalid pSoldier: %d", pSoldier->ubID);
 				continue;
 			}
 

@@ -1,27 +1,37 @@
 #include "DefaultContentManagerUT.h"
 
-#include "GameRes.h"
 #include "sgp/FileMan.h"
-
-#include "externalized/DefaultContentManager.h"
 #include "externalized/TestUtils.h"
 
-/** Create DefaultContentManager for usage in unit testing. */
-DefaultContentManager * createDefaultCMForTesting()
+DefaultContentManagerUT::DefaultContentManagerUT(GameVersion gameVersion,
+			const ST::string& configFolder,
+			const ST::string& gameResRootPath,
+			const ST::string& externalizedDataPath)
+	: DefaultContentManager(gameVersion, configFolder, gameResRootPath, externalizedDataPath)
+{}
+
+void DefaultContentManagerUT::init()
 {
-  std::string extraDataDir = GetExtraDataDir();
-  std::string configFolderPath = FileMan::joinPaths(extraDataDir, "unittests");
-  std::string gameResRootPath = FileMan::joinPaths(extraDataDir, "unittests");
-  std::string externalizedDataPath = FileMan::joinPaths(extraDataDir, "externalized");
+	// externalized data is used in the tests
+	AddVFSLayer(VFS_ORDER::ASSETS_STRACCIATELLA, m_externalizedDataPath);
+}
 
-  DefaultContentManager *cm;
+rapidjson::Document* DefaultContentManagerUT::_readJsonDataFile(const char* fileName) const
+{
+	return DefaultContentManager::readJsonDataFile(fileName);
+}
 
-  cm = new DefaultContentManager(GV_ENGLISH,
-                                 configFolderPath,
-                                 gameResRootPath, externalizedDataPath);
+DefaultContentManagerUT* DefaultContentManagerUT::createDefaultCMForTesting()
+{
+	ST::string extraDataDir = GetExtraDataDir();
+	ST::string configFolderPath = FileMan::joinPaths(extraDataDir, "unittests");
+	ST::string gameResRootPath = FileMan::joinPaths(extraDataDir, "unittests");
+	ST::string externalizedDataPath = FileMan::joinPaths(extraDataDir, "externalized");
 
-  // we don't load game resources
-  // bacause we don't need them at the moment
+	DefaultContentManagerUT* cm = new DefaultContentManagerUT(GameVersion::ENGLISH,
+					configFolderPath,
+					gameResRootPath, externalizedDataPath);
+	cm->init();
 
-  return cm;
+	return cm;
 }

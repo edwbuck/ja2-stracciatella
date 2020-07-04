@@ -18,6 +18,10 @@
 #include "Video.h"
 #include "MemMan.h"
 
+#include <string_theory/format>
+
+#include <sstream>
+
 
 BOOLEAN	gfAniEditMode = FALSE;
 static UINT16		usStartAnim = 0;
@@ -25,9 +29,9 @@ static UINT8		ubStartHeight = 0;
 static SOLDIERTYPE *pSoldier;
 
 static BOOLEAN fOKFiles = FALSE;
-static UINT8	 ubNumStates = 0;
-static UINT16   *pusStates = NULL;
-static INT8   ubCurLoadedState = 0;
+static UINT8   ubNumStates = 0;
+static UINT16  *pusStates = NULL;
+static INT8    ubCurLoadedState = 0;
 
 
 static void CycleAnimations(void)
@@ -55,9 +59,9 @@ static void BuildListFile(void);
 
 ScreenID AniEditScreenHandle(void)
 {
-  InputAtom					InputEvent;
+	InputAtom		InputEvent;
 	static BOOLEAN		fFirstTime = TRUE;
-	static UINT16			usOldState;
+	static UINT16		usOldState;
 	static BOOLEAN		fToggle = FALSE;
 	static BOOLEAN		fToggle2 = FALSE;
 
@@ -70,7 +74,7 @@ ScreenID AniEditScreenHandle(void)
 		ubStartHeight = ANIM_STAND;
 
 		fFirstTime = FALSE;
-		fToggle		 = FALSE;
+		fToggle    = FALSE;
 		fToggle2   = FALSE;
 		ubCurLoadedState = 0;
 
@@ -89,48 +93,48 @@ ScreenID AniEditScreenHandle(void)
 	EndFrameBufferRender( );
 
 	SetFont( LARGEFONT1 );
-	GDirtyPrint( 0,  0, L"SOLDIER ANIMATION VIEWER");
-	GDirtyPrintF(0, 20, L"Current Animation: %hs %hs", gAnimControl[usStartAnim].zAnimStr, gAnimSurfaceDatabase[pSoldier->usAnimSurface].Filename);
+	GDirtyPrint( 0,  0, "SOLDIER ANIMATION VIEWER");
+	GDirtyPrint(0, 20, ST::format("Current Animation: {} {}", gAnimControl[usStartAnim].zAnimStr, gAnimSurfaceDatabase[pSoldier->usAnimSurface].Filename));
 
 	switch( ubStartHeight )
 	{
-		case ANIM_STAND:  GDirtyPrint(0, 40, L"Current Stance: STAND");  break;
-		case ANIM_CROUCH: GDirtyPrint(0, 40, L"Current Stance: CROUCH"); break;
-		case ANIM_PRONE:  GDirtyPrint(0, 40, L"Current Stance: PRONE");  break;
+		case ANIM_STAND:  GDirtyPrint(0, 40, "Current Stance: STAND");  break;
+		case ANIM_CROUCH: GDirtyPrint(0, 40, "Current Stance: CROUCH"); break;
+		case ANIM_PRONE:  GDirtyPrint(0, 40, "Current Stance: PRONE");  break;
 	}
 
 	if ( fToggle )
 	{
-		GDirtyPrint(0, 60,L"FORCE ON");
+		GDirtyPrint(0, 60, "FORCE ON");
 	}
 
 	if ( fToggle2 )
 	{
-		GDirtyPrint( 0, 70, L"LOADED ORDER ON");
-		GDirtyPrintF(0, 90, L"LOADED ORDER : %hs", gAnimControl[pusStates[ubCurLoadedState]].zAnimStr);
+		GDirtyPrint( 0, 70, "LOADED ORDER ON");
+		GDirtyPrint(0, 90, ST::format("LOADED ORDER : {}", gAnimControl[pusStates[ubCurLoadedState]].zAnimStr));
 	}
 
 	if (DequeueEvent(&InputEvent))
-  {
-    if (InputEvent.usEvent == KEY_DOWN && InputEvent.usParam == SDLK_ESCAPE)
-    {
-			 fFirstTime = TRUE;
+	{
+		if (InputEvent.usEvent == KEY_DOWN && InputEvent.usParam == SDLK_ESCAPE)
+		{
+			fFirstTime = TRUE;
 
-			 gfAniEditMode = FALSE;
+			gfAniEditMode = FALSE;
 
-	  	 fFirstTimeInGameScreen = TRUE;
+			fFirstTimeInGameScreen = TRUE;
 
-			 gTacticalStatus.uiFlags &= (~LOADING_SAVED_GAME);
+			gTacticalStatus.uiFlags &= (~LOADING_SAVED_GAME);
 
-			 if ( fOKFiles )
-			 {
-					 MemFree( pusStates );
-			 }
+			if ( fOKFiles )
+			{
+				delete[] pusStates;
+			}
 
-			 fOKFiles = FALSE;
+				fOKFiles = FALSE;
 
-			 return( GAME_SCREEN );
-    }
+				return( GAME_SCREEN );
+		}
 
 		if (InputEvent.usEvent == KEY_UP && InputEvent.usParam == SDLK_SPACE)
 		{
@@ -150,17 +154,14 @@ ScreenID AniEditScreenHandle(void)
 				switch( ubStartHeight )
 				{
 					case ANIM_STAND:
-
 						usAnim = STANDING;
 						break;
 
 					case ANIM_CROUCH:
-
 						usAnim = CROUCHING;
 						break;
 
 					case ANIM_PRONE:
-
 						usAnim = PRONE;
 						break;
 				}
@@ -193,33 +194,33 @@ ScreenID AniEditScreenHandle(void)
 
 		if (InputEvent.usEvent == KEY_UP && InputEvent.usParam == SDLK_PAGEUP)
 		{
-			 if ( fOKFiles && fToggle2 )
-			 {
-					ubCurLoadedState++;
+			if ( fOKFiles && fToggle2 )
+			{
+				ubCurLoadedState++;
 
-					if ( ubCurLoadedState == ubNumStates )
-					{
-						ubCurLoadedState = 0;
-					}
+				if ( ubCurLoadedState == ubNumStates )
+				{
+					ubCurLoadedState = 0;
+				}
 
-					EVENT_InitNewSoldierAnim( pSoldier, pusStates[ ubCurLoadedState ], 0 , TRUE );
+				EVENT_InitNewSoldierAnim( pSoldier, pusStates[ ubCurLoadedState ], 0 , TRUE );
 
-			 }
+			}
 		}
 
 		if (InputEvent.usEvent == KEY_UP && InputEvent.usParam == SDLK_PAGEDOWN)
 		{
-			 if ( fOKFiles && fToggle2 )
-			 {
-					ubCurLoadedState--;
+			if ( fOKFiles && fToggle2 )
+			{
+				ubCurLoadedState--;
 
-					if ( ubCurLoadedState == 0 )
-					{
-						ubCurLoadedState = ubNumStates;
-					}
+				if ( ubCurLoadedState == 0 )
+				{
+					ubCurLoadedState = ubNumStates;
+				}
 
-					EVENT_InitNewSoldierAnim( pSoldier, pusStates[ ubCurLoadedState ], 0 , TRUE );
-			 }
+				EVENT_InitNewSoldierAnim( pSoldier, pusStates[ ubCurLoadedState ], 0 , TRUE );
+			}
 		}
 
 		if ((InputEvent.usEvent == KEY_UP) && (InputEvent.usParam == 'c' ))
@@ -245,10 +246,10 @@ ScreenID AniEditScreenHandle(void)
 			}
 		}
 
-  }
+	}
 
 
-  return( ANIEDIT_SCREEN );
+	return( ANIEDIT_SCREEN );
 
 }
 
@@ -269,43 +270,40 @@ static UINT16 GetAnimStateFromName(const char* zName)
 
 static void BuildListFile(void)
 {
-	FILE *infoFile;
 	char currFilename[128];
 	int numEntries = 0;
 	int	cnt;
 	UINT16 usState;
-	wchar_t zError[128];
+	ST::string zError;
 
-
-	//Verify the existance of the header text file.
-	infoFile = fopen("anitest.dat", "rb");
-	if(!infoFile)
+	RustPointer<VecU8> vec(Fs_read("anitest.dat"));
+	if (!vec)
 	{
+		RustPointer<char> err(getRustError());
+		SLOGE("BuildListFile: %s", err.get());
 		return;
 	}
-	//count STIs inside header and verify each one's existance.
-	while( !feof( infoFile ) )
-	{
-		fgets( currFilename, 128, infoFile );
-		//valid entry in header, continue on...
+	ST::string data(reinterpret_cast<const char*>(VecU8_as_ptr(vec.get())), VecU8_len(vec.get()));
+	vec.reset(nullptr);
 
+	//count STIs inside header and verify each one's existance.
+	std::stringstream ss(data.c_str());
+	while (ss.getline(currFilename, 128))
+	{
 		numEntries++;
 	}
-	fseek( infoFile, 0, SEEK_SET ); //reset header file
 
 	// Allocate array
-	pusStates = MALLOCN(UINT16, numEntries);
+	pusStates = new UINT16[numEntries]{};
 
 	fOKFiles = TRUE;
 
 	cnt = 0;
-	while( !feof( infoFile ) )
+	ss.str(data.c_str());
+	while (ss.getline(currFilename, 128))
 	{
-		fgets( currFilename, 128, infoFile );
-
 		// Remove newline
-		currFilename[ strlen( currFilename ) -1 ] = '\0';
-		currFilename[ strlen( currFilename ) -1 ] = '\0';
+		currFilename[ strcspn( currFilename, "\r\n" ) ] = '\0';
 
 		usState = GetAnimStateFromName( currFilename );
 
@@ -317,11 +315,9 @@ static void BuildListFile(void)
 		}
 		else
 		{
-			swprintf(zError, lengthof(zError), L"Animation str %hs is not known: ", currFilename);
+			zError = ST::format("Animation str {} is not known: ", currFilename);
 			DoMessageBox(MSG_BOX_BASIC_STYLE, zError, ANIEDIT_SCREEN, MSG_BOX_FLAG_YESNO, NULL, NULL);
-			fclose( infoFile );
 			return;
 		}
 	}
-	fclose(infoFile);
 }

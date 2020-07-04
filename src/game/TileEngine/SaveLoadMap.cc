@@ -24,7 +24,7 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
-#define			NUM_REVEALED_BYTES			3200
+#define NUM_REVEALED_BYTES 3200
 
 extern BOOLEAN gfLoadingExitGrids;
 
@@ -39,7 +39,7 @@ UINT8				*gpRevealedMap;
 
 static void SaveModifiedMapStructToMapTempFile(MODIFY_MAP const* const pMap, INT16 const sSectorX, INT16 const sSectorY, INT8 const bSectorZ)
 {
-	CHAR8		zMapName[ 128 ];
+	CHAR8 zMapName[ 128 ];
 
 	GetMapTempFileName( SF_MAP_MODIFICATIONS_TEMP_FILE_EXISTS, zMapName, sSectorX, sSectorY, bSectorZ );
 
@@ -60,9 +60,9 @@ static void SetOpenableStructStatusFromMapTempFile(UINT32 uiMapIndex, BOOLEAN fO
 
 void LoadAllMapChangesFromMapTempFileAndApplyThem()
 {
-	CHAR8		zMapName[ 128 ];
-	UINT32	uiNumberOfElementsSavedBackToFile = 0;	// added becuase if no files get saved back to disk, the flag needs to be erased
-	UINT32	cnt;
+	CHAR8      zMapName[ 128 ];
+	UINT32     uiNumberOfElementsSavedBackToFile = 0; // added becuase if no files get saved back to disk, the flag needs to be erased
+	UINT32     cnt;
 	MODIFY_MAP *pMap;
 
 	GetMapTempFileName( SF_MAP_MODIFICATIONS_TEMP_FILE_EXISTS, zMapName, gWorldSectorX, gWorldSectorY, gbWorldSectorZ );
@@ -220,7 +220,7 @@ void LoadAllMapChangesFromMapTempFileAndApplyThem()
 				break;
 
 			default:
-				SLOGE(DEBUG_TAG_ASSERTS, "Map Type not in switch when loading map changes from temp file");
+				SLOGA("Map Type not in switch when loading map changes from temp file");
 				break;
 		}
 
@@ -243,7 +243,7 @@ static void AddToMapTempFile(UINT32 const uiMapIndex, UINT16 const usIndex, UINT
 	UINT16 const usSubIndex = GetSubIndexFromTileIndex(usIndex);
 
 	MODIFY_MAP m;
-	memset(&m, 0, sizeof(m));
+	m = MODIFY_MAP{};
 	m.usGridNo        = uiMapIndex;
 	m.usImageType     = uiType;
 	m.usSubImageIndex = usSubIndex;
@@ -298,7 +298,7 @@ void SaveBloodSmellAndRevealedStatesFromMapToTempFile()
 	UINT16	cnt;
 	STRUCTURE * pStructure;
 
-	gpRevealedMap = MALLOCNZ(UINT8, NUM_REVEALED_BYTES);
+	gpRevealedMap = new UINT8[NUM_REVEALED_BYTES]{};
 
 	//Loop though all the map elements
 	for ( cnt = 0; cnt < WORLD_MAX; cnt++ )
@@ -306,7 +306,7 @@ void SaveBloodSmellAndRevealedStatesFromMapToTempFile()
 		//if there is either blood or a smell on the tile, save it
 		if( gpWorldLevelData[cnt].ubBloodInfo || gpWorldLevelData[cnt].ubSmellInfo )
 		{
-			memset( &Map, 0, sizeof( MODIFY_MAP ) );
+			Map = MODIFY_MAP{};
 
 
 			// Save the BloodInfo in the bottom byte and the smell info in the upper byte
@@ -344,7 +344,7 @@ void SaveBloodSmellAndRevealedStatesFromMapToTempFile()
 					if( pCurrent->sCubeOffset != 0 )
 						ubLevel |= ubBitToSet;
 
-					memset( &Map, 0, sizeof( MODIFY_MAP ) );
+					Map = MODIFY_MAP{};
 
 					// Save the Damaged value
 					Map.usGridNo	= cnt;
@@ -415,7 +415,7 @@ void SaveRevealedStatusArrayToRevealedTempFile(INT16 const sSectorX, INT16 const
 
 	SetSectorFlag( sSectorX, sSectorY, bSectorZ, SF_REVEALED_STATUS_TEMP_FILE_EXISTS );
 
-	MemFree( gpRevealedMap );
+	delete[] gpRevealedMap;
 	gpRevealedMap = NULL;
 }
 
@@ -436,7 +436,7 @@ void LoadRevealedStatusArrayFromRevealedTempFile()
 		AutoSGPFile hFile(GCM->openGameResForReading(zMapName));
 
 		Assert( gpRevealedMap == NULL );
-		gpRevealedMap = MALLOCNZ(UINT8, NUM_REVEALED_BYTES);
+		gpRevealedMap = new UINT8[NUM_REVEALED_BYTES]{};
 
 		// Load the Reveal map array structure
 		FileRead(hFile, gpRevealedMap, NUM_REVEALED_BYTES);
@@ -445,7 +445,7 @@ void LoadRevealedStatusArrayFromRevealedTempFile()
 	//Loop through and set the bits in the map that are revealed
 	SetMapRevealedStatus();
 
-	MemFree( gpRevealedMap );
+	delete[] gpRevealedMap;
 	gpRevealedMap = NULL;
 }
 
@@ -540,7 +540,7 @@ void AddStructToUnLoadedMapTempFile( UINT32 uiMapIndex, UINT16 usIndex, INT16 sS
 	const UINT32 uiType     = GetTileType(usIndex);
 	const UINT16 usSubIndex = GetSubIndexFromTileIndex(usIndex);
 
-	memset( &Map, 0, sizeof( MODIFY_MAP ) );
+	Map = MODIFY_MAP{};
 
 	Map.usGridNo = (UINT16)uiMapIndex;
 //	Map.usIndex		= usIndex;
@@ -564,7 +564,7 @@ void RemoveStructFromUnLoadedMapTempFile( UINT32 uiMapIndex, UINT16 usIndex, INT
 	const UINT32 uiType     = GetTileType(usIndex);
 	const UINT16 usSubIndex = GetSubIndexFromTileIndex(usIndex);
 
-	memset( &Map, 0, sizeof( MODIFY_MAP ) );
+	Map = MODIFY_MAP{};
 
 	Map.usGridNo	= (UINT16)uiMapIndex;
 //	Map.usIndex			= usIndex;
@@ -583,14 +583,14 @@ void AddExitGridToMapTempFile( UINT16 usGridNo, EXITGRID *pExitGrid, INT16 sSect
 
 	if (!ApplyMapChangesToMapTempFile::IsActive())
 	{
-		SLOGD(DEBUG_TAG_SAVELOAD, "Called AddExitGridToMapTempFile() without holding ApplyMapChangesToMapTempFile");
+		SLOGD("Called AddExitGridToMapTempFile() without holding ApplyMapChangesToMapTempFile");
 		return;
 	}
 
 	if( gTacticalStatus.uiFlags & LOADING_SAVED_GAME )
 		return;
 
-	memset( &Map, 0, sizeof( MODIFY_MAP ) );
+	Map = MODIFY_MAP{};
 
 	Map.usGridNo = usGridNo;
 //	Map.usIndex		= pExitGrid->ubGotoSectorX;
@@ -660,7 +660,7 @@ static void AddOpenableStructStatusToMapTempFile(UINT32 uiMapIndex, BOOLEAN fOpe
 {
 	MODIFY_MAP Map;
 
-	memset( &Map, 0, sizeof( MODIFY_MAP ) );
+	Map = MODIFY_MAP{};
 
 	Map.usGridNo = (UINT16)uiMapIndex;
 	Map.usImageType = fOpened;
@@ -674,7 +674,7 @@ void AddWindowHitToMapTempFile( UINT32 uiMapIndex )
 {
 	MODIFY_MAP Map;
 
-	memset( &Map, 0, sizeof( MODIFY_MAP ) );
+	Map = MODIFY_MAP{};
 
 	Map.usGridNo = (UINT16)uiMapIndex;
 	Map.ubType = SLM_WINDOW_HIT;
@@ -694,16 +694,16 @@ static bool ModifyWindowStatus(GridNo const grid_no)
 
 static void SetOpenableStructStatusFromMapTempFile(UINT32 uiMapIndex, BOOLEAN fOpened)
 {
-	STRUCTURE * pStructure;
-	STRUCTURE * pBase;
-	BOOLEAN			fStatusOnTheMap;
-  INT16     sBaseGridNo = (INT16)uiMapIndex;
+	STRUCTURE *pStructure;
+	STRUCTURE *pBase;
+	BOOLEAN   fStatusOnTheMap;
+	INT16     sBaseGridNo = (INT16)uiMapIndex;
 
 	pStructure = FindStructure( (UINT16)uiMapIndex, STRUCTURE_OPENABLE );
 
 	if( pStructure == NULL )
 	{
-		SLOGD(DEBUG_TAG_SAVELOAD, "SetOpenableStructStatusFromMapTempFile( %d, %d ) failed to find the openable struct.", uiMapIndex, fOpened );
+		SLOGD("SetOpenableStructStatusFromMapTempFile( %d, %d ) failed to find the openable struct.", uiMapIndex, fOpened );
 		return;
 	}
 
@@ -715,10 +715,10 @@ static void SetOpenableStructStatusFromMapTempFile(UINT32 uiMapIndex, BOOLEAN fO
 		pBase = FindBaseStructure( pStructure );
 
 		// Get LEVELNODE for struct and remove!
-    if ( pBase )
-    {
-		  sBaseGridNo = pBase->sGridNo;
-    }
+		if (pBase)
+		{
+			sBaseGridNo = pBase->sGridNo;
+		}
 
 		if (!SwapStructureForPartner(pStructure))
 		{
@@ -726,8 +726,8 @@ static void SetOpenableStructStatusFromMapTempFile(UINT32 uiMapIndex, BOOLEAN fO
 		}
 
 		// Adjust visiblity of any item pools here....
-    // ATE: Nasty bug here - use base gridno for structure for items!
-    // since items always drop to base gridno in AddItemToPool
+		// ATE: Nasty bug here - use base gridno for structure for items!
+		// since items always drop to base gridno in AddItemToPool
 		if (fOpened)
 		{
 			// We are open, make un-hidden if so....

@@ -3,6 +3,9 @@
 
 #include "Types.h"
 
+#include <string_theory/string>
+
+
 // INDIVIDUAL CURSORS
 
 enum CursorTypeDefines
@@ -54,7 +57,7 @@ enum CursorTypeDefines
 	CURSOR_KNIFE_NOGO_ON2,
 	CURSOR_CROSS_REG,
 	CURSOR_CROSS_ACTIVE,
-  CURSOR_WWW,
+	CURSOR_WWW,
 	CURSOR_LAPTOP_SCREEN,
 	CURSOR_IBEAM,
 	CURSOR_LOOK,
@@ -154,8 +157,8 @@ enum CursorTypeDefines
 
 	CURSOR_STRATEGIC_BULLSEYE,
 	CURSOR_JUMP_OVER,
-  CURSOR_FUEL,
-  CURSOR_FUEL_RED
+	CURSOR_FUEL,
+	CURSOR_FUEL_RED
 };
 
 enum CursorSurfaceDefines
@@ -182,7 +185,7 @@ enum CursorSurfaceDefines
 	C_KNIFE2,
 	C_CROSS1,
 	C_CROSS2,
-  C_WWW,
+	C_WWW,
 	C_LAPTOPSCREEN,
 	C_IBEAM,
 	C_LOOK,
@@ -244,11 +247,11 @@ void SetCursorFlags(UINT32 uiCursor, UINT8 ubFlags);
 void RemoveCursorFlags(UINT32 uiCursor, UINT8 ubFlags);
 
 // The string must be persistent
-void SetHitLocationText(const wchar_t* Text);
-void SetIntTileLocationText(const wchar_t* Text);
-void SetIntTileLocation2Text(const wchar_t* Text);
+void SetHitLocationText(const ST::string& str);
+void SetIntTileLocationText(const ST::string& str);
+void SetIntTileLocation2Text(const ST::string& str);
 
-const wchar_t* GetIntTileLocationText(void);
-const wchar_t* GetIntTileLocation2Text(void);
+const ST::string& GetIntTileLocationText(void);
+const ST::string& GetIntTileLocation2Text(void);
 
 #endif

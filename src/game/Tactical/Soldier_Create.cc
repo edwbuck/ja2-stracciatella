@@ -36,33 +36,39 @@
 #include "AI.h"
 #include "Strategic_Mines.h"
 #include "MapScreen.h"
-#include <math.h>
 #include "JAScreens.h"
 #include "SoundMan.h"
 #include "MemMan.h"
 #include "Debug.h"
 #include "ScreenIDs.h"
+#include "WorldDef.h"
 
 #include "ContentManager.h"
 #include "GameInstance.h"
 #include "policy/GamePolicy.h"
+#include "externalized/strategic/BloodCatSpawnsModel.h"
 
+#include <string_theory/string>
+
+#include <algorithm>
+#include <iterator>
+#include <math.h>
 
 // THESE 3 DIFFICULTY FACTORS MUST ALWAYS ADD UP TO 100% EXACTLY!!!
-#define DIFF_FACTOR_PLAYER_PROGRESS			50
-#define DIFF_FACTOR_PALACE_DISTANCE			30
-#define DIFF_FACTOR_GAME_DIFFICULTY			20
+#define DIFF_FACTOR_PLAYER_PROGRESS		50
+#define DIFF_FACTOR_PALACE_DISTANCE		30
+#define DIFF_FACTOR_GAME_DIFFICULTY		20
 
 // additional difficulty modifiers
-#define DIFF_MODIFIER_SOME_PROGRESS			+5
-#define DIFF_MODIFIER_NO_INCOME					-5
+#define DIFF_MODIFIER_SOME_PROGRESS		+5
+#define DIFF_MODIFIER_NO_INCOME		-5
 #define DIFF_MODIFIER_DRASSEN_MILITIA		+10
 
 
-#define PALACE_SECTOR_X 3
-#define PALACE_SECTOR_Y 16
+#define PALACE_SECTOR_X			3
+#define PALACE_SECTOR_Y			16
 
-#define MAX_PALACE_DISTANCE		20
+#define MAX_PALACE_DISTANCE			20
 
 
 BOOLEAN gfProfiledEnemyAdded = FALSE;
@@ -97,24 +103,24 @@ UINT8 gubItemDroppableFlag[NUM_INV_SLOTS] =
 
 void RandomizeNewSoldierStats( SOLDIERCREATE_STRUCT *pCreateStruct )
 {
-	pCreateStruct->bLifeMax  							= (UINT8)Random(50)+50;
-	pCreateStruct->bLife	  							= pCreateStruct->bLifeMax;
-	pCreateStruct->bAgility								= (UINT8)Random(50)+50;
-	pCreateStruct->bDexterity							= (UINT8)Random(50)+50;
-	pCreateStruct->bExpLevel							= 1 + (UINT8)Random(4);
+	pCreateStruct->bLifeMax = (UINT8)Random(50)+50;
+	pCreateStruct->bLife = pCreateStruct->bLifeMax;
+	pCreateStruct->bAgility = (UINT8)Random(50)+50;
+	pCreateStruct->bDexterity = (UINT8)Random(50)+50;
+	pCreateStruct->bExpLevel = 1 + (UINT8)Random(4);
 
 	// Randomize skills (for now)
-	pCreateStruct->bMarksmanship					= (UINT8)Random(50)+50;
-	pCreateStruct->bMedical								= (UINT8)Random(50)+50;
-	pCreateStruct->bMechanical						= (UINT8)Random(50)+50;
-	pCreateStruct->bExplosive							= (UINT8)Random(50)+50;
-	pCreateStruct->bLeadership						= (UINT8)Random(50)+50;
-	pCreateStruct->bStrength							= (UINT8)Random(50)+50;
-	pCreateStruct->bWisdom								= (UINT8)Random(50)+50;
-	pCreateStruct->bAttitude							= (INT8) Random( MAXATTITUDES );
-	pCreateStruct->bOrders								= FARPATROL;
-	pCreateStruct->bMorale								= 50;
-	pCreateStruct->bAIMorale							= MORALE_FEARLESS;
+	pCreateStruct->bMarksmanship = (UINT8)Random(50)+50;
+	pCreateStruct->bMedical = (UINT8)Random(50)+50;
+	pCreateStruct->bMechanical = (UINT8)Random(50)+50;
+	pCreateStruct->bExplosive = (UINT8)Random(50)+50;
+	pCreateStruct->bLeadership = (UINT8)Random(50)+50;
+	pCreateStruct->bStrength = (UINT8)Random(50)+50;
+	pCreateStruct->bWisdom = (UINT8)Random(50)+50;
+	pCreateStruct->bAttitude = (INT8) Random( MAXATTITUDES );
+	pCreateStruct->bOrders = FARPATROL;
+	pCreateStruct->bMorale = 50;
+	pCreateStruct->bAIMorale = MORALE_FEARLESS;
 }
 
 
@@ -127,9 +133,9 @@ static void TacticalCopySoldierFromProfile(SOLDIERTYPE&, SOLDIERCREATE_STRUCT co
 SOLDIERTYPE* TacticalCreateSoldier(SOLDIERCREATE_STRUCT const& c)
 try
 {
-	/* Kris: Huge no no! See the header file for description of static detailed
-	 * placements. If this expression ever evaluates to true, then it will expose
-	 * serious problems. Simply returning won't help. */
+	// Kris: Huge no no! See the header file for description of static detailed
+	// placements. If this expression ever evaluates to true, then it will expose
+	// serious problems. Simply returning won't help.
 	Assert(!c.fStatic);
 
 	ProfileID const profile = c.ubProfile;
@@ -141,7 +147,7 @@ try
 	if (guiCurrentScreen == AUTORESOLVE_SCREEN)
 	{
 		// We are creating a dynamically allocated soldier for autoresolve.
-		s  = MALLOC(SOLDIERTYPE);
+		s  = new SOLDIERTYPE{};
 		id = 255;
 	}
 	else
@@ -265,21 +271,22 @@ try
 		if (s->ubBodyType == BLOODCAT)
 		{
 			s->bNeutral = TRUE;
-		} // otherwise (creatures) false
+		}
+		// otherwise (creatures) false
 	}
 
-	/* If not given a profile num, set a randomized default battle sound set and
-	 * then adjust it according to body type */
+	// If not given a profile num, set a randomized default battle sound set and
+	// then adjust it according to body type
 	if (profile == NO_PROFILE)
 	{
 		s->ubBattleSoundID = Random(3);
 	}
 
 	// ATE: TEMP: No enemy women mercs (unless elite)!
-	if (profile           == NO_PROFILE &&
-			team_id           == ENEMY_TEAM &&
-			s->ubBodyType     == REGFEMALE  &&
-			s->ubSoldierClass != SOLDIER_CLASS_ELITE)
+	if (profile == NO_PROFILE &&
+		team_id == ENEMY_TEAM &&
+		s->ubBodyType == REGFEMALE &&
+		s->ubSoldierClass != SOLDIER_CLASS_ELITE)
 	{
 		s->ubBodyType = REGMALE + Random(3);
 	}
@@ -290,9 +297,8 @@ try
 		s->uiAnimSubFlags |= SUB_ANIM_BIGGUYTHREATENSTANCE;
 	}
 
-	/* For inventory, look for any face class items that may be located in the big
-	 * pockets and if found, move that item to a face slot and clear the pocket!
-	 */
+	// For inventory, look for any face class items that may be located in the big
+	// pockets and if found, move that item to a face slot and clear the pocket!
 	if (team_id != OUR_TEAM)
 	{
 		bool second_face_item = false;
@@ -302,22 +308,23 @@ try
 			if (!(GCM->getItem(o.usItem)->isFace())) continue;
 
 			if (!second_face_item)
-			{ /* Don't check for compatibility, automatically assume there are no head
-				 * positions filled. */
+			{
+				// Don't check for compatibility, automatically assume there are no head
+				// positions filled.
 				second_face_item = true;
 				s->inv[HEAD1POS] = o;
-				memset(&o, 0, sizeof(o));
+				o = OBJECTTYPE{};
 			}
 			else if (CompatibleFaceItem(s->inv[HEAD1POS].usItem, o.usItem))
 			{
 				s->inv[HEAD2POS] = o;
-				memset(&o, 0, sizeof(o));
+				o = OBJECTTYPE{};
 				break;
 			}
 		}
 
-		/* If an army guy has camouflage, roll to determine whether they start
-		 * camouflaged */
+		// If an army guy has camouflage, roll to determine whether they start
+		// camouflaged
 		if (guiCurrentScreen != AUTORESOLVE_SCREEN &&
 				team_id == ENEMY_TEAM                  &&
 				FindObj(s, CAMOUFLAGEKIT) != NO_SLOT   &&
@@ -327,10 +334,10 @@ try
 		}
 	}
 
-	/* Set some flags, actions based on what body type we are.
-	 * NOTE:  Be very careful what you do in this section!
-	 * It is possible to override editor settings, especially orders and attitude.
-	 * In those cases, you can check for !gfEditMode (not in editor). */
+	// Set some flags, actions based on what body type we are.
+	// NOTE:  Be very careful what you do in this section!
+	// It is possible to override editor settings, especially orders and attitude.
+	// In those cases, you can check for !gfEditMode (not in editor).
 	switch (s->ubBodyType)
 	{
 		case HATKIDCIV:
@@ -447,7 +454,7 @@ try
 
 	if (c.fOnRoof && FlatRoofAboveGridNo(c.sInsertionGridNo))
 	{
-		SetSoldierHeight(s, 58.0);
+		SetSoldierHeight(s, SECOND_LEVEL_Z_OFFSET);
 	}
 
 	AddManToTeam(team_id);
@@ -466,8 +473,8 @@ SOLDIERTYPE* TacticalCreateSoldierFromExisting(const SOLDIERTYPE* const existing
 	s = *existing;
 
 	if (s.ubProfile != NO_PROFILE &&
-			s.bTeam     == OUR_TEAM   &&
-			!(s.uiStatusFlags & SOLDIER_VEHICLE))
+		s.bTeam == OUR_TEAM &&
+		!(s.uiStatusFlags & SOLDIER_VEHICLE))
 	{
 		InitSoldierFace(s);
 	}
@@ -487,16 +494,16 @@ static void TacticalCopySoldierFromProfile(SOLDIERTYPE& s, SOLDIERCREATE_STRUCT 
 	ProfileID         const  pid = c.ubProfile;
 	MERCPROFILESTRUCT const& p   = GetProfile(pid);
 
-	SET_PALETTEREP_ID(s.HeadPal,  p.HAIR);
-	SET_PALETTEREP_ID(s.VestPal,  p.VEST);
-	SET_PALETTEREP_ID(s.SkinPal,  p.SKIN);
-	SET_PALETTEREP_ID(s.PantsPal, p.PANTS);
+	s.HeadPal  = p.HAIR;
+	s.VestPal  = p.VEST;
+	s.SkinPal  = p.SKIN;
+	s.PantsPal = p.PANTS;
 
 	s.ubProfile       = pid;
 	s.ubScheduleID    = c.ubScheduleID;
 	s.bHasKeys        = c.fHasKeys;
 
-	wcscpy(s.name, p.zNickname);
+	s.name = p.zNickname;
 
 	s.bLife           = p.bLife;
 	s.bLifeMax        = p.bLifeMax;
@@ -525,7 +532,8 @@ static void TacticalCopySoldierFromProfile(SOLDIERTYPE& s, SOLDIERCREATE_STRUCT 
 	memcpy(s.usPatrolGrid, c.sPatrolGrid, sizeof(s.usPatrolGrid));
 
 	if (HAS_SKILL_TRAIT(&s, CAMOUFLAGED))
-	{ // Set camouflaged to 100 automatically
+	{
+		// Set camouflaged to 100 automatically
 		s.bCamo = 100;
 	}
 }
@@ -534,8 +542,8 @@ static void TacticalCopySoldierFromProfile(SOLDIERTYPE& s, SOLDIERCREATE_STRUCT 
 enum { PINKSKIN, TANSKIN, DARKSKIN, BLACKSKIN, NUMSKINS };
 enum {
 	WHITEHEAD, BLACKHEAD, //black skin (only this line )
-	BROWNHEAD,						//dark skin (this line plus all above)
-	BLONDEHEAD, REDHEAD,   //pink/tan skin (this line plus all above )
+	BROWNHEAD, //dark skin (this line plus all above)
+	BLONDEHEAD, REDHEAD, //pink/tan skin (this line plus all above )
 	NUMHEADS
 };
 
@@ -568,16 +576,15 @@ static INT32 ChooseHairColor(SOLDIERTYPE* pSoldier, INT32 skin)
 			else
 			{
 				hair = WHITEHEAD;
-				if( pSoldier->ubBodyType == REGFEMALE ||
-					  pSoldier->ubBodyType == MINICIV ||
-						pSoldier->ubBodyType == DRESSCIV ||
-						pSoldier->ubBodyType == HATKIDCIV ||
-						pSoldier->ubBodyType == KIDCIV )
+				if(pSoldier->ubBodyType == REGFEMALE ||
+					pSoldier->ubBodyType == MINICIV ||
+					pSoldier->ubBodyType == DRESSCIV ||
+					pSoldier->ubBodyType == HATKIDCIV ||
+					pSoldier->ubBodyType == KIDCIV)
 				{
 					hair = Random( NUMHEADS - 1 ) + 1;
 				}
 			}
-			hair = Random( NUMHEADS );
 			break;
 		case DARKSKIN:
 			if( iRandom < 35 )
@@ -591,11 +598,11 @@ static INT32 ChooseHairColor(SOLDIERTYPE* pSoldier, INT32 skin)
 			else
 			{
 				hair = WHITEHEAD;
-				if( pSoldier->ubBodyType == REGFEMALE ||
-					  pSoldier->ubBodyType == MINICIV ||
-						pSoldier->ubBodyType == DRESSCIV ||
-						pSoldier->ubBodyType == HATKIDCIV ||
-						pSoldier->ubBodyType == KIDCIV )
+				if(pSoldier->ubBodyType == REGFEMALE ||
+					pSoldier->ubBodyType == MINICIV ||
+					pSoldier->ubBodyType == DRESSCIV ||
+					pSoldier->ubBodyType == HATKIDCIV ||
+					pSoldier->ubBodyType == KIDCIV)
 				{
 					hair = Random( 2 ) + 1;
 				}
@@ -609,18 +616,18 @@ static INT32 ChooseHairColor(SOLDIERTYPE* pSoldier, INT32 skin)
 			else
 			{
 				hair = WHITEHEAD;
-				if( pSoldier->ubBodyType == REGFEMALE ||
-					  pSoldier->ubBodyType == MINICIV ||
-						pSoldier->ubBodyType == DRESSCIV ||
-						pSoldier->ubBodyType == HATKIDCIV ||
-						pSoldier->ubBodyType == KIDCIV )
+				if(pSoldier->ubBodyType == REGFEMALE ||
+					pSoldier->ubBodyType == MINICIV ||
+					pSoldier->ubBodyType == DRESSCIV ||
+					pSoldier->ubBodyType == HATKIDCIV ||
+					pSoldier->ubBodyType == KIDCIV)
 				{
 					hair = BLACKHEAD;
 				}
 			}
 			break;
 		default:
-			SLOGE(DEBUG_TAG_ASSERTS, "Skin type not accounted for." );
+			SLOGA("Skin type not accounted for." );
 			break;
 	}
 	if( pSoldier->ubBodyType == CRIPPLECIV )
@@ -645,19 +652,19 @@ static void GeneratePaletteForSoldier(SOLDIERTYPE* pSoldier, UINT8 ubSoldierClas
 	switch( skin )
 	{
 		case PINKSKIN:
-			SET_PALETTEREP_ID( pSoldier->SkinPal,  "PINKSKIN" );
+			pSoldier->SkinPal = "PINKSKIN";
 			break;
 		case TANSKIN:
-			SET_PALETTEREP_ID( pSoldier->SkinPal,  "TANSKIN" );
+			pSoldier->SkinPal = "TANSKIN";
 			break;
 		case DARKSKIN:
-			SET_PALETTEREP_ID( pSoldier->SkinPal,  "DARKSKIN" );
+			pSoldier->SkinPal = "DARKSKIN";
 			break;
 		case BLACKSKIN:
-			SET_PALETTEREP_ID( pSoldier->SkinPal,  "BLACKSKIN" );
+			pSoldier->SkinPal = "BLACKSKIN";
 			break;
 		default:
-			SLOGE(DEBUG_TAG_ASSERTS, "Skin type not accounted for." );
+			SLOGA("Skin type not accounted for." );
 			break;
 	}
 
@@ -665,50 +672,52 @@ static void GeneratePaletteForSoldier(SOLDIERTYPE* pSoldier, UINT8 ubSoldierClas
 	hair = ChooseHairColor( pSoldier, skin );
 	switch( hair )
 	{
-		case BROWNHEAD: SET_PALETTEREP_ID( pSoldier->HeadPal, "BROWNHEAD" ); break;
-		case BLACKHEAD: SET_PALETTEREP_ID( pSoldier->HeadPal, "BLACKHEAD" ); break;
-		case WHITEHEAD: SET_PALETTEREP_ID( pSoldier->HeadPal, "WHITEHEAD" ); break;
-		case BLONDEHEAD:SET_PALETTEREP_ID( pSoldier->HeadPal, "BLONDHEAD" ); break;
-		case REDHEAD:   SET_PALETTEREP_ID( pSoldier->HeadPal, "REDHEAD"   ); break;
-		default:  SLOGE(DEBUG_TAG_ASSERTS, "Hair type not accounted for.");						 break;
+		case BROWNHEAD:  pSoldier->HeadPal = "BROWNHEAD"; break;
+		case BLACKHEAD:  pSoldier->HeadPal = "BLACKHEAD"; break;
+		case WHITEHEAD:  pSoldier->HeadPal = "WHITEHEAD"; break;
+		case BLONDEHEAD: pSoldier->HeadPal = "BLONDHEAD"; break;
+		case REDHEAD:    pSoldier->HeadPal = "REDHEAD"  ; break;
+		default:
+			SLOGA("Hair type not accounted for.");
+			break;
 	}
 
 	// OK, After skin, hair we could have a forced color scheme.. use here if so
 	switch( ubSoldierClass )
 	{
 		case SOLDIER_CLASS_ADMINISTRATOR:
-			SET_PALETTEREP_ID( pSoldier->VestPal, "YELLOWVEST"  );
-			SET_PALETTEREP_ID( pSoldier->PantsPal, "GREENPANTS"   );
+			pSoldier->VestPal  = "YELLOWVEST";
+			pSoldier->PantsPal = "GREENPANTS";
 			pSoldier->ubSoldierClass = ubSoldierClass;
 			return;
 		case SOLDIER_CLASS_ELITE:
-			SET_PALETTEREP_ID( pSoldier->VestPal, "BLACKSHIRT"  );
-			SET_PALETTEREP_ID( pSoldier->PantsPal, "BLACKPANTS"   );
+			pSoldier->VestPal  = "BLACKSHIRT";
+			pSoldier->PantsPal = "BLACKPANTS";
 			pSoldier->ubSoldierClass = ubSoldierClass;
 			return;
 		case SOLDIER_CLASS_ARMY:
-			SET_PALETTEREP_ID( pSoldier->VestPal, "REDVEST"  );
-			SET_PALETTEREP_ID( pSoldier->PantsPal, "GREENPANTS"   );
+			pSoldier->VestPal  = "REDVEST";
+			pSoldier->PantsPal = "GREENPANTS";
 			pSoldier->ubSoldierClass = ubSoldierClass;
 			return;
 		case SOLDIER_CLASS_GREEN_MILITIA:
-			SET_PALETTEREP_ID( pSoldier->VestPal, "GREENVEST"  );
-			SET_PALETTEREP_ID( pSoldier->PantsPal, "BEIGEPANTS"   );
+			pSoldier->VestPal  = "GREENVEST";
+			pSoldier->PantsPal = "BEIGEPANTS";
 			pSoldier->ubSoldierClass = ubSoldierClass;
 			return;
 		case SOLDIER_CLASS_REG_MILITIA:
-			SET_PALETTEREP_ID( pSoldier->VestPal, "JEANVEST"  );
-			SET_PALETTEREP_ID( pSoldier->PantsPal, "BEIGEPANTS"   );
+			pSoldier->VestPal  = "JEANVEST";
+			pSoldier->PantsPal = "BEIGEPANTS";
 			pSoldier->ubSoldierClass = ubSoldierClass;
 			return;
 		case SOLDIER_CLASS_ELITE_MILITIA:
-			SET_PALETTEREP_ID( pSoldier->VestPal, "BLUEVEST"  );
-			SET_PALETTEREP_ID( pSoldier->PantsPal, "BEIGEPANTS"   );
+			pSoldier->VestPal  = "BLUEVEST";
+			pSoldier->PantsPal = "BEIGEPANTS";
 			pSoldier->ubSoldierClass = ubSoldierClass;
 			return;
 		case SOLDIER_CLASS_MINER:
-			SET_PALETTEREP_ID( pSoldier->VestPal, "greyVEST"  );
-			SET_PALETTEREP_ID( pSoldier->PantsPal, "BEIGEPANTS"   );
+			pSoldier->VestPal  = "greyVEST";
+			pSoldier->PantsPal = "BEIGEPANTS";
 			pSoldier->ubSoldierClass = ubSoldierClass;
 			return;
 	}
@@ -717,37 +726,40 @@ static void GeneratePaletteForSoldier(SOLDIERTYPE* pSoldier, UINT8 ubSoldierClas
 	//merc clothing scheme is much larger and general and is an exclusive superset
 	//of the civilian clothing scheme which means the civilians will choose the
 	//merc clothing scheme often ( actually 60% of the time ).
-	if( !pSoldier->PantsPal[0] || !pSoldier->VestPal[0] )
+	if (pSoldier->PantsPal.empty() || pSoldier->VestPal.empty())
 	{
 		fMercClothingScheme = TRUE;
 		if( pSoldier->bTeam == CIV_TEAM && Random( 100 ) < 40 )
-		{ //40% chance of using cheezy civilian colors
+		{
+			//40% chance of using cheezy civilian colors
 			fMercClothingScheme = FALSE;
 		}
 		if( !fMercClothingScheme ) //CHEEZY CIVILIAN COLORS
 		{
 			if( Random( 100 ) < 30 )
-			{ //30% chance that the civilian will choose a gaudy yellow shirt with pants.
-				SET_PALETTEREP_ID( pSoldier->VestPal, "GYELLOWSHIRT" );
+			{
+				//30% chance that the civilian will choose a gaudy yellow shirt with pants.
+				pSoldier->VestPal = "GYELLOWSHIRT";
 				switch( Random( 3 ) )
 				{
-					case 0:	SET_PALETTEREP_ID( pSoldier->PantsPal, "TANPANTS"   ); break;
-					case 1: SET_PALETTEREP_ID( pSoldier->PantsPal, "BEIGEPANTS" ); break;
-					case 2: SET_PALETTEREP_ID( pSoldier->PantsPal, "GREENPANTS" ); break;
+					case 0:	pSoldier->PantsPal = "TANPANTS"  ; break;
+					case 1:	pSoldier->PantsPal = "BEIGEPANTS"; break;
+					case 2:	pSoldier->PantsPal = "GREENPANTS"; break;
 				}
 			}
 			else
-			{ //70% chance that the civilian will choose jeans with a shirt.
-				SET_PALETTEREP_ID( pSoldier->PantsPal, "JEANPANTS" );
+			{
+				//70% chance that the civilian will choose jeans with a shirt.
+				pSoldier->PantsPal = "JEANPANTS";
 				switch( Random( 7 ) )
 				{
-					case 0:	SET_PALETTEREP_ID( pSoldier->VestPal, "WHITEVEST"   ); break;
-					case 1: SET_PALETTEREP_ID( pSoldier->VestPal, "BLACKSHIRT"  ); break;
-					case 2: SET_PALETTEREP_ID( pSoldier->VestPal, "PURPLESHIRT" ); break;
-					case 3: SET_PALETTEREP_ID( pSoldier->VestPal, "BLUEVEST"    ); break;
-					case 4: SET_PALETTEREP_ID( pSoldier->VestPal, "BROWNVEST"   ); break;
-					case 5: SET_PALETTEREP_ID( pSoldier->VestPal, "JEANVEST"    ); break;
-					case 6: SET_PALETTEREP_ID( pSoldier->VestPal, "REDVEST"     ); break;
+					case 0:	pSoldier->VestPal = "WHITEVEST"  ; break;
+					case 1:	pSoldier->VestPal = "BLACKSHIRT" ; break;
+					case 2:	pSoldier->VestPal = "PURPLESHIRT"; break;
+					case 3:	pSoldier->VestPal = "BLUEVEST"   ; break;
+					case 4:	pSoldier->VestPal = "BROWNVEST"  ; break;
+					case 5:	pSoldier->VestPal = "JEANVEST"   ; break;
+					case 6:	pSoldier->VestPal = "REDVEST"    ; break;
 				}
 			}
 			return;
@@ -756,37 +768,37 @@ static void GeneratePaletteForSoldier(SOLDIERTYPE* pSoldier, UINT8 ubSoldierClas
 		switch( Random( 3 ) )
 		{
 			case 0:
-				SET_PALETTEREP_ID( pSoldier->PantsPal, "GREENPANTS" );
+				pSoldier->PantsPal = "GREENPANTS";
 				switch( Random( 4 ) )
 				{
-					case 0: SET_PALETTEREP_ID( pSoldier->VestPal, "YELLOWVEST" ); break;
-					case 1: SET_PALETTEREP_ID( pSoldier->VestPal, "WHITEVEST"  ); break;
-					case 2: SET_PALETTEREP_ID( pSoldier->VestPal, "BROWNVEST"  ); break;
-					case 3: SET_PALETTEREP_ID( pSoldier->VestPal, "GREENVEST"  ); break;
+					case 0: pSoldier->VestPal = "YELLOWVEST"; break;
+					case 1: pSoldier->VestPal = "WHITEVEST" ; break;
+					case 2: pSoldier->VestPal = "BROWNVEST" ; break;
+					case 3: pSoldier->VestPal = "GREENVEST" ; break;
 				}
 				break;
 			case 1:
-				SET_PALETTEREP_ID( pSoldier->PantsPal, "TANPANTS" );
+				pSoldier->PantsPal = "TANPANTS";
 				switch( Random( 8 ) )
 				{
-					case 0: SET_PALETTEREP_ID( pSoldier->VestPal, "YELLOWVEST" ); break;
-					case 1: SET_PALETTEREP_ID( pSoldier->VestPal, "WHITEVEST"  ); break;
-					case 2: SET_PALETTEREP_ID( pSoldier->VestPal, "BLACKSHIRT" ); break;
-					case 3: SET_PALETTEREP_ID( pSoldier->VestPal, "BLUEVEST"   ); break;
-					case 4: SET_PALETTEREP_ID( pSoldier->VestPal, "BROWNVEST"  ); break;
-					case 5: SET_PALETTEREP_ID( pSoldier->VestPal, "GREENVEST"  ); break;
-					case 6: SET_PALETTEREP_ID( pSoldier->VestPal, "JEANVEST"   ); break;
-					case 7: SET_PALETTEREP_ID( pSoldier->VestPal, "REDVEST"    ); break;
+					case 0: pSoldier->VestPal = "YELLOWVEST"; break;
+					case 1: pSoldier->VestPal = "WHITEVEST" ; break;
+					case 2: pSoldier->VestPal = "BLACKSHIRT"; break;
+					case 3: pSoldier->VestPal = "BLUEVEST"  ; break;
+					case 4: pSoldier->VestPal = "BROWNVEST" ; break;
+					case 5: pSoldier->VestPal = "GREENVEST" ; break;
+					case 6: pSoldier->VestPal = "JEANVEST"  ; break;
+					case 7: pSoldier->VestPal = "REDVEST"   ; break;
 				}
 				break;
 			case 2:
-				SET_PALETTEREP_ID( pSoldier->PantsPal, "BLUEPANTS" );
+				pSoldier->PantsPal = "BLUEPANTS";
 				switch( Random( 4 ) )
 				{
-					case 0: SET_PALETTEREP_ID( pSoldier->VestPal, "YELLOWVEST" ); break;
-					case 1: SET_PALETTEREP_ID( pSoldier->VestPal, "WHITEVEST"  ); break;
-					case 2: SET_PALETTEREP_ID( pSoldier->VestPal, "REDVEST"    ); break;
-					case 3: SET_PALETTEREP_ID( pSoldier->VestPal, "BLACKSHIRT" ); break;
+					case 0: pSoldier->VestPal = "YELLOWVEST"; break;
+					case 1: pSoldier->VestPal = "WHITEVEST" ; break;
+					case 2: pSoldier->VestPal = "REDVEST"   ; break;
+					case 3: pSoldier->VestPal = "BLACKSHIRT"; break;
 				}
 				break;
 		}
@@ -825,14 +837,14 @@ static void TacticalCopySoldierFromCreateStruct(SOLDIERTYPE& s, SOLDIERCREATE_ST
 
 	if (c.fVisible)
 	{
-		strcpy(s.HeadPal,  c.HeadPal);
-		strcpy(s.PantsPal, c.PantsPal);
-		strcpy(s.VestPal,  c.VestPal);
-		strcpy(s.SkinPal,  c.SkinPal);
+		s.HeadPal = c.HeadPal;
+		s.PantsPal = c.PantsPal;
+		s.VestPal = c.VestPal;
+		s.SkinPal = c.SkinPal;
 	}
 
-	/* KM:  March 25, 1999
-	 * Assign nightops traits to enemies/militia */
+	// KM:  March 25, 1999
+	// Assign nightops traits to enemies/militia
 	switch (s.ubSoldierClass)
 	{
 		INT32 chance;
@@ -866,16 +878,16 @@ maybe_nightops:
 			break;
 	}
 
-	/* KM:  November 10, 1997
-	 * Adding patrol points
-	 * CAUTION:  CONVERTING SIGNED TO UNSIGNED though the values should never be
-	 * negative. */
+	// KM:  November 10, 1997
+	// Adding patrol points
+	// CAUTION:  CONVERTING SIGNED TO UNSIGNED though the values should never be
+	// negative.
 	s.bPatrolCnt = c.bPatrolCnt;
 	memcpy(s.usPatrolGrid, c.sPatrolGrid, sizeof(s.usPatrolGrid));
 
-	/* Kris:  November 10, 1997
-	 * Expanded the default names based on team. */
-	wchar_t const* name;
+	// Kris:  November 10, 1997
+	// Expanded the default names based on team.
+	ST::string name;
 	switch (c.bTeam)
 	{
 		case ENEMY_TEAM:   name = TacticalStr[ENEMY_TEAM_MERC_NAME];   break;
@@ -896,7 +908,7 @@ maybe_nightops:
 
 		default: goto no_name; // XXX fishy
 	}
-	wcslcpy(s.name, name, lengthof(s.name));
+	s.name = name;
 no_name:
 
 	GeneratePaletteForSoldier(&s, c.ubSoldierClass);
@@ -907,7 +919,7 @@ no_name:
 
 static void InitSoldierStruct(SOLDIERTYPE& s)
 {
-	memset(&s, 0, sizeof(s));
+	s = SOLDIERTYPE{};
 	s.bVisible                  = -1;
 	s.face                      = 0;
 	s.bMorale                   = DEFAULT_MORALE;
@@ -984,14 +996,15 @@ void InternalTacticalRemoveSoldier(SOLDIERTYPE& s, BOOLEAN const fRemoveVehicle)
 		{
 			// Decrement men in sector number!
 			RemoveManFromTeam(s.bTeam);
-		} // people specified off-map have already been removed from their team count
+		}
+		// people specified off-map have already been removed from their team count
 
 		DeleteSoldier(s);
 	}
 	else
 	{
 		if (gfPersistantPBI) DeleteSoldier(s);
-		MemFree(&s);
+		delete &s;
 	}
 }
 
@@ -1005,8 +1018,8 @@ void TacticalRemoveSoldier(SOLDIERTYPE& s)
 static UINT8 GetLocationModifier(UINT8 ubSoldierClass);
 
 
-// returns a soldier difficulty modifier from 0 to 100 based on player's progress, distance from the Palace, mining income, and
-// playing difficulty level.  Used for generating soldier stats, equipment, and AI skill level.
+// returns a soldier difficulty modifier from 0 to 100 based on player's progress, distance from the Palace, mining
+// income, and playing difficulty level.  Used for generating soldier stats, equipment, and AI skill level.
 INT8 CalcDifficultyModifier( UINT8 ubSoldierClass )
 {
 	INT8 bDiffModifier = 0;
@@ -1022,7 +1035,7 @@ INT8 CalcDifficultyModifier( UINT8 ubSoldierClass )
 
 
 	// THESE 3 DIFFICULTY FACTORS MUST ALWAYS ADD UP TO 100% EXACTLY!!!
-	Assert( ( DIFF_FACTOR_PLAYER_PROGRESS	+ DIFF_FACTOR_PALACE_DISTANCE	+ DIFF_FACTOR_GAME_DIFFICULTY ) == 100 );
+	Assert((DIFF_FACTOR_PLAYER_PROGRESS + DIFF_FACTOR_PALACE_DISTANCE + DIFF_FACTOR_GAME_DIFFICULTY ) == 100 );
 
 
 	// adjust for game difficulty level
@@ -1110,18 +1123,18 @@ void CreateDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT *pp, B
 
 	if( !pp || !bp )
 		return;
-	pp->fStatic								= FALSE;
-	pp->ubProfile							= NO_PROFILE;
-	pp->sInsertionGridNo			= bp->usStartingGridNo;
+	pp->fStatic = FALSE;
+	pp->ubProfile = NO_PROFILE;
+	pp->sInsertionGridNo = bp->usStartingGridNo;
 	pp->fCopyProfileItemsOver = FALSE;
-	pp->bTeam									= bp->bTeam;
-	pp->ubSoldierClass				= bp->ubSoldierClass;
-	pp->ubCivilianGroup				= bp->ubCivilianGroup;
-	pp->ubScheduleID					= 0;
-	pp->sSectorX							= gWorldSectorX;
-	pp->sSectorY							= gWorldSectorY;
-	pp->bSectorZ							= gbWorldSectorZ;
-	pp->fHasKeys							= bp->fHasKeys;
+	pp->bTeam = bp->bTeam;
+	pp->ubSoldierClass = bp->ubSoldierClass;
+	pp->ubCivilianGroup = bp->ubCivilianGroup;
+	pp->ubScheduleID = 0;
+	pp->sSectorX = gWorldSectorX;
+	pp->sSectorY = gWorldSectorY;
+	pp->bSectorZ = gbWorldSectorZ;
+	pp->fHasKeys = bp->fHasKeys;
 
 	//Choose a body type randomly if none specified.
 	if( bp->bBodyType < 0 )
@@ -1133,20 +1146,21 @@ void CreateDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT *pp, B
 			case MILITIA_TEAM:
 				switch( Random( 4 ) )
 				{
-					case 0:	pp->bBodyType = REGMALE;		break;
-					case 1:	pp->bBodyType = BIGMALE;		break;
-					case 2:	pp->bBodyType = STOCKYMALE;	break;
-					case 3:	pp->bBodyType = REGFEMALE;	break;
+					case 0:	pp->bBodyType = REGMALE; break;
+					case 1:	pp->bBodyType = BIGMALE; break;
+					case 2:	pp->bBodyType = STOCKYMALE; break;
+					case 3:	pp->bBodyType = REGFEMALE; break;
 				}
 				break;
 			case CIV_TEAM:
 				if( pp->ubSoldierClass == SOLDIER_CLASS_MINER )
 				{
 					switch( Random( 3 ) )
-					{ //only strong and fit men can be miners.
-						case 0:	pp->bBodyType = REGMALE;	break;
-						case 1:	pp->bBodyType = BIGMALE;	break;
-						case 2: pp->bBodyType = MANCIV;		break;
+					{
+						//only strong and fit men can be miners.
+						case 0:	pp->bBodyType = REGMALE; break;
+						case 1:	pp->bBodyType = BIGMALE; break;
+						case 2: pp->bBodyType = MANCIV; break;
 					}
 				}
 				else
@@ -1154,27 +1168,33 @@ void CreateDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT *pp, B
 					INT32 iRandom;
 					iRandom = Random( 100 );
 					if( iRandom < 8 )
-					{ //8% chance FATCIV
+					{
+						//8% chance FATCIV
 						pp->bBodyType = FATCIV;
 					}
 					else if( iRandom < 38 )
-					{ //30% chance MANCIV
+					{
+						//30% chance MANCIV
 						pp->bBodyType = MANCIV;
 					}
 					else if( iRandom < 57 )
-					{ //19% chance MINICIV
+					{
+						//19% chance MINICIV
 						pp->bBodyType = MINICIV;
 					}
 					else if( iRandom < 76 )
-					{ //19% chance DRESSCIV
+					{
+						//19% chance DRESSCIV
 						pp->bBodyType = DRESSCIV;
 					}
 					else if( iRandom < 88 )
-					{ //12% chance HATKIDCIV
+					{
+						//12% chance HATKIDCIV
 						pp->bBodyType = HATKIDCIV;
 					}
 					else
-					{ //12% chance KIDCIV
+					{
+						//12% chance KIDCIV
 						pp->bBodyType = KIDCIV;
 					}
 				}
@@ -1207,13 +1227,13 @@ void CreateDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT *pp, B
 
 	// experience level is modified by game difficulty, player's progress, & proximity to Queen's Palace, etc.
 	// This formula gives the following results:
-	//	DIFFICULTY FACTOR			EXP. LEVEL  MODIFIER		LEVEL OF AVG REGULAR TROOP
-	//			   0 to 19									-2													2
-	//			  20 to 39									-1													3
-	//			  41 to 59									-0													4
-	//				60 to 79									+1													5
-	//				80 to 99									+2													6
-	//				  100											+3													7		(can happen in P3 Meduna itself on HARD only!)
+	// DIFFICULTY FACTOR    EXP. LEVEL MODIFIER    LEVEL OF AVG REGULAR TROOP
+	//   0 to 19            -2                     2
+	//  20 to 39            -1                     3
+	//  41 to 59            -0                     4
+	//  60 to 79            +1                     5
+	//  80 to 99            +2                     6
+	// 100                  +3                     7    (can happen in P3 Meduna itself on HARD only!)
 	bExpLevelModifier = ( ubDiffFactor / 20 ) - 2;
 
 	// if in the upper half of this difficulty rating (10-19, 30-39, 50-59, 70-79, and 90-99)
@@ -1239,7 +1259,7 @@ void CreateDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT *pp, B
 		case 4:	bExpLevelModifier += +1; bStatsModifier += +1; break;
 
 		default:
-			AssertMsg( FALSE, String( "Invalid bRelativeAttributeLevel = %d", bp->bRelativeAttributeLevel ) );
+			AssertMsg(FALSE, String("Invalid bRelativeAttributeLevel = %d", bp->bRelativeAttributeLevel));
 			break;
 	}
 
@@ -1266,7 +1286,7 @@ void CreateDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT *pp, B
 			pp->bExpLevel = (INT8) 6 + bExpLevelModifier;
 			break;
 		case SOLDIER_CLASS_MINER:
-			pp->bExpLevel = bp->bRelativeAttributeLevel;					 //avg 2 (1-4)
+			pp->bExpLevel = bp->bRelativeAttributeLevel; //avg 2 (1-4)
 			break;
 
 		case SOLDIER_CLASS_CREATURE:
@@ -1292,7 +1312,8 @@ void CreateDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT *pp, B
 
 				case BLOODCAT:
 					pp->bExpLevel = 5 + bExpLevelModifier;
-					if( SECTOR( gWorldSectorX, gWorldSectorY ) == SEC_I16 )
+					auto spawns = GCM->getBloodCatSpawnsOfSector( SECTOR( gWorldSectorX, gWorldSectorY ));
+					if( spawns != NULL && spawns->isLair )  
 					{
 						pp->bExpLevel += gGameOptions.ubDifficultyLevel;
 					}
@@ -1301,7 +1322,7 @@ void CreateDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT *pp, B
 			break;
 
 		default:
-			pp->bExpLevel = bp->bRelativeAttributeLevel;					 //avg 2 (1-4)
+			pp->bExpLevel = bp->bRelativeAttributeLevel; //avg 2 (1-4)
 			ubSoldierClass = SOLDIER_CLASS_NONE;
 			break;
 	}
@@ -1325,19 +1346,19 @@ void CreateDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT *pp, B
 
 	//Roll soldier's statistics and skills
 	//Stat range is currently 49-99, bell-curved around a range of 16 values dependent on the stats level
-	pp->bLifeMax			= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	pp->bLife	  			= pp->bLifeMax;
-	pp->bAgility			= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	pp->bDexterity		= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	pp->bLifeMax = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	pp->bLife = pp->bLifeMax;
+	pp->bAgility = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	pp->bDexterity = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
 
-	pp->bMarksmanship	= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	pp->bMedical			= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	pp->bMechanical		= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	pp->bExplosive		= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	pp->bLeadership		= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	pp->bStrength			= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	pp->bWisdom				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	pp->bMorale				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	pp->bMarksmanship = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	pp->bMedical = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	pp->bMechanical = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	pp->bExplosive = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	pp->bLeadership = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	pp->bStrength = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	pp->bWisdom = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	pp->bMorale = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
 
 	if (ubSoldierClass != SOLDIER_CLASS_ELITE)
 	{
@@ -1346,20 +1367,25 @@ void CreateDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT *pp, B
 		ReduceHighExpLevels( &( pp->bExpLevel ) );
 	}
 
-	pp->fVisible			= 0;
+	pp->fVisible = 0;
 
-	pp->fOnRoof				= bp->fOnRoof;
+	pp->fOnRoof = bp->fOnRoof;
 
 	pp->ubSoldierClass = ubSoldierClass;
 
 	//Transfer over the patrol points.
-	pp->bPatrolCnt		= bp->bPatrolCnt;
+	pp->bPatrolCnt = bp->bPatrolCnt;
 	memcpy( pp->sPatrolGrid, bp->sPatrolGrid, sizeof( INT16 ) * MAXPATROLGRIDS );
 
 	//If it is a detailed placement, don't do this yet, as detailed placements may have their
 	//own equipment.
-	if( !bp->fDetailedPlacement && ubSoldierClass != SOLDIER_CLASS_NONE && ubSoldierClass != SOLDIER_CLASS_CREATURE && ubSoldierClass != SOLDIER_CLASS_MINER )
-		GenerateRandomEquipment( pp, ubSoldierClass, bp->bRelativeEquipmentLevel);
+	if(!bp->fDetailedPlacement &&
+		ubSoldierClass != SOLDIER_CLASS_NONE &&
+		ubSoldierClass != SOLDIER_CLASS_CREATURE &&
+		ubSoldierClass != SOLDIER_CLASS_MINER)
+	{
+		GenerateRandomEquipment(pp, ubSoldierClass, bp->bRelativeEquipmentLevel);
+	}
 }
 
 
@@ -1373,19 +1399,19 @@ void CreateStaticDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT 
 	INT32 i;
 	if( !spp || !bp )
 		return;
-	memset( spp, 0, sizeof( SOLDIERCREATE_STRUCT ) );
-	spp->fStatic								= TRUE;
-	spp->ubProfile							= NO_PROFILE;
-	spp->sInsertionGridNo				= bp->usStartingGridNo;
-	spp->fCopyProfileItemsOver	= FALSE;
-	spp->bTeam									= bp->bTeam;
-	spp->ubSoldierClass					= bp->ubSoldierClass;
-	spp->ubCivilianGroup				= bp->ubCivilianGroup;
-	spp->ubScheduleID						= 0;
-	spp->sSectorX							= gWorldSectorX;
-	spp->sSectorY							= gWorldSectorY;
-	spp->bSectorZ							= gbWorldSectorZ;
-	spp->fHasKeys							= bp->fHasKeys;
+	*spp = SOLDIERCREATE_STRUCT{};
+	spp->fStatic = TRUE;
+	spp->ubProfile = NO_PROFILE;
+	spp->sInsertionGridNo = bp->usStartingGridNo;
+	spp->fCopyProfileItemsOver = FALSE;
+	spp->bTeam = bp->bTeam;
+	spp->ubSoldierClass = bp->ubSoldierClass;
+	spp->ubCivilianGroup = bp->ubCivilianGroup;
+	spp->ubScheduleID = 0;
+	spp->sSectorX = gWorldSectorX;
+	spp->sSectorY = gWorldSectorY;
+	spp->bSectorZ = gbWorldSectorZ;
+	spp->fHasKeys = bp->fHasKeys;
 
 	//Pass over mandatory information specified from the basic placement
 	spp->bOrders = bp->bOrders;
@@ -1398,32 +1424,32 @@ void CreateStaticDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT 
 	//Set up all possible static values.
 	//By setting them all to -1, that signifies that the attribute isn't static.
 	//The static placement needs to be later *regenerated* in order to create a valid soldier.
-	spp->bExpLevel			= -1;
-	spp->bLifeMax				= -1;
-	spp->bLife	  			= -1;
-	spp->bAgility				= -1;
-	spp->bDexterity			= -1;
-	spp->bMarksmanship	= -1;
-	spp->bMedical				= -1;
-	spp->bMechanical		= -1;
-	spp->bExplosive			= -1;
-	spp->bLeadership		= -1;
-	spp->bStrength			= -1;
-	spp->bWisdom				= -1;
-	spp->bMorale				= -1;
+	spp->bExpLevel = -1;
+	spp->bLifeMax = -1;
+	spp->bLife    = -1;
+	spp->bAgility = -1;
+	spp->bDexterity = -1;
+	spp->bMarksmanship = -1;
+	spp->bMedical = -1;
+	spp->bMechanical = -1;
+	spp->bExplosive = -1;
+	spp->bLeadership = -1;
+	spp->bStrength = -1;
+	spp->bWisdom = -1;
+	spp->bMorale = -1;
 
-	spp->fVisible				=  0;
+	spp->fVisible =  0;
 
-	spp->fOnRoof				= bp->fOnRoof;
+	spp->fOnRoof = bp->fOnRoof;
 
 	//Transfer over the patrol points.
-	spp->bPatrolCnt			= bp->bPatrolCnt;
+	spp->bPatrolCnt = bp->bPatrolCnt;
 	memcpy( spp->sPatrolGrid, bp->sPatrolGrid, sizeof( INT16 ) * MAXPATROLGRIDS );
 
 	//Starts with nothing
 	for( i = 0; i < NUM_INV_SLOTS; i++ )
 	{
-		memset( &(spp->Inv[ i ]), 0, sizeof( OBJECTTYPE ) );
+		spp->Inv[ i ] = OBJECTTYPE{};
 		spp->Inv[ i ].usItem = NOTHING;
 		spp->Inv[ i ].fFlags |= OBJECT_UNDROPPABLE;
 	}
@@ -1433,11 +1459,11 @@ void CreateStaticDetailedPlacementGivenBasicPlacementInfo( SOLDIERCREATE_STRUCT 
 //the proper detailed placement slot given the static detailed placement and it's accompanying basic placement.
 //For the purposes of merc editing, the static detailed placement is preserved.
 void CreateDetailedPlacementGivenStaticDetailedPlacementAndBasicPlacementInfo(
-		   SOLDIERCREATE_STRUCT *pp, SOLDIERCREATE_STRUCT *spp, BASIC_SOLDIERCREATE_STRUCT *bp )
+	SOLDIERCREATE_STRUCT *pp, SOLDIERCREATE_STRUCT *spp, BASIC_SOLDIERCREATE_STRUCT *bp )
 {
 	INT32 i;
 
-	memset( pp, 0, sizeof( SOLDIERCREATE_STRUCT ) );
+	*pp = SOLDIERCREATE_STRUCT{};
 	pp->fOnRoof = spp->fOnRoof = bp->fOnRoof;
 	pp->fStatic = FALSE;
 	pp->ubSoldierClass = bp->ubSoldierClass;
@@ -1448,50 +1474,50 @@ void CreateDetailedPlacementGivenStaticDetailedPlacementAndBasicPlacementInfo(
 		// Copy over team
 		pp->bTeam = bp->bTeam;
 
-		pp->bDirection						= bp->bDirection;
-		pp->sInsertionGridNo			= bp->usStartingGridNo;
+		pp->bDirection = bp->bDirection;
+		pp->sInsertionGridNo = bp->usStartingGridNo;
 
 		//ATE: Copy over sector coordinates from profile to create struct
-		pp->sSectorX							= gMercProfiles[ pp->ubProfile ].sSectorX;
-		pp->sSectorY							= gMercProfiles[ pp->ubProfile ].sSectorY;
-		pp->bSectorZ							= gMercProfiles[ pp->ubProfile ].bSectorZ;
+		pp->sSectorX = gMercProfiles[ pp->ubProfile ].sSectorX;
+		pp->sSectorY = gMercProfiles[ pp->ubProfile ].sSectorY;
+		pp->bSectorZ = gMercProfiles[ pp->ubProfile ].bSectorZ;
 
-		pp->ubScheduleID					= spp->ubScheduleID;
+		pp->ubScheduleID = spp->ubScheduleID;
 
-		pp->bOrders								= bp->bOrders;
-		pp->bAttitude							= bp->bAttitude;
-		pp->bDirection						= bp->bDirection;
-		pp->bPatrolCnt						= bp->bPatrolCnt;
+		pp->bOrders = bp->bOrders;
+		pp->bAttitude = bp->bAttitude;
+		pp->bDirection = bp->bDirection;
+		pp->bPatrolCnt = bp->bPatrolCnt;
 		memcpy( pp->sPatrolGrid, bp->sPatrolGrid, sizeof( INT16 ) * MAXPATROLGRIDS );
-		pp->fHasKeys							= bp->fHasKeys;
-		pp->ubCivilianGroup				= bp->ubCivilianGroup;
+		pp->fHasKeys = bp->fHasKeys;
+		pp->ubCivilianGroup = bp->ubCivilianGroup;
 
 		return; //done
 	}
 	CreateDetailedPlacementGivenBasicPlacementInfo( pp, bp );
-	pp->ubScheduleID			= spp->ubScheduleID;
+	pp->ubScheduleID = spp->ubScheduleID;
 	//Replace any of the new placement's attributes with static attributes.
-	if( spp->bExpLevel		!= -1 )			pp->bExpLevel			=	spp->bExpLevel;
-	if( spp->bLife				!= -1 )			pp->bLife					= spp->bLife;
-	if( spp->bLifeMax			!= -1 )			pp->bLifeMax			= spp->bLifeMax;
-	if( spp->bMarksmanship!= -1 )			pp->bMarksmanship	= spp->bMarksmanship;
-	if( spp->bStrength		!= -1 )			pp->bStrength			= spp->bStrength;
-	if( spp->bAgility			!= -1 )			pp->bAgility			= spp->bAgility;
-	if( spp->bDexterity		!= -1 )			pp->bDexterity		= spp->bDexterity;
-	if( spp->bWisdom			!= -1 )			pp->bWisdom				= spp->bWisdom;
-	if( spp->bLeadership	!= -1 )			pp->bLeadership		= spp->bLeadership;
-	if( spp->bExplosive		!= -1 )			pp->bExplosive		= spp->bExplosive;
-	if( spp->bMedical			!= -1 )			pp->bMedical			= spp->bMedical;
-	if( spp->bMechanical	!= -1 )			pp->bMechanical		= spp->bMechanical;
-	if( spp->bMorale			!= -1 )			pp->bMorale				= spp->bMorale;
+	if( spp->bExpLevel != -1 ) pp->bExpLevel = spp->bExpLevel;
+	if( spp->bLife != -1 ) pp->bLife = spp->bLife;
+	if( spp->bLifeMax != -1 ) pp->bLifeMax = spp->bLifeMax;
+	if( spp->bMarksmanship!= -1 ) pp->bMarksmanship = spp->bMarksmanship;
+	if( spp->bStrength != -1 ) pp->bStrength = spp->bStrength;
+	if( spp->bAgility != -1 ) pp->bAgility = spp->bAgility;
+	if( spp->bDexterity != -1 ) pp->bDexterity = spp->bDexterity;
+	if( spp->bWisdom != -1 ) pp->bWisdom = spp->bWisdom;
+	if( spp->bLeadership != -1 ) pp->bLeadership = spp->bLeadership;
+	if( spp->bExplosive != -1 ) pp->bExplosive = spp->bExplosive;
+	if( spp->bMedical != -1 ) pp->bMedical = spp->bMedical;
+	if( spp->bMechanical != -1 ) pp->bMechanical = spp->bMechanical;
+	if( spp->bMorale != -1 ) pp->bMorale = spp->bMorale;
 
 	pp->fVisible = spp->fVisible;
 	if( spp->fVisible )
 	{
-		strcpy(pp->HeadPal,  spp->HeadPal);
-		strcpy(pp->PantsPal, spp->PantsPal);
-		strcpy(pp->VestPal,  spp->VestPal);
-		strcpy(pp->SkinPal,  spp->SkinPal);
+		pp->HeadPal = spp->HeadPal;
+		pp->PantsPal = spp->PantsPal;
+		pp->VestPal = spp->VestPal;
+		pp->SkinPal = spp->SkinPal;
 	}
 
 	//This isn't perfect, however, it blindly brings over the items from the static
@@ -1539,7 +1565,8 @@ void UpdateSoldierWithStaticDetailedInformation( SOLDIERTYPE *s, SOLDIERCREATE_S
 	}
 
 	switch( spp->ubSoldierClass )
-	{ //If the soldier is an administrator, then
+	{
+		//If the soldier is an administrator, then
 		case SOLDIER_CLASS_ADMINISTRATOR:
 		case SOLDIER_CLASS_ARMY:
 		case SOLDIER_CLASS_ELITE:
@@ -1548,7 +1575,8 @@ void UpdateSoldierWithStaticDetailedInformation( SOLDIERTYPE *s, SOLDIERCREATE_S
 	}
 
 	if( spp->bExpLevel != -1 )
-	{ //We have a static experience level, so generate all of the soldier's attributes.
+	{
+		//We have a static experience level, so generate all of the soldier's attributes.
 		INT8 bBaseAttribute;
 		s->bExpLevel = spp->bExpLevel;
 		//Set the minimum base attribute
@@ -1556,38 +1584,38 @@ void UpdateSoldierWithStaticDetailedInformation( SOLDIERTYPE *s, SOLDIERCREATE_S
 
 		//Roll enemy's combat statistics, taking bExpLevel into account.
 		//Stat range is currently 40-99, slightly bell-curved around the bExpLevel
-		s->bLifeMax				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-		s->bLife	  			= s->bLifeMax;
-		s->bAgility				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-		s->bDexterity			= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-		s->bMarksmanship	= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-		s->bMedical				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-		s->bMechanical		= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-		s->bExplosive			= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-		s->bLeadership		= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-		s->bStrength			= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-		s->bWisdom				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-		s->bMorale				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+		s->bLifeMax = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+		s->bLife    = s->bLifeMax;
+		s->bAgility = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+		s->bDexterity = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+		s->bMarksmanship = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+		s->bMedical = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+		s->bMechanical = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+		s->bExplosive = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+		s->bLeadership = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+		s->bStrength = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+		s->bWisdom = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+		s->bMorale = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
 	}
 	//Replace any soldier attributes with any static values in the detailed placement.
-	if( spp->bLife				!= -1 )			s->bLife					= spp->bLife;
-	if( spp->bLifeMax			!= -1 )			s->bLifeMax				= spp->bLifeMax;
-	if( spp->bMarksmanship!= -1 )			s->bMarksmanship	= spp->bMarksmanship;
-	if( spp->bStrength		!= -1 )			s->bStrength			= spp->bStrength;
-	if( spp->bAgility			!= -1 )			s->bAgility				= spp->bAgility;
-	if( spp->bDexterity		!= -1 )			s->bDexterity			= spp->bDexterity;
-	if( spp->bWisdom			!= -1 )			s->bWisdom				= spp->bWisdom;
-	if( spp->bLeadership	!= -1 )			s->bLeadership		= spp->bLeadership;
-	if( spp->bExplosive		!= -1 )			s->bExplosive			= spp->bExplosive;
-	if( spp->bMedical			!= -1 )			s->bMedical				= spp->bMedical;
-	if( spp->bMechanical	!= -1 )			s->bMechanical		= spp->bMechanical;
-	if( spp->bMorale			!= -1 )			s->bMorale				= spp->bMorale;
+	if( spp->bLife != -1 ) s->bLife = spp->bLife;
+	if( spp->bLifeMax != -1 ) s->bLifeMax = spp->bLifeMax;
+	if( spp->bMarksmanship!= -1 ) s->bMarksmanship = spp->bMarksmanship;
+	if( spp->bStrength != -1 ) s->bStrength = spp->bStrength;
+	if( spp->bAgility != -1 ) s->bAgility = spp->bAgility;
+	if( spp->bDexterity != -1 ) s->bDexterity = spp->bDexterity;
+	if( spp->bWisdom != -1 ) s->bWisdom = spp->bWisdom;
+	if( spp->bLeadership != -1 ) s->bLeadership = spp->bLeadership;
+	if( spp->bExplosive != -1 ) s->bExplosive = spp->bExplosive;
+	if( spp->bMedical != -1 ) s->bMedical = spp->bMedical;
+	if( spp->bMechanical != -1 ) s->bMechanical = spp->bMechanical;
+	if( spp->bMorale != -1 ) s->bMorale = spp->bMorale;
 
 	//life can't exceed the life max.
 	if( s->bLife > s->bLifeMax )
 		s->bLife = s->bLifeMax;
 
-	s->ubScheduleID		=	spp->ubScheduleID;
+	s->ubScheduleID = spp->ubScheduleID;
 
 	//Copy over the current inventory list.
 	memcpy( s->inv, spp->Inv, sizeof( OBJECTTYPE ) * NUM_INV_SLOTS );
@@ -1598,30 +1626,30 @@ void UpdateSoldierWithStaticDetailedInformation( SOLDIERTYPE *s, SOLDIERCREATE_S
 //also want to copy that information to the static detailed placement, for editor viewing purposes.
 static void UpdateStaticDetailedPlacementWithProfileInformation(SOLDIERCREATE_STRUCT* spp, UINT8 ubProfile)
 {
-	UINT32					cnt;
+	UINT32 cnt;
 
 	spp->ubProfile = ubProfile;
 
 	MERCPROFILESTRUCT& p = GetProfile(ubProfile);
 
-	SET_PALETTEREP_ID(spp->HeadPal,  p.HAIR);
-	SET_PALETTEREP_ID(spp->VestPal,  p.VEST);
-	SET_PALETTEREP_ID(spp->SkinPal,  p.SKIN);
-	SET_PALETTEREP_ID(spp->PantsPal, p.PANTS);
+	spp->HeadPal  = p.HAIR;
+	spp->VestPal  = p.VEST;
+	spp->SkinPal  = p.SKIN;
+	spp->PantsPal = p.PANTS;
 
-	wcscpy(spp->name, p.zNickname);
+	spp->name = p.zNickname;
 
-  spp->bLife         = p.bLife;
-  spp->bLifeMax      = p.bLifeMax;
-  spp->bAgility      = p.bAgility;
-  spp->bLeadership   = p.bLeadership;
-  spp->bDexterity    = p.bDexterity;
-  spp->bStrength     = p.bStrength;
-  spp->bWisdom       = p.bWisdom;
-  spp->bExpLevel     = p.bExpLevel;
-  spp->bMarksmanship = p.bMarksmanship;
-  spp->bMedical      = p.bMedical;
-  spp->bMechanical   = p.bMechanical;
+	spp->bLife         = p.bLife;
+	spp->bLifeMax      = p.bLifeMax;
+	spp->bAgility      = p.bAgility;
+	spp->bLeadership   = p.bLeadership;
+	spp->bDexterity    = p.bDexterity;
+	spp->bStrength     = p.bStrength;
+	spp->bWisdom       = p.bWisdom;
+	spp->bExpLevel     = p.bExpLevel;
+	spp->bMarksmanship = p.bMarksmanship;
+	spp->bMedical      = p.bMedical;
+	spp->bMechanical   = p.bMechanical;
 	spp->bExplosive    = p.bExplosive;
 
 	spp->bBodyType     = p.ubBodyType;
@@ -1652,18 +1680,18 @@ void ModifySoldierAttributesWithNewRelativeLevel( SOLDIERTYPE *s, INT8 bRelative
 
 	//Roll enemy's combat statistics, taking bExpLevel into account.
 	//Stat range is currently 40-99, slightly bell-curved around the bExpLevel
-	s->bLifeMax				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	s->bLife	  			= s->bLifeMax;
-	s->bAgility				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	s->bDexterity			= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	s->bMarksmanship	= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	s->bMedical				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	s->bMechanical		= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	s->bExplosive			= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	s->bLeadership		= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	s->bStrength			= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	s->bWisdom				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
-	s->bMorale				= (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	s->bLifeMax = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	s->bLife = s->bLifeMax;
+	s->bAgility = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	s->bDexterity = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	s->bMarksmanship = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	s->bMedical = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	s->bMechanical = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	s->bExplosive = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	s->bLeadership = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	s->bStrength = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	s->bWisdom = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
+	s->bMorale = (INT8)(bBaseAttribute + Random( 9 ) + Random( 8 ));
 }
 
 
@@ -1671,7 +1699,7 @@ void ForceSoldierProfileID( SOLDIERTYPE *pSoldier, UINT8 ubProfileID )
 {
 	SOLDIERCREATE_STRUCT CreateStruct;
 
-	memset( &CreateStruct, 0, sizeof( CreateStruct ) );
+	CreateStruct = SOLDIERCREATE_STRUCT{};
 	CreateStruct.ubProfile = ubProfileID;
 	TacticalCopySoldierFromProfile(*pSoldier, CreateStruct);
 
@@ -1688,8 +1716,8 @@ void ForceSoldierProfileID( SOLDIERTYPE *pSoldier, UINT8 ubProfileID )
 	CreateSoldierPalettes(*pSoldier);
 }
 
-#define CENTRAL_GRIDNO 13202
-#define CENTRAL_RADIUS 30
+#define CENTRAL_GRIDNO				13202
+#define CENTRAL_RADIUS				30
 
 
 static SOLDIERTYPE* ReserveTacticalSoldierForAutoresolve(UINT8 ubSoldierClass)
@@ -1710,7 +1738,7 @@ try
 				s->sGridNo = NOWHERE;
 
 				//Allocate and copy the soldier
-				SOLDIERTYPE* const pSoldier = MALLOC(SOLDIERTYPE);
+				SOLDIERTYPE* const pSoldier = new SOLDIERTYPE{};
 				*pSoldier = *s;
 
 				//Assign a bogus ID, then return it
@@ -1733,7 +1761,7 @@ SOLDIERTYPE* TacticalCreateEnemySoldier(SoldierClass const sc)
 	}
 
 	BASIC_SOLDIERCREATE_STRUCT bp;
-	memset(&bp, 0, sizeof(bp));
+	bp = BASIC_SOLDIERCREATE_STRUCT{};
 	RandomizeRelativeLevel(&bp.bRelativeAttributeLevel, sc);
 	RandomizeRelativeLevel(&bp.bRelativeEquipmentLevel, sc);
 	bp.bTeam          = ENEMY_TEAM;
@@ -1743,24 +1771,26 @@ SOLDIERTYPE* TacticalCreateEnemySoldier(SoldierClass const sc)
 	bp.ubSoldierClass = sc;
 
 	SOLDIERCREATE_STRUCT pp;
-	memset(&pp, 0, sizeof(pp));
+	pp = SOLDIERCREATE_STRUCT{};
 	CreateDetailedPlacementGivenBasicPlacementInfo(&pp, &bp);
 
 	if (sc == SOLDIER_CLASS_ELITE)
-	{ /* SPECIAL! Certain events in the game can cause profiled NPCs to become
-		 * enemies. The two cases are adding Mike and Iggy. We will only add one NPC
-		 * in any given combat and the conditions for setting the associated facts
-		 * are done elsewhere. There is also another place where NPCs can get
-		 * added, which is in AddPlacementToWorld() used for inserting defensive
-		 * enemies.
-		 * NOTE: We don't want to add Mike or Iggy if this is being called from
-		 * autoresolve! */
+	{
+		// SPECIAL! Certain events in the game can cause profiled NPCs to become
+		// enemies. The two cases are adding Mike and Iggy. We will only add one NPC
+		// in any given combat and the conditions for setting the associated facts
+		// are done elsewhere. There is also another place where NPCs can get
+		// added, which is in AddPlacementToWorld() used for inserting defensive
+		// enemies.
+		// NOTE: We don't want to add Mike or Iggy if this is being called from
+		// autoresolve!
 		OkayToUpgradeEliteToSpecialProfiledEnemy(&pp);
 	}
 
 	SOLDIERTYPE* const s = TacticalCreateSoldier(pp);
 	if (s)
-	{ // Send soldier to centre of map, roughly
+	{
+		// Send soldier to centre of map, roughly
 		s->sNoiseGridno  = CENTRAL_GRIDNO + (Random(CENTRAL_RADIUS * 2 + 1) - CENTRAL_RADIUS) + (Random(CENTRAL_RADIUS * 2 + 1) - CENTRAL_RADIUS) * WORLD_COLS;
 		s->ubNoiseVolume = MAX_MISC_NOISE_DURATION;
 	}
@@ -1773,8 +1803,8 @@ SOLDIERTYPE* TacticalCreateMilitia( UINT8 ubMilitiaClass )
 	BASIC_SOLDIERCREATE_STRUCT bp;
 	SOLDIERCREATE_STRUCT pp;
 
-	memset( &bp, 0, sizeof( BASIC_SOLDIERCREATE_STRUCT ) );
-	memset( &pp, 0, sizeof( SOLDIERCREATE_STRUCT ) );
+	bp = BASIC_SOLDIERCREATE_STRUCT{};
+	pp = SOLDIERCREATE_STRUCT{};
 	RandomizeRelativeLevel( &( bp.bRelativeAttributeLevel ), ubMilitiaClass );
 	RandomizeRelativeLevel( &( bp.bRelativeEquipmentLevel ), ubMilitiaClass );
 	bp.bTeam = MILITIA_TEAM;
@@ -1797,13 +1827,13 @@ SOLDIERTYPE* TacticalCreateCreature( INT8 bCreatureBodyType )
 		return ReserveTacticalSoldierForAutoresolve( SOLDIER_CLASS_CREATURE );
 	}
 
-	memset( &bp, 0, sizeof( BASIC_SOLDIERCREATE_STRUCT ) );
-	memset( &pp, 0, sizeof( SOLDIERCREATE_STRUCT ) );
+	bp = BASIC_SOLDIERCREATE_STRUCT{};
+	pp = SOLDIERCREATE_STRUCT{};
 	RandomizeRelativeLevel( &( bp.bRelativeAttributeLevel ), SOLDIER_CLASS_CREATURE );
 	RandomizeRelativeLevel( &( bp.bRelativeEquipmentLevel ), SOLDIER_CLASS_CREATURE );
 	bp.bTeam = CREATURE_TEAM;
 	bp.ubSoldierClass = SOLDIER_CLASS_CREATURE;
-	bp.bOrders	= SEEKENEMY;
+	bp.bOrders = SEEKENEMY;
 	bp.bAttitude = AGGRESSIVE;
 	bp.bBodyType = bCreatureBodyType;
 	CreateDetailedPlacementGivenBasicPlacementInfo( &pp, &bp );
@@ -1818,9 +1848,10 @@ void RandomizeRelativeLevel( INT8 *pbRelLevel, UINT8 ubSoldierClass )
 	INT8 bRoll, bAdjustedRoll;
 
 
-	// We now adjust the relative level by location on the map, so enemies in NE corner will be generally very crappy (lots
-	// of bad and poor, with avg about best), while enemies in the SW will have lots of great and good, with avg about as
-	// lousy as it gets.  Militia are generally unmodified by distance, and never get bad or great at all.
+	// We now adjust the relative level by location on the map, so enemies in NE corner will be generally very
+	// crappy (lots of bad and poor, with avg about best), while enemies in the SW will have lots of great and
+	// good, with avg about as lousy as it gets.  Militia are generally unmodified by distance, and never get
+	// bad or great at all.
 
 	// this returns 0 to DIFF_FACTOR_PALACE_DISTANCE (0 to +30)
 	ubLocationModifier = GetLocationModifier( ubSoldierClass );
@@ -1840,7 +1871,8 @@ void RandomizeRelativeLevel( INT8 *pbRelLevel, UINT8 ubSoldierClass )
 		bAdjustedRoll = __max( 1, bAdjustedRoll );
 		bAdjustedRoll = __min( 8, bAdjustedRoll );
 		if( IsAutoResolveActive() )
-		{ //Artificially strengthen militia strength for sake of gameplay
+		{
+			//Artificially strengthen militia strength for sake of gameplay
 			bAdjustedRoll++;
 		}
 	}
@@ -1850,7 +1882,8 @@ void RandomizeRelativeLevel( INT8 *pbRelLevel, UINT8 ubSoldierClass )
 		bAdjustedRoll = __max( 0, bAdjustedRoll );
 		bAdjustedRoll = __min( 9, bAdjustedRoll );
 		if( IsAutoResolveActive() )
-		{ //Artificially weaken enemy/creature strength for sake of gameplay
+		{
+			//Artificially weaken enemy/creature strength for sake of gameplay
 			if( bAdjustedRoll > 0 )
 			{
 				bAdjustedRoll--;
@@ -1892,7 +1925,7 @@ void RandomizeRelativeLevel( INT8 *pbRelLevel, UINT8 ubSoldierClass )
 			break;
 	}
 
-/*
+	/*
 	if( IsAutoResolveActive() )
 	{ //Artificially strengthen militia strength for sake of gameplay
 		if ( SOLDIER_CLASS_MILITIA( ubSoldierClass ) )
@@ -1903,8 +1936,7 @@ void RandomizeRelativeLevel( INT8 *pbRelLevel, UINT8 ubSoldierClass )
 		{
 			*pbRelLevel = 0;
 		}
-	}
-*/
+	}*/
 }
 
 
@@ -1915,7 +1947,7 @@ void QuickCreateProfileMerc( INT8 bTeam, UINT8 ubProfileID )
 	if (pos == NOWHERE) return;
 
 	SOLDIERCREATE_STRUCT MercCreateStruct;
-	memset(&MercCreateStruct, 0, sizeof(MercCreateStruct));
+	MercCreateStruct = SOLDIERCREATE_STRUCT{};
 	MercCreateStruct.bTeam            = bTeam;
 	MercCreateStruct.ubProfile        = ubProfileID;
 	MercCreateStruct.sSectorX         = gWorldSectorX;
@@ -1968,10 +2000,10 @@ static void CopyProfileItems(SOLDIERTYPE& s, SOLDIERCREATE_STRUCT const& c)
 				UINT8 const count = p.bInvNumber[i];
 				if (GCM->getItem(item)->getItemClass() == IC_KEY)
 				{
-					/* Since keys depend on 2 values, they pretty much have to be
-					 * hardcoded.  if a case isn't handled here it's better to not give
-					 * any key than to provide one which doesn't work and would confuse
-					 * everything. */
+					// Since keys depend on 2 values, they pretty much have to be
+					// hardcoded.  if a case isn't handled here it's better to not give
+					// any key than to provide one which doesn't work and would confuse
+					// everything.
 					if (KEY_1 <= item && item <= KEY_32)
 					{
 						switch (c.ubProfile)
@@ -1979,12 +2011,12 @@ static void CopyProfileItems(SOLDIERTYPE& s, SOLDIERCREATE_STRUCT const& c)
 							case BREWSTER: CreateKeyObject(slot, count, 19); break;
 							case SKIPPER:  CreateKeyObject(slot, count, 11); break;
 							case DOREEN:   CreateKeyObject(slot, count, 32); break;
-							default:       memset(slot, 0, sizeof(*slot));   break;
+							default:       *slot = OBJECTTYPE{};             break;
 						}
 					}
 					else
 					{
-						memset(slot, 0, sizeof(*slot));
+						*slot = OBJECTTYPE{};
 					}
 				}
 				else
@@ -2002,7 +2034,7 @@ static void CopyProfileItems(SOLDIERTYPE& s, SOLDIERCREATE_STRUCT const& c)
 			}
 			else
 			{
-				memset(slot, 0, sizeof(*slot));
+				*slot = OBJECTTYPE{};
 			}
 		}
 
@@ -2020,9 +2052,9 @@ static void CopyProfileItems(SOLDIERTYPE& s, SOLDIERCREATE_STRUCT const& c)
 	}
 	else if (c.fCopyProfileItemsOver) // Copy over inv if we want to
 	{
-		/* do some special coding to put stuff in the profile in better-looking
-		 * spots */
-		memset(s.inv, 0, sizeof(s.inv));
+		// do some special coding to put stuff in the profile in better-looking
+		// spots
+		std::fill(std::begin(s.inv), std::end(s.inv), OBJECTTYPE{});
 		for (UINT32 i = 0; i != NUM_INV_SLOTS; ++i)
 		{
 			if (p.inv[i] == NOTHING) continue;
@@ -2139,9 +2171,9 @@ UINT8 GetPythDistanceFromPalace( INT16 sSectorX, INT16 sSectorY )
 }
 
 
-/* Reduce the experience levels of very high level enemies to something that
- * player can compete with for interrupts. It doesn't affect attributes and
- * skills, those are rolled prior to this reduction! */
+// Reduce the experience levels of very high level enemies to something that
+// player can compete with for interrupts. It doesn't affect attributes and
+// skills, those are rolled prior to this reduction!
 static void ReduceHighExpLevels(INT8* const exp_level)
 {
 	INT8 max_level;

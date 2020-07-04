@@ -14,6 +14,8 @@
 #include "EditorBuildings.h"
 #include "Debug.h"
 
+#include <string_theory/string>
+
 
 SGPRect gSelectRegion;
 
@@ -28,8 +30,7 @@ UINT16 gusSavedSelectionType = SMALLSELECTION;
 UINT16 gusSavedBuildingSelectionType = AREASELECTION;
 static INT16 sBadMarker = -1;
 
-wchar_t SelTypeWidth[] = L"Width: xx";
-const wchar_t* const wszSelType[6]= { L"Small", L"Medium", L"Large", L"XLarge", SelTypeWidth, L"Area" };
+ST::string wszSelType[6]= { "Small", "Medium", "Large", "XLarge", "Width: xx", "Area" };
 
 static BOOLEAN gfAllowRightButtonSelections = FALSE;
 BOOLEAN gfCurrentSelectionWithRightButton = FALSE;
@@ -82,8 +83,8 @@ void RemoveCursors()
 	{
 		RemoveBuildingLayout();
 	}
-	Assert( gSelectRegion.iTop >= 0 && gSelectRegion.iTop <= gSelectRegion.iBottom );
-	Assert( gSelectRegion.iLeft >= 0 && gSelectRegion.iLeft <= gSelectRegion.iRight );
+	Assert( gSelectRegion.iTop <= gSelectRegion.iBottom );
+	Assert( gSelectRegion.iLeft <= gSelectRegion.iRight );
 	for( y = gSelectRegion.iTop; y <= gSelectRegion.iBottom; y++ )
 	{
 		for( x = gSelectRegion.iLeft; x <= gSelectRegion.iRight; x++ )
@@ -193,7 +194,7 @@ void UpdateCursorAreas()
 		{
 			iMapIndex = gSelectRegion.iTop * WORLD_COLS + gSelectRegion.iLeft;
 			if( (!IsLocationSittable( iMapIndex, gfRoofPlacement ) && iDrawMode != DRAW_MODE_SCHEDULEACTION) ||
-				  (!IsLocationSittableExcludingPeople( iMapIndex, gfRoofPlacement ) && iDrawMode == DRAW_MODE_SCHEDULEACTION) )
+				(!IsLocationSittableExcludingPeople( iMapIndex, gfRoofPlacement ) && iDrawMode == DRAW_MODE_SCHEDULEACTION) )
 			{
 				if( sBadMarker != iMapIndex )
 				{
@@ -284,7 +285,7 @@ static BOOLEAN HandleAreaSelection(const INT16 sGridX, const INT16 sGridY)
 	if( fAnchored )
 	{
 		if( (!gfLeftButtonState  && !gfCurrentSelectionWithRightButton) ||
-			  (!gfRightButtonState &&  gfCurrentSelectionWithRightButton) )
+			(!gfRightButtonState &&  gfCurrentSelectionWithRightButton) )
 		{
 			fAnchored = FALSE;
 			ProcessAreaSelection(!gfCurrentSelectionWithRightButton);
@@ -344,9 +345,9 @@ static BOOLEAN HandleAreaSelection(const INT16 sGridX, const INT16 sGridY)
 
 static void ValidateSelectionRegionBoundaries(void)
 {
-	gSelectRegion.iLeft		= MAX( MIN( 159, gSelectRegion.iLeft	 ), 0 );
-	gSelectRegion.iRight	= MAX( MIN( 159, gSelectRegion.iRight  ), 0 );
-	gSelectRegion.iTop		= MAX( MIN( 159, gSelectRegion.iTop		 ), 0 );
+	gSelectRegion.iLeft   = MAX( MIN( 159, gSelectRegion.iLeft   ), 0 );
+	gSelectRegion.iRight  = MAX( MIN( 159, gSelectRegion.iRight  ), 0 );
+	gSelectRegion.iTop    = MAX( MIN( 159, gSelectRegion.iTop    ), 0 );
 	gSelectRegion.iBottom = MAX( MIN( 159, gSelectRegion.iBottom ), 0 );
 }
 

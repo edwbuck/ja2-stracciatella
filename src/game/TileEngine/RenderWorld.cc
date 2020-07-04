@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include "Animation_Control.h"
 #include "Animation_Data.h"
 #include "Debug.h"
@@ -33,12 +32,19 @@
 #include "VObject_Blitters.h"
 #include "VSurface.h"
 #include "WCheck.h"
-#include <math.h>
 #include "UILayout.h"
 #include "GameState.h"
-#include "slog/slog.h"
+#include "Logger.h"
+
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <algorithm>
+#include <math.h>
+#include <stdint.h>
 
 UINT16* gpZBuffer = NULL;
+UINT16  gZBufferPitch = 0;
 
 static INT16 gsCurrentGlowFrame     = 0;
 static INT16 gsCurrentItemGlowFrame = 0;
@@ -59,7 +65,6 @@ enum RenderTilesFlags
 	TILES_MARKED                    = 0x10000000,
 	TILES_OBSCURED                  = 0x01000000
 };
-ENUM_BITSET(RenderTilesFlags)
 
 
 #define MAX_RENDERED_ITEMS 2
@@ -135,16 +140,12 @@ BOOLEAN gfIgnoreScrollDueToCenterAdjust = FALSE;
 // GLOBAL SCROLLING PARAMS
 INT16 gCenterWorldX;
 INT16 gCenterWorldY;
-INT16 gsTLX;                            /**< Top left corner of the current map in screen coordinates. */
-INT16 gsTLY;                            /**< Top left corner of the current map in screen coordinates. */
-INT16 gsTRX;                            /**< Top right corner of the current map in screen coordinates. */
-INT16 gsTRY;                            /**< Top right corner of the current map in screen coordinates. */
-INT16 gsBLX;                            /**< Bottom left corner of the current map in screen coordinates. */
-INT16 gsBLY;                            /**< Bottom left corner of the current map in screen coordinates. */
-INT16 gsBRX;                            /**< Bottom right corner of the current map in screen coordinates. */
-INT16 gsBRY;                            /**< Bottom right corner of the current map in screen coordinates. */
-INT16 gsCX;                             /**< Center of the map in screen coordinates (seems to be always 0). */
-INT16 gsCY;                             /**< Center of the map in screen coordinates (seems to be always 1625). */
+INT16 gsLeftX;      // Left edge of the current map in screen coordinates.
+INT16 gsTopY;       // Top edge of the current map in screen coordinates.
+INT16 gsRightX;     // Right edge of the current map in screen coordinates.
+INT16 gsBottomY;    // Bottom edge of the current map in screen coordinates.
+INT16 gsCX;         // Center of the map in screen coordinates (seems to be always 0).
+INT16 gsCY;         // Center of the map in screen coordinates (seems to be always 1625).
 double gdScaleX;
 double gdScaleY;
 
@@ -155,8 +156,6 @@ bool g_scroll_inertia = false;
 
 
 // GLOBALS FOR CALCULATING STARTING PARAMETERS
-static INT16 gsStartPointX_W;
-static INT16 gsStartPointY_W;
 static INT16 gsStartPointX_S;
 static INT16 gsStartPointY_S;
 static INT16 gsStartPointX_M;
@@ -164,8 +163,9 @@ static INT16 gsStartPointY_M;
 static INT16 gsEndXS;
 static INT16 gsEndYS;
 // LARGER OFFSET VERSION FOR GIVEN LAYERS
-static INT16 gsLStartPointX_W;
-static INT16 gsLStartPointY_W;
+// NOTE: Larger viewport offset values are used for static world surface rendering. That surface is blitted
+//       during scrolling to speed up rendering and make scrolling smoother.
+// TODO: maxrd2 drop all of these when SDL blitting is done
 static INT16 gsLStartPointX_S;
 static INT16 gsLStartPointY_S;
 static INT16 gsLStartPointX_M;
@@ -335,7 +335,7 @@ static inline INT16 GetMapXYWorldY(INT32 WorldCellX, INT32 WorldCellY)
 	INT16 RDistToCenterX = WorldCellX * CELL_X_SIZE - gCenterWorldX;
 	INT16 RDistToCenterY = WorldCellY * CELL_Y_SIZE - gCenterWorldY;
 	INT16 RScreenCenterY = RDistToCenterX + RDistToCenterY;
-	return RScreenCenterY + gsCY - gsTLY;
+	return RScreenCenterY + gsCY - gsTopY;
 }
 
 
@@ -966,8 +966,8 @@ zlevel_topmost:
 												OneCDirection(s.bDirection);
 										}
 										break;
-                                    default:
-                                        break;
+									default:
+										break;
 								}
 
 								// IF we are not active, or are a placeholder for multi-tile animations do nothing
@@ -1141,8 +1141,8 @@ zlevel_topmost:
 								uiDirtyFlags = BGND_FLAG_SINGLE | BGND_FLAG_ANIMATED;
 								break;
 							}
-                            default:
-                                break;
+							default:
+								break;
 						}
 
 						// Adjust for interface level
@@ -1204,8 +1204,7 @@ zlevel_topmost:
 							UINT8 const foreground = gfUIDisplayActionPointsBlack ? FONT_MCOLOR_BLACK : FONT_MCOLOR_WHITE;
 							SetFontAttributes(TINYFONT1, foreground);
 							SetFontDestBuffer(guiSAVEBUFFER, 0, gsVIEWPORT_WINDOW_START_Y, SCREEN_WIDTH, gsVIEWPORT_WINDOW_END_Y);
-							wchar_t buf[16];
-							swprintf(buf, lengthof(buf), L"%d", pNode->uiAPCost);
+							ST::string buf = ST::format("{}", pNode->uiAPCost);
 							INT16 sX;
 							INT16 sY;
 							FindFontCenterCoordinates(sXPos, sYPos, 1, 1, buf, TINYFONT1, &sX, &sY);
@@ -1627,7 +1626,7 @@ static void ScrollBackground(INT16 sScrollXIncrement, INT16 sScrollYIncrement)
 	if (!gfDoVideoScroll)
 	{
 		// Clear z-buffer
-		memset(gpZBuffer, LAND_Z_LEVEL, gsVIEWPORT_END_Y * SCREEN_WIDTH * 2);
+		std::fill_n(gpZBuffer, gsVIEWPORT_END_Y * SCREEN_WIDTH, LAND_Z_LEVEL);
 
 		RenderStaticWorldRect(gsVIEWPORT_START_X, gsVIEWPORT_START_Y, gsVIEWPORT_END_X, gsVIEWPORT_END_Y, FALSE);
 
@@ -1642,13 +1641,13 @@ static void ScrollBackground(INT16 sScrollXIncrement, INT16 sScrollYIncrement)
 
 
 enum ScrollType {
-  ScrollType_Undefined,
-  ScrollType_Horizontal,
-  ScrollType_Vertical
+	ScrollType_Undefined,
+	ScrollType_Horizontal,
+	ScrollType_Vertical
 };
 
 static BOOLEAN ApplyScrolling(INT16 sTempRenderCenterX, INT16 sTempRenderCenterY, BOOLEAN fForceAdjust, BOOLEAN fCheckOnly,
-                              ScrollType scrollType=ScrollType_Undefined);
+				ScrollType scrollType=ScrollType_Undefined);
 static void ClearMarkedTiles(void);
 static void ExamineZBufferRect(INT16 sLeft, INT16 sTop, INT16 sRight, INT16 sBottom);
 static void RenderDynamicWorld(void);
@@ -1851,7 +1850,7 @@ static void RenderStaticWorld(void)
 	CalcRenderParameters(gsVIEWPORT_START_X, gsVIEWPORT_START_Y, gsVIEWPORT_END_X, gsVIEWPORT_END_Y);
 
 	// Clear z-buffer
-	memset(gpZBuffer, LAND_Z_LEVEL, gsVIEWPORT_END_Y * SCREEN_WIDTH * 2);
+	std::fill_n(gpZBuffer, gsVIEWPORT_END_Y * SCREEN_WIDTH, LAND_Z_LEVEL);
 
 	FreeBackgroundRectType(BGND_FLAG_ANIMATED);
 	InvalidateBackgroundRects();
@@ -1973,7 +1972,7 @@ static void RenderDynamicWorld(void)
 
 static BOOLEAN HandleScrollDirections(UINT32 ScrollFlags, INT16 sScrollXStep, INT16 sScrollYStep, BOOLEAN fCheckOnly)
 {
-  // printf("HandleScrollDirections: %d, (%4d, %4d), %d\n", ScrollFlags, sScrollXStep, sScrollYStep, fCheckOnly);
+	// printf("HandleScrollDirections: %d, (%4d, %4d), %d\n", ScrollFlags, sScrollXStep, sScrollYStep, fCheckOnly);
 	INT16 scroll_x = 0;
 	if (ScrollFlags & SCROLL_LEFT)  scroll_x -= sScrollXStep;
 	if (ScrollFlags & SCROLL_RIGHT) scroll_x += sScrollXStep;
@@ -2197,12 +2196,10 @@ void ScrollWorld(void)
 
 void InitRenderParams(UINT8 ubRestrictionID)
 {
+	// FIXME incorrect use of CELL_X_SIZE/CELL_Y_SIZE and WORLD_ROWS/WORLD_COLS
+	//       it only works as intended because they have the same value as the counterpart
 	INT16 gTopLeftWorldLimitX;     // XXX HACK000E
 	INT16 gTopLeftWorldLimitY;     // XXX HACK000E
-	INT16 gTopRightWorldLimitX;    // XXX HACK000E
-	INT16 gTopRightWorldLimitY;    // XXX HACK000E
-	INT16 gBottomLeftWorldLimitX;  // XXX HACK000E
-	INT16 gBottomLeftWorldLimitY;  // XXX HACK000E
 	INT16 gBottomRightWorldLimitX; // XXX HACK000E
 	INT16 gBottomRightWorldLimitY; // XXX HACK000E
 	switch (ubRestrictionID)
@@ -2211,12 +2208,6 @@ void InitRenderParams(UINT8 ubRestrictionID)
 			gTopLeftWorldLimitX = CELL_X_SIZE;
 			gTopLeftWorldLimitY = CELL_X_SIZE * WORLD_ROWS / 2;
 
-			gTopRightWorldLimitX = CELL_Y_SIZE * WORLD_COLS / 2;
-			gTopRightWorldLimitY = CELL_X_SIZE;
-
-			gBottomLeftWorldLimitX = CELL_Y_SIZE * WORLD_COLS / 2;
-			gBottomLeftWorldLimitY = CELL_Y_SIZE * WORLD_ROWS;
-
 			gBottomRightWorldLimitX = CELL_Y_SIZE * WORLD_COLS;
 			gBottomRightWorldLimitY = CELL_X_SIZE * WORLD_ROWS / 2;
 			break;
@@ -2224,12 +2215,6 @@ void InitRenderParams(UINT8 ubRestrictionID)
 		case 1: // BAEMENT LEVEL 1
 			gTopLeftWorldLimitX = CELL_X_SIZE * WORLD_ROWS * 3 / 10;
 			gTopLeftWorldLimitY = CELL_X_SIZE * WORLD_ROWS     /  2;
-
-			gTopRightWorldLimitX = CELL_X_SIZE * WORLD_ROWS     /  2;
-			gTopRightWorldLimitY = CELL_X_SIZE * WORLD_COLS * 3 / 10;
-
-			gBottomLeftWorldLimitX = CELL_X_SIZE * WORLD_ROWS     /  2;
-			gBottomLeftWorldLimitY = CELL_X_SIZE * WORLD_COLS * 7 / 10;
 
 			gBottomRightWorldLimitX = CELL_X_SIZE * WORLD_ROWS * 7 / 10;
 			gBottomRightWorldLimitY = CELL_X_SIZE * WORLD_ROWS     /  2;
@@ -2242,23 +2227,20 @@ void InitRenderParams(UINT8 ubRestrictionID)
 	gCenterWorldY = CELL_X_SIZE * WORLD_COLS / 2;
 
 	// Convert Bounding box into screen coords
-	FromCellToScreenCoordinates(gTopLeftWorldLimitX,     gTopLeftWorldLimitY,     &gsTLX, &gsTLY);
-	FromCellToScreenCoordinates(gTopRightWorldLimitX,    gTopRightWorldLimitY,    &gsTRX, &gsTRY);
-	FromCellToScreenCoordinates(gBottomLeftWorldLimitX,  gBottomLeftWorldLimitY,  &gsBLX, &gsBLY);
-	FromCellToScreenCoordinates(gBottomRightWorldLimitX, gBottomRightWorldLimitY, &gsBRX, &gsBRY);
+	FromCellToScreenCoordinates(gTopLeftWorldLimitX,     gTopLeftWorldLimitY,     &gsLeftX, &gsTopY);
+	FromCellToScreenCoordinates(gBottomRightWorldLimitX, gBottomRightWorldLimitY, &gsRightX, &gsBottomY);
 	FromCellToScreenCoordinates(gCenterWorldX,           gCenterWorldY,           &gsCX,  &gsCY);
 
 	// Adjust for interface height tabbing!
-	gsTLY += ROOF_LEVEL_HEIGHT;
-	gsTRY += ROOF_LEVEL_HEIGHT;
+	gsTopY += ROOF_LEVEL_HEIGHT;
 	gsCY  += ROOF_LEVEL_HEIGHT / 2;
 
-	SLOGD(DEBUG_TAG_RENDERWORLD, "World Screen Width %d Height %d", gsTRX - gsTLX, gsBRY - gsTRY);
+	SLOGD("World Screen Width %d Height %d", gsRightX - gsLeftX, gsBottomY - gsTopY);
 
 	// Determine scale factors
 	// First scale world screen coords for VIEWPORT ratio
-	const double dWorldX = gsTRX - gsTLX;
-	const double dWorldY = gsBRY - gsTRY;
+	const double dWorldX = gsRightX - gsLeftX;
+	const double dWorldY = gsBottomY - gsTopY;
 
 	gdScaleX = (double)RADAR_WINDOW_WIDTH  / dWorldX;
 	gdScaleY = (double)RADAR_WINDOW_HEIGHT / dWorldY;
@@ -2278,10 +2260,8 @@ void InitRenderParams(UINT8 ubRestrictionID)
 
 /** This function checks whether the render screen can be moved to new position. */
 static BOOLEAN ApplyScrolling(INT16 sTempRenderCenterX, INT16 sTempRenderCenterY, BOOLEAN fForceAdjust, BOOLEAN fCheckOnly,
-                              ScrollType scrollType)
+				ScrollType scrollType)
 {
-  // printf("~ %4d, %4d\n", sTempRenderCenterX, sTempRenderCenterY);
-
 	// Make sure it's a multiple of 5
 	sTempRenderCenterX = sTempRenderCenterX / CELL_X_SIZE * CELL_X_SIZE + CELL_X_SIZE / 2;
 	sTempRenderCenterY = sTempRenderCenterY / CELL_X_SIZE * CELL_Y_SIZE + CELL_Y_SIZE / 2;
@@ -2299,62 +2279,53 @@ static BOOLEAN ApplyScrolling(INT16 sTempRenderCenterX, INT16 sTempRenderCenterY
 	const INT16 sY_S = g_ui.m_tacticalMapCenterY;
 
 	// Get corners in screen coords
-	// TOP LEFT
 	const INT16 sTopLeftWorldX = sScreenCenterX - sX_S;
 	const INT16 sTopLeftWorldY = sScreenCenterY - sY_S;
-
-	const INT16 sTopRightWorldX = sScreenCenterX + sX_S;
-	// const INT16 sTopRightWorldY = sScreenCenterY - sY_S;
-
-	// const INT16 sBottomLeftWorldX = sScreenCenterX - sX_S;
-	const INT16 sBottomLeftWorldY = sScreenCenterY + sY_S;
 
 	const INT16 sBottomRightWorldX = sScreenCenterX + sX_S;
 	const INT16 sBottomRightWorldY = sScreenCenterY + sY_S;
 
-#define TILE_SIZE 10
+	// Checking if screen shows areas outside of the map
+	const BOOLEAN fOutLeft   = (gsLeftX + SCROLL_LEFT_PADDING > sTopLeftWorldX);
+	const BOOLEAN fOutRight  = (gsRightX + SCROLL_RIGHT_PADDING < sBottomRightWorldX);
+	const BOOLEAN fOutTop    = (gsTopY + SCROLL_TOP_PADDING >= sTopLeftWorldY);            /* top of the screen is above top of the map */
+	const BOOLEAN fOutBottom = (gsBottomY + SCROLL_BOTTOM_PADDING < sBottomRightWorldY);          /* bottom of the screen is below bottom if the map */
 
-  // Checking if screen shows areas outside of the map
-	BOOLEAN fOutLeft   = (gsTLX > sTopLeftWorldX);
-	BOOLEAN fOutRight  = (gsTRX < sTopRightWorldX);
-	BOOLEAN fOutTop    = (gsTLY >= sTopLeftWorldY);            /* top of the screen is above top of the map */
-	BOOLEAN fOutBottom = (gsBLY < sBottomLeftWorldY);          /* bottom of the screen is below bottom if the map */
+	const int mapHeight = (gsBottomY + SCROLL_BOTTOM_PADDING) - (gsTopY + SCROLL_TOP_PADDING);
+	const int screenHeight = gsVIEWPORT_END_Y - gsVIEWPORT_START_Y;
 
-  int mapHeight = gsBLY - gsTLY;
-  int screenHeight = gsVIEWPORT_END_Y - gsVIEWPORT_START_Y;
-
-  int mapWidth = gsTRX - gsTLX;
-  int screenWidth = gsVIEWPORT_END_X - gsVIEWPORT_START_X;
+	const int mapWidth = (gsRightX + SCROLL_RIGHT_PADDING) - (gsLeftX + SCROLL_LEFT_PADDING);
+	const int screenWidth = gsVIEWPORT_END_X - gsVIEWPORT_START_X;
 
 	BOOLEAN fScrollGood = FALSE;
 
 	if (!fOutRight && !fOutLeft && !fOutTop && !fOutBottom)
-  {
-    // Nothing goes outside the borders of the map.
-    // Can change render center.
-    fScrollGood = TRUE;
-  }
-  else
-  {
-    // Something is outside the border.
-    // Let's check if we can move horizontally or vertically.
+	{
+		// Nothing goes outside the borders of the map.
+		// Can change render center.
+		fScrollGood = TRUE;
+	}
+	else
+	{
+		// Something is outside the border.
+		// Let's check if we can move horizontally or vertically.
 
-    if((scrollType == ScrollType_Horizontal)
-       && (((sTempRenderCenterX < gsRenderCenterX) && !fOutLeft)                /** moving left */
-           || ((sTempRenderCenterX > gsRenderCenterX) && !fOutRight)))            /** moving right */
-    {
-      // can move
-      fScrollGood = TRUE;
-    }
+		if((scrollType == ScrollType_Horizontal)
+			&& (((sTempRenderCenterX < gsRenderCenterX) && !fOutLeft)                /** moving left */
+			|| ((sTempRenderCenterX > gsRenderCenterX) && !fOutRight)))            /** moving right */
+		{
+			// can move
+			fScrollGood = TRUE;
+		}
 
-    if((scrollType == ScrollType_Vertical)
-       && (((sTempRenderCenterY < gsRenderCenterY) && !fOutTop)
-           || ((sTempRenderCenterY > gsRenderCenterY) && !fOutBottom)))
-    {
-      // can move
-      fScrollGood = TRUE;
-    }
-  }
+		if((scrollType == ScrollType_Vertical)
+			&& (((sTempRenderCenterY < gsRenderCenterY) && !fOutTop)
+			|| ((sTempRenderCenterY > gsRenderCenterY) && !fOutBottom)))
+		{
+			// can move
+			fScrollGood = TRUE;
+		}
+	}
 
 	// If in editor, anything goes
 	if (gfEditMode && _KeyDown(SHIFT)) fScrollGood = TRUE;
@@ -2369,43 +2340,43 @@ static BOOLEAN ApplyScrolling(INT16 sTempRenderCenterX, INT16 sTempRenderCenterY
 	{
 		if (fForceAdjust)
 		{
-      INT16 newScreenCenterX = sScreenCenterX;
-      INT16 newScreenCenterY = sScreenCenterY;
+			INT16 newScreenCenterX = sScreenCenterX;
+			INT16 newScreenCenterY = sScreenCenterY;
 
 			if (screenHeight > mapHeight)
-      {
-        // printf("screen height is bigger than map height\n");
-        newScreenCenterY = gsCY;
-      }
+			{
+				// printf("screen height is bigger than map height\n");
+				newScreenCenterY = gsCY + (SCROLL_TOP_PADDING + SCROLL_BOTTOM_PADDING) / 2;
+			}
 			else if (fOutTop)
 			{
-        newScreenCenterY = gsTLY + sY_S;
+				newScreenCenterY = gsTopY + SCROLL_TOP_PADDING + sY_S;
 			}
 			else if (fOutBottom)
 			{
-        newScreenCenterY = gsBLY - sY_S - 50;
+				newScreenCenterY = gsBottomY + SCROLL_BOTTOM_PADDING - sY_S;
 			}
 
 			if (screenWidth > mapWidth)
-      {
-        // printf("screen width is bigger than map width\n");
-        newScreenCenterX = gsCX;
-      }
+			{
+				// printf("screen width is bigger than map width\n");
+				newScreenCenterX = gsCX + (SCROLL_LEFT_PADDING + SCROLL_RIGHT_PADDING) / 2;
+			}
 			else if (fOutLeft)
 			{
-        newScreenCenterX = gsTLX + sX_S;
+				newScreenCenterX = gsLeftX + SCROLL_LEFT_PADDING + sX_S;
 			}
 			else if (fOutRight)
 			{
-        newScreenCenterX = gsTRX - sX_S;
+				newScreenCenterX = gsRightX + SCROLL_RIGHT_PADDING - sX_S;
 			}
 
 			INT16 sTempPosX_W;
 			INT16 sTempPosY_W;
-      FromScreenToCellCoordinates(newScreenCenterX, newScreenCenterY, &sTempPosX_W, &sTempPosY_W);
-      sTempRenderCenterX = sTempPosX_W;
-      sTempRenderCenterY = sTempPosY_W;
-      fScrollGood = TRUE;
+			FromScreenToCellCoordinates(newScreenCenterX, newScreenCenterY, &sTempPosX_W, &sTempPosY_W);
+			sTempRenderCenterX = sTempPosX_W;
+			sTempRenderCenterY = sTempPosY_W;
+			fScrollGood = TRUE;
 		}
 		else
 		{
@@ -2422,11 +2393,11 @@ static BOOLEAN ApplyScrolling(INT16 sTempRenderCenterX, INT16 sTempRenderCenterY
 		gsRenderCenterX = sTempRenderCenterX / CELL_X_SIZE * CELL_X_SIZE + CELL_X_SIZE / 2;
 		gsRenderCenterY = sTempRenderCenterY / CELL_X_SIZE * CELL_Y_SIZE + CELL_Y_SIZE / 2;
 
-		gsTopLeftWorldX = sTopLeftWorldX - gsTLX;
-		gsTopLeftWorldY = sTopLeftWorldY - gsTLY;
+		gsTopLeftWorldX = sTopLeftWorldX - gsLeftX;
+		gsTopLeftWorldY = sTopLeftWorldY - gsTopY;
 
-		gsBottomRightWorldX = sBottomRightWorldX - gsTLX;
-		gsBottomRightWorldY = sBottomRightWorldY - gsTLY;
+		gsBottomRightWorldX = sBottomRightWorldX - gsLeftX;
+		gsBottomRightWorldY = sBottomRightWorldY - gsTopY;
 
 		SetPositionSndsVolumeAndPanning();
 	}
@@ -2457,7 +2428,7 @@ void InvalidateWorldRedundency(void)
 #define Z_STRIP_DELTA_Y  (Z_SUBLAYERS * 10)
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransZIncClip
+Blt8BPPDataTo16BPPBufferTransZIncClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -2525,14 +2496,14 @@ static void Blt8BPPDataTo16BPPBufferTransZIncClip(UINT16* pBuffer, UINT32 uiDest
 
 	if (hSrcVObject->ppZStripInfo == NULL)
 	{
-		SLOGW(DEBUG_TAG_RENDERWORLD, "Missing Z-Strip info on multi-Z object");
+		SLOGW("Missing Z-Strip info on multi-Z object");
 		return;
 	}
 	// setup for the z-column blitting stuff
 	const ZStripInfo* const pZInfo = hSrcVObject->ppZStripInfo[usIndex];
 	if (pZInfo == NULL)
 	{
-		SLOGW(DEBUG_TAG_RENDERWORLD, "Missing Z-Strip info on multi-Z object");
+		SLOGW("Missing Z-Strip info on multi-Z object");
 		return;
 	}
 
@@ -2611,7 +2582,7 @@ static void Blt8BPPDataTo16BPPBufferTransZIncClip(UINT16* pBuffer, UINT32 uiDest
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -2620,7 +2591,7 @@ static void Blt8BPPDataTo16BPPBufferTransZIncClip(UINT16* pBuffer, UINT32 uiDest
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -2639,7 +2610,7 @@ static void Blt8BPPDataTo16BPPBufferTransZIncClip(UINT16* pBuffer, UINT32 uiDest
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -2670,7 +2641,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -2720,7 +2691,7 @@ BlitNonTransLoop: // blit non-transparent pixels
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransZIncClipSaveZBurnsThrough
+Blt8BPPDataTo16BPPBufferTransZIncClipSaveZBurnsThrough
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -2788,14 +2759,14 @@ static void Blt8BPPDataTo16BPPBufferTransZIncClipZSameZBurnsThrough(UINT16* pBuf
 
 	if (hSrcVObject->ppZStripInfo == NULL)
 	{
-		SLOGW(DEBUG_TAG_RENDERWORLD, "Missing Z-Strip info on multi-Z object");
+		SLOGW("Missing Z-Strip info on multi-Z object");
 		return;
 	}
 	// setup for the z-column blitting stuff
 	const ZStripInfo* const pZInfo = hSrcVObject->ppZStripInfo[usIndex];
 	if (pZInfo == NULL)
 	{
-		SLOGW(DEBUG_TAG_RENDERWORLD, "Missing Z-Strip info on multi-Z object");
+		SLOGW("Missing Z-Strip info on multi-Z object");
 		return;
 	}
 
@@ -2873,7 +2844,7 @@ static void Blt8BPPDataTo16BPPBufferTransZIncClipZSameZBurnsThrough(UINT16* pBuf
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -2882,7 +2853,7 @@ static void Blt8BPPDataTo16BPPBufferTransZIncClipZSameZBurnsThrough(UINT16* pBuf
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -2901,7 +2872,7 @@ static void Blt8BPPDataTo16BPPBufferTransZIncClipZSameZBurnsThrough(UINT16* pBuf
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -2932,7 +2903,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -2982,7 +2953,7 @@ BlitNonTransLoop: // blit non-transparent pixels
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransZIncObscureClip
+Blt8BPPDataTo16BPPBufferTransZIncObscureClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -3055,14 +3026,14 @@ static void Blt8BPPDataTo16BPPBufferTransZIncObscureClip(UINT16* pBuffer, UINT32
 
 	if (hSrcVObject->ppZStripInfo == NULL)
 	{
-		SLOGW(DEBUG_TAG_RENDERWORLD, "Missing Z-Strip info on multi-Z object");
+		SLOGW("Missing Z-Strip info on multi-Z object");
 		return;
 	}
 	// setup for the z-column blitting stuff
 	const ZStripInfo* const pZInfo = hSrcVObject->ppZStripInfo[usIndex];
 	if (pZInfo == NULL)
 	{
-		SLOGW(DEBUG_TAG_RENDERWORLD, "Missing Z-Strip info on multi-Z object");
+		SLOGW("Missing Z-Strip info on multi-Z object");
 		return;
 	}
 
@@ -3142,7 +3113,7 @@ static void Blt8BPPDataTo16BPPBufferTransZIncObscureClip(UINT16* pBuffer, UINT32
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -3151,7 +3122,7 @@ static void Blt8BPPDataTo16BPPBufferTransZIncObscureClip(UINT16* pBuffer, UINT32
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -3170,7 +3141,7 @@ static void Blt8BPPDataTo16BPPBufferTransZIncObscureClip(UINT16* pBuffer, UINT32
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -3201,7 +3172,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -3253,10 +3224,10 @@ BlitNonTransLoop: // blit non-transparent pixels
 
 
 /* Blitter Specs
- * 1) 8 to 16 bpp
- * 2) strip z-blitter
- * 3) clipped
- * 4) trans shadow - if value is 254, makes a shadow */
+	* 1) 8 to 16 bpp
+	* 2) strip z-blitter
+	* 3) clipped
+	* 4) trans shadow - if value is 254, makes a shadow */
 static void Blt8BPPDataTo16BPPBufferTransZTransShadowIncObscureClip(UINT16* pBuffer, UINT32 uiDestPitchBYTES, UINT16* pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect* clipregion, INT16 sZIndex, const UINT16* p16BPPPalette)
 {
 	UINT32 Unblitted;
@@ -3317,14 +3288,14 @@ static void Blt8BPPDataTo16BPPBufferTransZTransShadowIncObscureClip(UINT16* pBuf
 
 	if (hSrcVObject->ppZStripInfo == NULL)
 	{
-		SLOGW(DEBUG_TAG_RENDERWORLD, "Missing Z-Strip info on multi-Z object");
+		SLOGW("Missing Z-Strip info on multi-Z object");
 		return;
 	}
 	// setup for the z-column blitting stuff
 	const ZStripInfo* const pZInfo = hSrcVObject->ppZStripInfo[sZIndex];
 	if (pZInfo == NULL)
 	{
-		SLOGW(DEBUG_TAG_RENDERWORLD, "Missing Z-Strip info on multi-Z object");
+		SLOGW("Missing Z-Strip info on multi-Z object");
 		return;
 	}
 
@@ -3403,7 +3374,7 @@ static void Blt8BPPDataTo16BPPBufferTransZTransShadowIncObscureClip(UINT16* pBuf
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -3412,7 +3383,7 @@ static void Blt8BPPDataTo16BPPBufferTransZTransShadowIncObscureClip(UINT16* pBuf
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -3431,7 +3402,7 @@ static void Blt8BPPDataTo16BPPBufferTransZTransShadowIncObscureClip(UINT16* pBuf
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -3462,7 +3433,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -3521,10 +3492,10 @@ BlitNonTransLoop: // blit non-transparent pixels
 }
 
 /* Blitter Specs
- * 1) 8 to 16 bpp
- * 2) strip z-blitter
- * 3) clipped
- * 4) trans shadow - if value is 254, makes a shadow */
+	* 1) 8 to 16 bpp
+	* 2) strip z-blitter
+	* 3) clipped
+	* 4) trans shadow - if value is 254, makes a shadow */
 static void Blt8BPPDataTo16BPPBufferTransZTransShadowIncClip(UINT16* pBuffer, UINT32 uiDestPitchBYTES, UINT16* pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect* clipregion, INT16 sZIndex, const UINT16* p16BPPPalette)
 {
 	UINT32 Unblitted;
@@ -3583,14 +3554,14 @@ static void Blt8BPPDataTo16BPPBufferTransZTransShadowIncClip(UINT16* pBuffer, UI
 
 	if (hSrcVObject->ppZStripInfo == NULL)
 	{
-		SLOGW(DEBUG_TAG_RENDERWORLD, "Missing Z-Strip info on multi-Z object");
+		SLOGW("Missing Z-Strip info on multi-Z object");
 		return;
 	}
 	// setup for the z-column blitting stuff
 	const ZStripInfo* const pZInfo = hSrcVObject->ppZStripInfo[sZIndex];
 	if (pZInfo == NULL)
 	{
-		SLOGW(DEBUG_TAG_RENDERWORLD, "Missing Z-Strip info on multi-Z object");
+		SLOGW("Missing Z-Strip info on multi-Z object");
 		return;
 	}
 
@@ -3669,7 +3640,7 @@ static void Blt8BPPDataTo16BPPBufferTransZTransShadowIncClip(UINT16* pBuffer, UI
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -3678,7 +3649,7 @@ static void Blt8BPPDataTo16BPPBufferTransZTransShadowIncClip(UINT16* pBuffer, UI
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -3697,7 +3668,7 @@ static void Blt8BPPDataTo16BPPBufferTransZTransShadowIncClip(UINT16* pBuffer, UI
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -3728,7 +3699,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -3831,7 +3802,7 @@ static void RenderRoomInfo(INT16 sStartPointX_M, INT16 sStartPointY_M, INT16 sSt
 						case 3: SetFontForeground(FONT_LTBLUE);  break;
 						case 4: SetFontForeground(FONT_LTGREEN); break;
 					}
-					mprintf_buffer(pDestBuf, uiDestPitchBYTES, sX, sY, L"%d", gubWorldRoomInfo[usTileIndex]);
+					MPrintBuffer(pDestBuf, uiDestPitchBYTES, sX, sY, ST::format("{}", gubWorldRoomInfo[usTileIndex]));
 					SetFontDestBuffer(FRAME_BUFFER);
 				}
 			}
@@ -3898,7 +3869,7 @@ static void RenderFOVDebugInfo(INT16 sStartPointX_M, INT16 sStartPointY_M, INT16
 					SetFont(SMALLCOMPFONT);
 					SetFontDestBuffer(FRAME_BUFFER, 0, 0, SCREEN_WIDTH, gsVIEWPORT_END_Y);
 					SetFontForeground(FONT_GRAY3);
-					mprintf_buffer(pDestBuf, uiDestPitchBYTES, sX, sY, L"%d", gubFOVDebugInfoInfo[usTileIndex]);
+					MPrintBuffer(pDestBuf, uiDestPitchBYTES, sX, sY, ST::format("{}", gubFOVDebugInfoInfo[usTileIndex]));
 					SetFontDestBuffer(FRAME_BUFFER);
 
 					Blt8BPPDataTo16BPPBufferTransparentClip(pDestBuf, uiDestPitchBYTES, gTileDatabase[0].hTileSurface, sTempPosX_S, sTempPosY_S, 0, &gClippingRect);
@@ -3909,7 +3880,7 @@ static void RenderFOVDebugInfo(INT16 sStartPointX_M, INT16 sStartPointY_M, INT16
 					SetFont(SMALLCOMPFONT);
 					SetFontDestBuffer(FRAME_BUFFER, 0, 0, SCREEN_WIDTH, gsVIEWPORT_END_Y);
 					SetFontForeground(FONT_FCOLOR_YELLOW);
-					MPrintBuffer(pDestBuf, uiDestPitchBYTES, sX, sY + 4, L"x");
+					MPrintBuffer(pDestBuf, uiDestPitchBYTES, sX, sY + 4, "x");
 					SetFontDestBuffer(FRAME_BUFFER);
 				}
 			}
@@ -3985,7 +3956,7 @@ static void RenderCoverDebugInfo(INT16 sStartPointX_M, INT16 sStartPointY_M, INT
 					{
 						SetFontForeground(FONT_GRAY3);
 					}
-					mprintf_buffer(pDestBuf, uiDestPitchBYTES, sX, sY, L"%d", gsCoverValue[usTileIndex]);
+					MPrintBuffer(pDestBuf, uiDestPitchBYTES, sX, sY, ST::format("{}", gsCoverValue[usTileIndex]));
 					SetFontDestBuffer(FRAME_BUFFER);
 				}
 			}
@@ -4056,7 +4027,7 @@ static void RenderGridNoVisibleDebugInfo(INT16 sStartPointX_M, INT16 sStartPoint
 				{
 					SetFontForeground(FONT_GRAY3);
 				}
-				mprintf_buffer(pDestBuf, uiDestPitchBYTES, sX, sY, L"%d", usTileIndex);
+				MPrintBuffer(pDestBuf, uiDestPitchBYTES, sX, sY, ST::format("{}", usTileIndex));
 				SetFontDestBuffer(FRAME_BUFFER);
 			}
 
@@ -4212,16 +4183,12 @@ static void CalcRenderParameters(INT16 sLeft, INT16 sTop, INT16 sRight, INT16 sB
 	gsStartPointX_S = g_ui.m_tacticalMapCenterX - (sLeft - VIEWPORT_XOFFSET_S);
 	gsStartPointY_S = g_ui.m_tacticalMapCenterY - (sTop  - VIEWPORT_YOFFSET_S);
 
-
 	// b) Convert these distances into world distances
 	FromScreenToCellCoordinates(gsStartPointX_S, gsStartPointY_S, &sTempPosX_W, &sTempPosY_W);
 
 	// c) World start point is Render center minus this distance
-	gsStartPointX_W = sRenderCenterX_W - sTempPosX_W;
-	gsStartPointY_W = sRenderCenterY_W - sTempPosY_W;
-
-	// NOTE: Increase X map value by 1 tile to offset where on screen we are...
-	if (gsStartPointX_W > 0) gsStartPointX_W += CELL_X_SIZE;
+	const INT16 sStartPointX_W = sRenderCenterX_W - sTempPosX_W + CELL_X_SIZE;
+	const INT16 sStartPointY_W = sRenderCenterY_W - sTempPosY_W;
 
 	// d) screen start point is screen distances minus screen center
 	gsStartPointX_S = sLeft - VIEWPORT_XOFFSET_S;
@@ -4229,48 +4196,37 @@ static void CalcRenderParameters(INT16 sLeft, INT16 sTop, INT16 sRight, INT16 sB
 
 	// STEP FOUR - Determine Start block
 	// a) Find start block
-	gsStartPointX_M = gsStartPointX_W / CELL_X_SIZE;
-	gsStartPointY_M = gsStartPointY_W / CELL_Y_SIZE;
+	gsStartPointX_M = floor(DOUBLE(sStartPointX_W) / DOUBLE(CELL_X_SIZE));
+	gsStartPointY_M = floor(DOUBLE(sStartPointY_W) / DOUBLE(CELL_Y_SIZE));
 
-	// STEP 5 - Determine Deltas for center and find screen values
-	//Make sure these coordinates are multiples of scroll steps
-	const INT16 sOffsetX_W = ABS(gsStartPointX_W) - ABS(gsStartPointX_M * CELL_X_SIZE);
-	const INT16 sOffsetY_W = ABS(gsStartPointY_W) - ABS(gsStartPointY_M * CELL_Y_SIZE);
+	// STEP 5 - Determine offsets for tile center and convert to screen values
+	// Make sure these coordinates are multiples of scroll steps
+	const INT16 sOffsetX_W = sStartPointX_W - gsStartPointX_M * CELL_X_SIZE;
+	const INT16 sOffsetY_W = sStartPointY_W - gsStartPointY_M * CELL_Y_SIZE;
 
 	INT16 sOffsetX_S;
 	INT16 sOffsetY_S;
 	FromCellToScreenCoordinates(sOffsetX_W, sOffsetY_W, &sOffsetX_S, &sOffsetY_S);
 
-	if (gsStartPointY_W < 0)
-	{
-		gsStartPointY_S += 0;
-	}
-	else
-	{
-		gsStartPointY_S -= sOffsetY_S;
-	}
 	gsStartPointX_S -= sOffsetX_S;
+	gsStartPointY_S -= sOffsetY_S;
 
 	/////////////////////////////////////////
 	//ATE: CALCULATE LARGER OFFSET VALUES
 	gsLEndXS = sRight  + LARGER_VIEWPORT_XOFFSET_S;
 	gsLEndYS = sBottom + LARGER_VIEWPORT_YOFFSET_S;
 
-		// STEP THREE - determine starting point in world coords
+	// STEP THREE - determine starting point in world coords
 	// a) Determine where in screen coords to start rendering
 	gsLStartPointX_S = g_ui.m_tacticalMapCenterX - (sLeft - LARGER_VIEWPORT_XOFFSET_S);
 	gsLStartPointY_S = g_ui.m_tacticalMapCenterY - (sTop  - LARGER_VIEWPORT_YOFFSET_S);
-
 
 	// b) Convert these distances into world distances
 	FromScreenToCellCoordinates(gsLStartPointX_S, gsLStartPointY_S, &sTempPosX_W, &sTempPosY_W);
 
 	// c) World start point is Render center minus this distance
-	gsLStartPointX_W = sRenderCenterX_W - sTempPosX_W;
-	gsLStartPointY_W = sRenderCenterY_W - sTempPosY_W;
-
-	// NOTE: Increase X map value by 1 tile to offset where on screen we are...
-	if (gsLStartPointX_W > 0) gsLStartPointX_W += CELL_X_SIZE;
+	const INT16 sLStartPointX_W = sRenderCenterX_W - sTempPosX_W + CELL_X_SIZE;
+	const INT16 sLStartPointY_W = sRenderCenterY_W - sTempPosY_W;
 
 	// d) screen start point is screen distances minus screen center
 	gsLStartPointX_S = sLeft - LARGER_VIEWPORT_XOFFSET_S;
@@ -4278,21 +4234,12 @@ static void CalcRenderParameters(INT16 sLeft, INT16 sTop, INT16 sRight, INT16 sB
 
 	// STEP FOUR - Determine Start block
 	// a) Find start block
-	gsLStartPointX_M = gsLStartPointX_W / CELL_X_SIZE;
-	gsLStartPointY_M = gsLStartPointY_W / CELL_Y_SIZE;
+	gsLStartPointX_M = floor(DOUBLE(sLStartPointX_W) / DOUBLE(CELL_X_SIZE));
+	gsLStartPointY_M = floor(DOUBLE(sLStartPointY_W) / DOUBLE(CELL_Y_SIZE));
 
-	// Adjust starting screen coordinates
+	// STEP 5 - Adjust screen coordinates to tile center, so it matches small viewport
 	gsLStartPointX_S -= sOffsetX_S;
-
-	if (gsLStartPointY_W < 0)
-	{
-		gsLStartPointY_S +=  0;
-		gsLStartPointX_S -= 20;
-	}
-	else
-	{
-		gsLStartPointY_S -= sOffsetY_S;
-	}
+	gsLStartPointY_S -= sOffsetY_S;
 }
 
 
@@ -4407,9 +4354,9 @@ void RenderCoverDebug(void)
 
 TEST(RenderWorld, asserts)
 {
-  EXPECT_EQ(lengthof(RenderFX), NUM_RENDER_FX_TYPES);
-  EXPECT_EQ(lengthof(RenderFXStartIndex), NUM_RENDER_FX_TYPES);
-  EXPECT_EQ(lengthof(g_render_fx_layer_flags), NUM_RENDER_FX_TYPES);
+	EXPECT_EQ(lengthof(RenderFX), NUM_RENDER_FX_TYPES);
+	EXPECT_EQ(lengthof(RenderFXStartIndex), NUM_RENDER_FX_TYPES);
+	EXPECT_EQ(lengthof(g_render_fx_layer_flags), NUM_RENDER_FX_TYPES);
 }
 
 #endif

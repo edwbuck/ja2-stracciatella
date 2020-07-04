@@ -195,11 +195,11 @@ static UINT16 GetCaveTileIndexFromPerimeterValue(UINT8 ubTotal)
 	return GetTileIndexFromTypeSubIndex(usType, usIndex);
 }
 
-//	16 | 1 | 32
-//	---+---+---
-//	 8 |   | 2
-//	---+---+---
-//	128| 4 | 64
+//  16 | 1 | 32
+//  ---+---+---
+//   8 |   | 2
+//  ---+---+---
+//  128| 4 | 64
 //These values are combined in any possible order ranging in
 //values from 0 - 255.  If there is a cave existing in any of
 //these bordering gridnos, then the corresponding number is added
@@ -233,7 +233,7 @@ void AddCave( INT32 iMapIndex, UINT16 usIndex )
 {
 	LEVELNODE *pStruct;
 
-	if( iMapIndex < 0 || iMapIndex >= NOWHERE )
+	if( iMapIndex < 0 || iMapIndex >= GRIDSIZE )
 		return;
 	//First toast any existing wall (caves)
 	RemoveAllStructsOfTypeRange( iMapIndex, FIRSTWALL, LASTWALL );
@@ -247,7 +247,7 @@ void AddCave( INT32 iMapIndex, UINT16 usIndex )
 }
 
 //These walls have shadows associated with them, and are draw when the wall is drawn.
-#define EXTERIOR_L_SHADOW_INDEX					30
+#define EXTERIOR_L_SHADOW_INDEX		30
 #define INTERIOR_BOTTOMEND_SHADOW_INDEX	31
 
 //Wall Look Up Table containing variants and indices with each row being a different walltype.
@@ -272,33 +272,33 @@ static const INT8 gbWallTileLUT[NUM_WALL_TYPES][7] =
 };
 
 //Roof table -- such a small table, using definitions instead.
-#define TOP_ROOF_INDEX					2
-#define BOTTOM_ROOF_INDEX				4
-#define LEFT_ROOF_INDEX					1
-#define RIGHT_ROOF_INDEX				5
-#define TOPLEFT_ROOF_INDEX			3
-#define TOPRIGHT_ROOF_INDEX			7
-#define BOTTOMLEFT_ROOF_INDEX		8
+#define TOP_ROOF_INDEX		2
+#define BOTTOM_ROOF_INDEX	4
+#define LEFT_ROOF_INDEX	1
+#define RIGHT_ROOF_INDEX	5
+#define TOPLEFT_ROOF_INDEX	3
+#define TOPRIGHT_ROOF_INDEX	7
+#define BOTTOMLEFT_ROOF_INDEX	8
 #define BOTTOMRIGHT_ROOF_INDEX	6
 #define CENTER_ROOF_BASE_INDEX	9
-#define CENTER_ROOF_VARIANTS		3
+#define CENTER_ROOF_VARIANTS	3
 
 //slant roof table
 #define THIN_BOTTOM		1
-#define THIN_TOP			2
-#define THIN_LEFT			5
+#define THIN_TOP		2
+#define THIN_LEFT		5
 #define THIN_RIGHT		6
-#define THICK_BOTTOM	3
-#define THICK_TOP			4
+#define THICK_BOTTOM		3
+#define THICK_TOP		4
 #define THICK_LEFT		7
-#define	THICK_RIGHT		8
+#define THICK_RIGHT		8
 #define VWALL_LEFT		32
 #define VWALL_RIGHT		33
 #define HWALL_LEFT		35
 #define HWALL_RIGHT		34
 
 
-#define FLOOR_VARIANTS					8
+#define FLOOR_VARIANTS		8
 
 
 //These construction functions do all the smoothing.
@@ -378,7 +378,7 @@ UINT16 PickAWallPiece( UINT16 usWallPieceType )
 	if (usWallPieceType < NUM_WALL_TYPES)
 	{
 		usVariants = gbWallTileLUT[ usWallPieceType ][ 0 ];
-		usVariantChosen = ( rand() % usVariants ) + 1;
+		usVariantChosen = Random(usVariants) + 1;
 		usWallPieceChosen = gbWallTileLUT[ usWallPieceType ][ usVariantChosen ];
 	}
 	return usWallPieceChosen;
@@ -548,7 +548,7 @@ void BuildWallPiece( UINT32 iMapIndex, UINT8 ubWallPiece, UINT16 usWallType )
 					ubWallClass = EXTERIOR_EXTENDED;
 			}
 			if( !gfBasement && GetHorizontalWall( iMapIndex + 1 ) && !GetHorizontalWall( iMapIndex )
-				  && !FloorAtGridNo( iMapIndex + WORLD_COLS ) )
+				&& !FloorAtGridNo( iMapIndex + WORLD_COLS ) )
 			{
 				UINT16 usTileIndex = GetTileIndexFromTypeSubIndex(usWallType, INTERIOR_BOTTOMEND_SHADOW_INDEX);
 				AddExclusiveShadow( iMapIndex, usTileIndex );
@@ -591,7 +591,7 @@ void RebuildRoofUsingFloorInfo(INT32 const map_idx, UINT16 roof_type)
 		bottom          ? BOTTOM_ROOF_INDEX      :
 		left            ? LEFT_ROOF_INDEX        :
 		right           ? RIGHT_ROOF_INDEX       :
-		CENTER_ROOF_BASE_INDEX + rand() % CENTER_ROOF_VARIANTS;
+		CENTER_ROOF_BASE_INDEX + Random(CENTER_ROOF_VARIANTS);
 	UINT16 const tile_idx = GetTileIndexFromTypeSubIndex(roof_type, roof_idx);
 	AddRoofToHead(map_idx, tile_idx);
 	// If the editor view roofs is off, then the new roofs need to be hidden.
@@ -628,7 +628,7 @@ void RebuildRoof(UINT32 const map_idx, UINT16 roof_type)
 		bottom           ? BOTTOM_ROOF_INDEX      :
 		left             ? LEFT_ROOF_INDEX        :
 		right            ? RIGHT_ROOF_INDEX       :
-		CENTER_ROOF_BASE_INDEX + rand() % CENTER_ROOF_VARIANTS;
+		CENTER_ROOF_BASE_INDEX + Random(CENTER_ROOF_VARIANTS);
 	UINT16 const tile_idx = GetTileIndexFromTypeSubIndex(roof_type, roof_idx);
 	AddRoofToHead(map_idx, tile_idx);
 	// If the editor view roofs is off, then the new roofs need to be hidden.
@@ -705,7 +705,7 @@ static void EraseFloorOwnedBuildingPieces(UINT32 iMapIndex)
 		{
 			const UINT32 uiTileType = GetTileType(pStruct->usIndex);
 			if ( (uiTileType >= FIRSTWALL && uiTileType <= LASTWALL) ||
-					 (uiTileType >= FIRSTDOOR && uiTileType <= LASTDOOR) )
+				(uiTileType >= FIRSTDOOR && uiTileType <= LASTDOOR) )
 			{
 				UINT16 usWallOrientation = GetWallOrientation(pStruct->usIndex);
 				if( usWallOrientation == INSIDE_TOP_RIGHT || usWallOrientation == OUTSIDE_TOP_RIGHT )
@@ -727,7 +727,7 @@ static void EraseFloorOwnedBuildingPieces(UINT32 iMapIndex)
 		{
 			const UINT32 uiTileType = GetTileType(pStruct->usIndex);
 			if ( (uiTileType >= FIRSTWALL && uiTileType <= LASTWALL) ||
-					 (uiTileType >= FIRSTDOOR && uiTileType <= LASTDOOR) )
+				(uiTileType >= FIRSTDOOR && uiTileType <= LASTDOOR) )
 			{
 				UINT16 usWallOrientation = GetWallOrientation(pStruct->usIndex);
 				if( usWallOrientation == INSIDE_TOP_LEFT || usWallOrientation == OUTSIDE_TOP_LEFT )
@@ -767,7 +767,7 @@ void RemoveCaveSectionFromWorld( SGPRect *pSelectRegion )
 		iMapIndex = y * WORLD_COLS + x;
 		if( CaveAtGridNo( iMapIndex ) )
 		{
-		  ubPerimeterValue = CalcNewCavePerimeterValue( iMapIndex );
+			ubPerimeterValue = CalcNewCavePerimeterValue( iMapIndex );
 			usIndex = GetCaveTileIndexFromPerimeterValue( ubPerimeterValue );
 			AddToUndoList( iMapIndex );
 			if( usIndex != 0xffff )
@@ -794,7 +794,7 @@ void AddCaveSectionToWorld( SGPRect *pSelectRegion )
 	for( y = top; y <= bottom; y++ ) for( x = left; x <= right; x++ )
 	{
 		uiMapIndex = y * WORLD_COLS + x;
-		if( uiMapIndex < NOWHERE )
+		if( uiMapIndex < GRIDSIZE )
 		{
 			usIndex = GetCaveTileIndexFromPerimeterValue( 0xff );
 			AddToUndoList( uiMapIndex );
@@ -805,7 +805,7 @@ void AddCaveSectionToWorld( SGPRect *pSelectRegion )
 	for( y = top - 1; y <= bottom + 1; y++ ) for( x = left - 1; x <= right + 1; x++ )
 	{
 		uiMapIndex = y * WORLD_COLS + x;
-		if( uiMapIndex < NOWHERE )
+		if( uiMapIndex < GRIDSIZE )
 		{
 			if( CaveAtGridNo( uiMapIndex ) )
 			{

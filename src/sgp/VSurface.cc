@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Debug.h"
 #include "HImage.h"
 #include "MemMan.h"
@@ -8,7 +6,12 @@
 #include "VSurface.h"
 #include "Video.h"
 #include "SGP.h"
-#include "slog/slog.h"
+#include "Logger.h"
+
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <stdexcept>
 
 extern SGPVSurface* gpVSurfaceHead;
 
@@ -78,11 +81,11 @@ SGPVSurface::~SGPVSurface()
 		break;
 	}
 
-	if (p16BPPPalette) MemFree(p16BPPPalette);
+	if (p16BPPPalette) delete[] p16BPPPalette;
 
 #ifdef SGP_VIDEO_DEBUGGING
-	if (name_) MemFree(name_);
-	if (code_) MemFree(code_);
+	if (name_) delete[] name_;
+	if (code_) delete[] code_;
 #endif
 }
 
@@ -97,7 +100,7 @@ void SGPVSurface::SetPalette(const SGPPaletteEntry* const src_pal)
 		p[i] = src_pal[i];
 	}
 
-	if (p16BPPPalette != NULL) MemFree(p16BPPPalette);
+	if (p16BPPPalette != NULL) delete[] p16BPPPalette;
 	p16BPPPalette = Create16BPPPalette(src_pal);
 }
 
@@ -122,21 +125,21 @@ void SGPVSurface::Fill(const UINT16 colour)
 }
 
 SGPVSurfaceAuto::SGPVSurfaceAuto(UINT16 w, UINT16 h, UINT8 bpp)
-  : SGPVSurface(w, h, bpp)
+	: SGPVSurface(w, h, bpp)
 {
 }
 
 SGPVSurfaceAuto::SGPVSurfaceAuto(SDL_Surface* surface)
-  : SGPVSurface(surface)
+	: SGPVSurface(surface)
 {
 }
 
 SGPVSurfaceAuto::~SGPVSurfaceAuto()
 {
-  if(surface_)
-  {
-    SDL_FreeSurface(surface_);
-  }
+	if(surface_)
+	{
+		SDL_FreeSurface(surface_);
+	}
 }
 
 
@@ -217,7 +220,7 @@ SGPVSurfaceAuto* AddVideoSurfaceFromFile(const char* const Filename)
 		BOOLEAN const Ret   = CopyImageToBuffer(img, buffer_bpp, dst, pitch, vs->Height(), 0, 0, &box);
 		if (!Ret)
 		{
-			SLOGE(DEBUG_TAG_VSURFACE, "Error Occured Copying SGPImage to video surface");
+			SLOGE("Error Occured Copying SGPImage to video surface");
 		}
 	}
 
@@ -232,13 +235,13 @@ SGPVSurfaceAuto* AddVideoSurfaceFromFile(const char* const Filename)
 static void RecordVSurface(SGPVSurface* const vs, char const* const Filename, UINT32 const LineNum, char const* const SourceFile)
 {
 	//record the filename of the vsurface (some are created via memory though)
-	vs->name_ = MALLOCN(char, strlen(Filename) + 1);
+	vs->name_ = new char[strlen(Filename) + 1]{};
 	strcpy(vs->name_, Filename);
 
 	//record the code location of the calling creating function.
 	char str[256];
 	sprintf(str, "%s -- line(%d)", SourceFile, LineNum);
-	vs->code_ = MALLOCN(char, strlen(str) + 1);
+	vs->code_ = new char[strlen(str) + 1]{};
 	strcpy(vs->code_, str);
 }
 
@@ -322,12 +325,12 @@ void BltVideoSurface(SGPVSurface* const dst, SGPVSurface* const src, INT32 const
 			// Check Sizes, SRC size MUST be <= DEST size
 			if (dst->Height() < src->Height())
 			{
-				SLOGD(DEBUG_TAG_VSURFACE, "Incompatible height size given in Video Surface blit");
+				SLOGD("Incompatible height size given in Video Surface blit");
 				return;
 			}
 			if (dst->Width() < src->Width())
 			{
-				SLOGD(DEBUG_TAG_VSURFACE, "Incompatible height size given in Video Surface blit");
+				SLOGD("Incompatible height size given in Video Surface blit");
 				return;
 			}
 
@@ -348,7 +351,7 @@ void BltVideoSurface(SGPVSurface* const dst, SGPVSurface* const src, INT32 const
 	}
 	else
 	{
-		SLOGD(DEBUG_TAG_VSURFACE, "Incompatible BPP values with src and dest Video Surfaces for blitting");
+		SLOGD("Incompatible BPP values with src and dest Video Surfaces for blitting");
 	}
 }
 
@@ -373,7 +376,7 @@ void BltStretchVideoSurface(SGPVSurface* const dst, SGPVSurface const* const src
 	if (ssurface->flags & SDL_TRUE)
 	{
 //		const UINT16 key = ssurface->format->colorkey;
-        const UINT16 key = 0;
+		const UINT16 key = 0;
 		for (UINT iy = 0; iy < height; ++iy)
 		{
 			const UINT16* s = os;
@@ -420,17 +423,17 @@ void BltVideoSurfaceOnce(SGPVSurface* const dst, const char* const filename, INT
 void BltVideoSurfaceOnceWithStretch(SGPVSurface* const dst, const char* const filename)
 {
 	SGP::AutoPtr<SGPVSurfaceAuto> src(AddVideoSurfaceFromFile(filename));
-  FillVideoSurfaceWithStretch(dst, src);
+	FillVideoSurfaceWithStretch(dst, src);
 }
 
 /** Fill video surface with another one with stretch. */
 void FillVideoSurfaceWithStretch(SGPVSurface* const dst, SGPVSurface* const src)
 {
-  SGPBox srcRec;
-  SGPBox dstRec;
-  srcRec.set(0, 0, src->Width(), src->Height());
-  dstRec.set(0, 0, dst->Width(), dst->Height());
-  BltStretchVideoSurface(dst, src, &srcRec, &dstRec);
+	SGPBox srcRec;
+	SGPBox dstRec;
+	srcRec.set(0, 0, src->Width(), src->Height());
+	dstRec.set(0, 0, dst->Width(), dst->Height());
+	BltStretchVideoSurface(dst, src, &srcRec, &dstRec);
 }
 
 #ifdef SGP_VIDEO_DEBUGGING
@@ -450,11 +453,16 @@ void DumpVSurfaceInfoIntoFile(const char* filename, BOOLEAN fAppend)
 {
 	if (!guiVSurfaceSize) return;
 
-	FILE* fp = fopen(filename, fAppend ? "a" : "w");
-	Assert(fp != NULL);
+	RustPointer<File> file(File_open(filename, fAppend ? FILE_OPEN_APPEND : FILE_OPEN_WRITE));
+	if (!file)
+	{
+		RustPointer<char> err(getRustError());
+		SLOGA("DumpVSurfaceInfoIntoFile: %s", err.get());
+		return;
+	}
 
 	//Allocate enough strings and counters for each node.
-	DUMPINFO* const Info = MALLOCNZ(DUMPINFO, guiVSurfaceSize);
+	DUMPINFO* const Info = new DUMPINFO[guiVSurfaceSize]{};
 
 	//Loop through the list and record every unique filename and count them
 	UINT32 uiUniqueID = 0;
@@ -482,17 +490,22 @@ void DumpVSurfaceInfoIntoFile(const char* filename, BOOLEAN fAppend)
 	}
 
 	//Now dump the info.
-	fprintf(fp, "-----------------------------------------------\n");
-	fprintf(fp, "%d unique vSurface names exist in %d VSurfaces\n", uiUniqueID, guiVSurfaceSize);
-	fprintf(fp, "-----------------------------------------------\n\n");
+	ST::string buf;
+	buf += "-----------------------------------------------\n";
+	buf += ST::format(ST::substitute_invalid, "{} unique vSurface names exist in {} VSurfaces\n", uiUniqueID, guiVSurfaceSize);
+	buf += "-----------------------------------------------\n\n";
 	for (UINT32 i = 0; i < uiUniqueID; i++)
 	{
-		fprintf(fp, "%d occurrences of %s\n%s\n\n", Info[i].Counter, Info[i].Name, Info[i].Code);
+		buf += ST::format(ST::substitute_invalid, "{} occurrences of {}\n{}\n\n", Info[i].Counter, Info[i].Name, Info[i].Code);
 	}
-	fprintf(fp, "\n-----------------------------------------------\n\n");
+	buf += "\n-----------------------------------------------\n\n";
 
-	MemFree(Info);
-	fclose(fp);
+	delete[] Info;
+	if (!File_writeAll(file.get(), reinterpret_cast<const uint8_t*>(buf.c_str()), buf.size()))
+	{
+		RustPointer<char> err(getRustError());
+		SLOGW("DumpVSurfaceInfoIntoFile: %s", err.get());
+	}
 }
 
 

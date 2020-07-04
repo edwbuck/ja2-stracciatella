@@ -4,28 +4,30 @@
 #include "GameSettings.h"
 #include "ScreenIDs.h"
 
+#include <string_theory/string>
 
-#define		BYTESINMEGABYTE						1048576 //1024*1024
-#define		REQUIRED_FREE_SPACE				(20 * BYTESINMEGABYTE)
 
-#define		SIZE_OF_SAVE_GAME_DESC				128
+#define BYTESINMEGABYTE				1048576 //1024*1024
+#define REQUIRED_FREE_SPACE				(20 * BYTESINMEGABYTE)
 
-#define		NUM_SAVE_GAME_BACKUPS					2
+#define SIZE_OF_SAVE_GAME_DESC				128
 
-#define		GAME_VERSION_LENGTH						16
+#define NUM_SAVE_GAME_BACKUPS				2
 
-#define		SAVE__ERROR_NUM						99
-#define		SAVE__END_TURN_NUM				98
+#define GAME_VERSION_LENGTH				16
 
-#define SAVED_GAME_HEADER_ON_DISK_SIZE            (432) /** Size of SAVED_GAME_HEADER on disk in Vanilla and Stracciatella Windows  */
-#define SAVED_GAME_HEADER_ON_DISK_SIZE_STRAC_LIN  (688) /** Size of SAVED_GAME_HEADER on disk in Stracciatella Linux */
+#define SAVE__ERROR_NUM				99
+#define SAVE__END_TURN_NUM				98
+
+#define SAVED_GAME_HEADER_ON_DISK_SIZE			(432) // Size of SAVED_GAME_HEADER on disk in Vanilla and Stracciatella Windows
+#define SAVED_GAME_HEADER_ON_DISK_SIZE_STRAC_LIN	(688) // Size of SAVED_GAME_HEADER on disk in Stracciatella Linux
 
 struct SAVED_GAME_HEADER
 {
 	UINT32	uiSavedGameVersion;
 	char zGameVersionNumber[GAME_VERSION_LENGTH];
 
-	wchar_t	sSavedGameDesc[ SIZE_OF_SAVE_GAME_DESC ];
+	ST::string sSavedGameDesc;
 
 	/* (vanilla) UINT32	uiFlags; */
 
@@ -75,15 +77,13 @@ extern ScreenID guiScreenToGotoAfterLoadingSavedGame;
 void CreateSavedGameFileNameFromNumber(UINT8 ubSaveGameID, char* pzNewFileName);
 
 
-BOOLEAN SaveGame( UINT8 ubSaveGameID, const wchar_t *pGameDesc );
+BOOLEAN SaveGame(UINT8 ubSaveGameID, const ST::string& gameDesc);
 void    LoadSavedGame(UINT8 save_slot_id);
 
 void BackupSavedGame(UINT8 const ubSaveGameID);
 
 void SaveFilesToSavedGame(char const* pSrcFileName, HWFILE);
 void LoadFilesFromSavedGame(char const* pSrcFileName, HWFILE);
-
-BOOLEAN DoesUserHaveEnoughHardDriveSpace(void);
 
 void GetBestPossibleSectorXYZValues(INT16* psSectorX, INT16* psSectorY, INT8* pbSectorZ);
 

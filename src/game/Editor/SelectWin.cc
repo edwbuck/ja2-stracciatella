@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Button_System.h"
 #include "Directories.h"
 #include "Font.h"
@@ -20,6 +18,11 @@
 #include "VObject_Blitters.h"
 #include "WorldDef.h"
 #include "UILayout.h"
+
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <stdexcept>
 
 
 // defines for DisplaySpec.ubType
@@ -74,9 +77,9 @@ static INT16 iEndClickY;
 
 
 #define CANCEL_ICON		0
-#define UP_ICON				1
-#define DOWN_ICON			2
-#define OK_ICON				3
+#define UP_ICON		1
+#define DOWN_ICON		2
+#define OK_ICON		3
 
 static INT32 iButtonIcons[4];
 static GUIButtonRef iSelectWin;
@@ -93,41 +96,41 @@ static SGPBox   g_sel_win_box;
 
 //These definitions help define the start and end of the various wall indices.
 //This needs to be maintained if the walls change.
-#define WALL_LAST_WALL_OFFSET						 30
-#define	WALL_FIRST_AFRAME_OFFSET				 31
-#define WALL_LAST_AFRAME_OFFSET					 34
-#define	WALL_FIRST_WINDOW_OFFSET				 35
-#define WALL_LAST_WINDOW_OFFSET					 46
-#define WALL_FIRST_BROKEN_WALL_OFFSET		 47
-#define WALL_LAST_BROKEN_WALL_OFFSET		 54
-#define WALL_FIRST_APPENDED_WALL_OFFSET	 55
-#define WALL_LAST_APPENDED_WALL_OFFSET	 56
+#define WALL_LAST_WALL_OFFSET            30
+#define WALL_FIRST_AFRAME_OFFSET         31
+#define WALL_LAST_AFRAME_OFFSET          34
+#define WALL_FIRST_WINDOW_OFFSET         35
+#define WALL_LAST_WINDOW_OFFSET          46
+#define WALL_FIRST_BROKEN_WALL_OFFSET    47
+#define WALL_LAST_BROKEN_WALL_OFFSET     54
+#define WALL_FIRST_APPENDED_WALL_OFFSET  55
+#define WALL_LAST_APPENDED_WALL_OFFSET   56
 #define WALL_FIRST_WEATHERED_WALL_OFFSET 57
 #define WALL_LAST_WEATHERED_WALL_OFFSET  64
 
 //I've added these definitions to add readability, and minimize conversion time for changes
 //incase there are new values, etc.
-#define OSTRUCTS_NUMELEMENTS		( LASTOSTRUCT - FIRSTFULLSTRUCT + 22 )
-#define OSTRUCTS1_NUMELEMENTS					5
-#define OSTRUCTS2_NUMELEMENTS					12
-#define BANKSLIST_NUMELEMENTS					5
-#define ROADSLIST_NUMELEMENTS					1
+#define OSTRUCTS_NUMELEMENTS				( LASTOSTRUCT - FIRSTFULLSTRUCT + 22 )
+#define OSTRUCTS1_NUMELEMENTS				5
+#define OSTRUCTS2_NUMELEMENTS				12
+#define BANKSLIST_NUMELEMENTS				5
+#define ROADSLIST_NUMELEMENTS				1
 #define DEBRISLIST_NUMELEMENTS				( LASTDEBRIS - DEBRISROCKS + 2 + 1 ) //+1 for ANOTHERDEBRIS
 
 #define SINGLEWALL_NUMELEMENTS				( (LASTWALL-FIRSTWALL+1) * 2 )
 #define SINGLEDOOR_NUMELEMENTS				(( LASTDOOR - FIRSTDOOR + 1 ) * 5)
 #define SINGLEWINDOW_NUMELEMENTS			( LASTWALL - FIRSTWALL + 1 )
 #define SINGLEROOF_NUMELEMENTS				( (LASTROOF-FIRSTROOF+1) + (LASTSLANTROOF-FIRSTSLANTROOF+1) + \
-																				(LASTWALL-FIRSTWALL+1) + (SECONDONROOF-FIRSTONROOF+1) )
+								(LASTWALL-FIRSTWALL+1) + (SECONDONROOF-FIRSTONROOF+1) )
 #define SINGLENEWROOF_NUMELEMENTS			(LASTROOF-FIRSTROOF+1)
-#define SINGLEBROKENWALL_NUMELEMENTS	( (LASTDECORATIONS-FIRSTDECORATIONS+1) + (LASTWALL-FIRSTWALL+1)*2 )
-#define SINGLEDECOR_NUMELEMENTS				( LASTISTRUCT - FIRSTISTRUCT + 1 )
-#define SINGLEDECAL_NUMELEMENTS				( LASTWALLDECAL - FIRSTWALLDECAL + EIGTHWALLDECAL - FIFTHWALLDECAL + 3 )
-#define SINGLEFLOOR_NUMELEMENTS				( LASTFLOOR - FIRSTFLOOR + 1 )
+#define SINGLEBROKENWALL_NUMELEMENTS			( (LASTDECORATIONS-FIRSTDECORATIONS+1) + (LASTWALL-FIRSTWALL+1)*2 )
+#define SINGLEDECOR_NUMELEMENTS			( LASTISTRUCT - FIRSTISTRUCT + 1 )
+#define SINGLEDECAL_NUMELEMENTS			( LASTWALLDECAL - FIRSTWALLDECAL + EIGTHWALLDECAL - FIFTHWALLDECAL + 3 )
+#define SINGLEFLOOR_NUMELEMENTS			( LASTFLOOR - FIRSTFLOOR + 1 )
 #define SINGLETOILET_NUMELEMENTS			( EIGHTISTRUCT - FIFTHISTRUCT + 1 )
 //	the final 2 used to be (LASTSLANTROOF-FIRSTSLANTROOF+1)
-#define ROOM_NUMELEMENTS					( (LASTWALL-FIRSTWALL+1) + (LASTFLOOR-FIRSTFLOOR+1) + \
-																		(LASTROOF-FIRSTROOF+1) + (2 ))
+#define ROOM_NUMELEMENTS				( (LASTWALL-FIRSTWALL+1) + (LASTFLOOR-FIRSTFLOOR+1) + \
+								(LASTROOF-FIRSTROOF+1) + (2 ))
 
 
 //This is a special case for trees which may have varying numbers.  There was a problem
@@ -221,7 +224,7 @@ static void SelWinClkCallback(GUI_BUTTON* button, INT32 reason);
 static void UpClkCallback(GUI_BUTTON* button, INT32 reason);
 
 
-static GUIButtonRef MakeButton(UINT idx, const char* gfx, INT16 y, INT16 h, GUI_CALLBACK click, const wchar_t* help)
+static GUIButtonRef MakeButton(UINT idx, const char* gfx, INT16 y, INT16 h, GUI_CALLBACK click, const ST::string& help)
 {
 	INT32 img = LoadGenericButtonIcon(gfx);
 	iButtonIcons[idx] = img;
@@ -244,11 +247,11 @@ void CreateJA2SelectionWindow(SelectWindow const sWhat)
 	iSelectWin = CreateHotSpot(0, 0, SCREEN_WIDTH - 40, TASKBAR_Y, MSYS_PRIORITY_HIGH, SelWinClkCallback);
 
 	INT16 y;
-	iOkWin      = MakeButton(OK_ICON,     EDITORDIR "/checkmark.sti",   y  =  0, 40, OkClkCallback,   L"Accept selections");
-	iCancelWin  = MakeButton(CANCEL_ICON, EDITORDIR "/bigx.sti",        y += 40, 40, CnclClkCallback, L"Cancel selections");
+	iOkWin      = MakeButton(OK_ICON,     EDITORDIR "/checkmark.sti",   y  =  0, 40, OkClkCallback,   "Accept selections");
+	iCancelWin  = MakeButton(CANCEL_ICON, EDITORDIR "/bigx.sti",        y += 40, 40, CnclClkCallback, "Cancel selections");
 	INT16 const h = (TASKBAR_Y - 40 - 40) / 2;
-	iScrollUp   = MakeButton(UP_ICON,     EDITORDIR "/lguparrow.sti",   y += 40,  h, UpClkCallback,   L"Scroll window up");
-	iScrollDown = MakeButton(DOWN_ICON,   EDITORDIR "/lgdownarrow.sti", y += h,   h, DwnClkCallback,  L"Scroll window down");
+	iScrollUp   = MakeButton(UP_ICON,     EDITORDIR "/lguparrow.sti",   y += 40,  h, UpClkCallback,   "Scroll window up");
+	iScrollDown = MakeButton(DOWN_ICON,   EDITORDIR "/lgdownarrow.sti", y += h,   h, DwnClkCallback,  "Scroll window down");
 
 	fButtonsPresent = TRUE;
 
@@ -647,7 +650,7 @@ static DisplayList* TrashList(DisplayList* pNode)
 		pNode->pNext = TrashList(pNode->pNext);
 
 	if (pNode->pNext == NULL)
-		MemFree(pNode);
+		delete pNode;
 
 	return(NULL);
 }
@@ -853,15 +856,15 @@ void DisplaySelectionWindowGraphicalInformation()
 		char const* const filename = gTilesets[giCurrentTilesetID].TileSurfaceFilenames[obj_idx];
 		if (filename[0] != '\0')
 		{
-			mprintf(2, 2, L"File:  %hs, subindex:  %d (%hs)", filename, i->uiIndex, name);
+			MPrint(2, 2, ST::format("File:  {}, subindex:  {} ({})", filename, i->uiIndex, name));
 		}
 		else
 		{
 			TILESET const& generic = gTilesets[GENERIC_1];
-			mprintf(2, 2, L"%hs[%d] is from default tileset %ls (%hs)", generic.TileSurfaceFilenames[obj_idx], i->uiIndex, generic.zName, name);
+			MPrint(2, 2, ST::format("{}[{}] is from default tileset {} ({})", generic.TileSurfaceFilenames[obj_idx], i->uiIndex, generic.zName, name));
 		}
 	}
-	mprintf(350, 2, L"Current Tileset:  %ls", gTilesets[giCurrentTilesetID].zName);
+	MPrint(350, 2, ST::format("Current Tileset:  {}", gTilesets[giCurrentTilesetID].zName));
 }
 
 
@@ -876,7 +879,7 @@ static void AddToSelectionList(DisplayList* pNode)
 	for (INT32 iIndex = 0; iIndex < *pNumSelList; ++iIndex)
 	{
 		if ( pNode->uiObjIndx == pSelList[ iIndex ].uiObject &&
-				 pNode->uiIndex == pSelList[ iIndex ].usIndex )
+			pNode->uiIndex == pSelList[ iIndex ].usIndex )
 		{
 			// Was already in the list, so bump up the count
 			++pSelList[iIndex].sCount;
@@ -937,7 +940,7 @@ static BOOLEAN RemoveFromSelectionList(DisplayList* pNode)
 	for (INT32 iIndex = 0; iIndex < *pNumSelList; ++iIndex)
 	{
 		if ( pNode->uiObjIndx == pSelList[ iIndex ].uiObject &&
-				 pNode->uiIndex == pSelList[ iIndex ].usIndex )
+			pNode->uiIndex == pSelList[ iIndex ].usIndex )
 		{
 			if (--pSelList[iIndex].sCount <= 0)
 			{
@@ -1185,7 +1188,7 @@ try
 				max_h = 0;
 			}
 
-			DisplayList* const n = MALLOC(DisplayList);
+			DisplayList* const n = new DisplayList{};
 			n->hObj      = vo;
 			n->uiIndex   = usETRLELoop;
 			n->iX        = x;
@@ -1234,6 +1237,6 @@ static void DisplayWindowFunc(DisplayList* const n, INT16 const top_cut_off, SGP
 	if (n->fChosen)
 	{
 		INT16 const count = FindInSelectionList(*n).sCount;
-		if (count != 0) gprintf(x, y, L"%d", count);
+		if (count != 0) GPrint(x, y, ST::format("{}", count));
 	}
 }

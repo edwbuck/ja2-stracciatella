@@ -25,15 +25,17 @@
 #include "Video.h"
 #include "Quantize.h"
 #include "UILayout.h"
-#include <boost/foreach.hpp>
 
 #include "ContentManager.h"
 #include "GameInstance.h"
 
-#define		MINIMAP_X_SIZE			88
-#define		MINIMAP_Y_SIZE			44
+#include <string_theory/format>
 
-#define		WINDOW_SIZE					2
+
+#define MINIMAP_X_SIZE		88
+#define MINIMAP_Y_SIZE		44
+
+#define WINDOW_SIZE		2
 
 static float     gdXStep;
 static float     gdYStep;
@@ -48,22 +50,22 @@ static SGPVSurface* gi8BitMiniMap;
 ScreenID MapUtilScreenHandle()
 {
 	static SGPPaletteEntry* p24BitValues = NULL;
-	static INT16		fNewMap = TRUE;
-  InputAtom  InputEvent;
+	static INT16 fNewMap = TRUE;
+	InputAtom InputEvent;
 	static FDLG_LIST *FListNode;
 	static INT16 sFiles = 0, sCurFile = 0;
 	static FDLG_LIST *FileList = NULL;
 
-	UINT32					uiRGBColor;
+	UINT32 uiRGBColor;
 
-	UINT32					bR, bG, bB, bAvR, bAvG, bAvB;
-	INT16						s16BPPSrc, sDest16BPPColor;
+	UINT32 bR, bG, bB, bAvR, bAvG, bAvB;
+	INT16 s16BPPSrc, sDest16BPPColor;
 
 	INT16 sX1, sX2, sY1, sY2, sTop, sBottom, sLeft, sRight;
 
 
-	FLOAT		dX, dY, dStartX, dStartY;
-	INT32		iX, iY, iSubX1, iSubY1, iSubX2, iSubY2, iWindowX, iWindowY, iCount;
+	FLOAT dX, dY, dStartX, dStartY;
+	INT32 iX, iY, iSubX1, iSubY1, iSubX2, iSubY2, iWindowX, iWindowY, iCount;
 	SGPPaletteEntry pPalette[ 256 ];
 
 
@@ -81,19 +83,19 @@ ScreenID MapUtilScreenHandle()
 		// USING BRET's STUFF FOR LOOPING FILES/CREATING LIST, hence AddToFDlgList.....
 		try
 		{
-      std::vector<std::string> files = GCM->getAllMaps();
-      BOOST_FOREACH(const std::string &file, files)
-      {
-        FileList = AddToFDlgList(FileList, file.c_str());
+			std::vector<ST::string> files = GCM->getAllMaps();
+			for (const ST::string &file : files)
+			{
+				FileList = AddToFDlgList(FileList, file.c_str());
 				++sFiles;
-      }
+			}
 		}
 		catch (...) { /* XXX ignore */ }
 
 		FListNode = FileList;
 
 		//Allocate 24 bit Surface
-		p24BitValues = MALLOCN(SGPPaletteEntry, MINIMAP_X_SIZE * MINIMAP_Y_SIZE);
+		p24BitValues = new SGPPaletteEntry[MINIMAP_X_SIZE * MINIMAP_Y_SIZE]{};
 
 		//Allocate 8-bit surface
 		gi8BitMiniMap = AddVideoSurface(88, 44, 8);
@@ -102,7 +104,7 @@ ScreenID MapUtilScreenHandle()
 	//OK, we are here, now loop through files
 	if ( sCurFile == sFiles || FListNode== NULL )
 	{
-    requestGameExit();
+		requestGameExit();
 		return( MAPUTILITY_SCREEN );
 	}
 
@@ -120,7 +122,7 @@ ScreenID MapUtilScreenHandle()
 
 	RenderOverheadMap(0, WORLD_COLS / 2, 0, 0, SCREEN_WIDTH, 320, TRUE);
 
-  TrashOverheadMap( );
+	TrashOverheadMap( );
 
 	// OK, NOW PROCESS OVERHEAD MAP ( SHOUIDL BE ON THE FRAMEBUFFER )
 	gdXStep	= SCREEN_WIDTH / 88.f;
@@ -258,22 +260,22 @@ ScreenID MapUtilScreenHandle()
 			}
 		}
 
-		std::string zFilename2(GCM->getRadarMapResourceName(FileMan::replaceExtension(zFilename, ".sti")));
+		ST::string zFilename2(GCM->getRadarMapResourceName(FileMan::replaceExtension(zFilename, "sti")));
 		WriteSTIFile( pDataPtr, pPalette, MINIMAP_X_SIZE, MINIMAP_Y_SIZE, zFilename2.c_str(), CONVERT_ETRLE_COMPRESS, 0 );
 	}
 
 	SetFontAttributes(TINYFONT1, FONT_MCOLOR_DKGRAY);
-	mprintf(10, 340, L"Writing radar image %hs", zFilename2);
-	mprintf(10, 350, L"Using tileset %ls", gTilesets[giCurrentTilesetID].zName);
+	MPrint(10, 340, ST::format("Writing radar image {}", zFilename2));
+	MPrint(10, 350, ST::format("Using tileset {}", gTilesets[giCurrentTilesetID].zName));
 
 	InvalidateScreen( );
 
 	while (DequeueEvent(&InputEvent))
-  {
+	{
 		if (InputEvent.usEvent == KEY_DOWN && InputEvent.usParam == SDLK_ESCAPE)
-      { // Exit the program
-        requestGameExit();
-      }
+		{ // Exit the program
+			requestGameExit();
+		}
 	}
 
 	// Set next

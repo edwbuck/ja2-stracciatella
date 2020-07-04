@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "Directories.h"
 #include "LoadSaveSmokeEffect.h"
 #include "Overhead.h"
@@ -26,7 +24,10 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
-#define		NUM_SMOKE_EFFECT_SLOTS					25
+#include <algorithm>
+#include <stdexcept>
+
+#define NUM_SMOKE_EFFECT_SLOTS 25
 
 
 // GLOBAL FOR SMOKE LISTING
@@ -36,9 +37,9 @@ static UINT32      guiNumSmokeEffects = 0;
 
 #define BASE_FOR_EACH_SMOKE_EFFECT(type, iter)                    \
 	for (type* iter        = gSmokeEffectData,                      \
-	         * iter##__end = gSmokeEffectData + guiNumSmokeEffects; \
-	     iter != iter##__end;                                       \
-	     ++iter)                                                    \
+		* iter##__end = gSmokeEffectData + guiNumSmokeEffects; \
+		iter != iter##__end;                                       \
+		++iter)                                                    \
 		if (!iter->fAllocated) continue; else
 #define FOR_EACH_SMOKE_EFFECT(iter)  BASE_FOR_EACH_SMOKE_EFFECT(      SMOKEEFFECT, iter)
 #define CFOR_EACH_SMOKE_EFFECT(iter) BASE_FOR_EACH_SMOKE_EFFECT(const SMOKEEFFECT, iter)
@@ -126,7 +127,7 @@ void NewSmokeEffect(const INT16 sGridNo, const UINT16 usItem, const INT8 bLevel,
 	SMOKEEFFECT* const pSmoke = GetFreeSmokeEffect();
 	if (pSmoke == NULL) return;
 
-	memset(pSmoke, 0, sizeof(*pSmoke));
+	*pSmoke = SMOKEEFFECT{};
 
 	// Set some values...
 	pSmoke->sGridNo									= sGridNo;
@@ -140,8 +141,8 @@ void NewSmokeEffect(const INT16 sGridNo, const UINT16 usItem, const INT8 bLevel,
 	}
 
 
-  switch( usItem )
-  {
+	switch( usItem )
+	{
 		case MUSTARD_GRENADE:
 
 			bSmokeEffectType	=	MUSTARDGAS_SMOKE_EFFECT;
@@ -170,25 +171,25 @@ void NewSmokeEffect(const INT16 sGridNo, const UINT16 usItem, const INT8 bLevel,
 			ubStartRadius			= 1;
 			break;
 
-    case SMALL_CREATURE_GAS:
+		case SMALL_CREATURE_GAS:
 			bSmokeEffectType	=	CREATURE_SMOKE_EFFECT;
 			ubDuration				= 3;
 			ubStartRadius			= 1;
 			break;
 
-    case LARGE_CREATURE_GAS:
+		case LARGE_CREATURE_GAS:
 			bSmokeEffectType	=	CREATURE_SMOKE_EFFECT;
 			ubDuration				= 3;
 			ubStartRadius			= Explosive[ GCM->getItem(LARGE_CREATURE_GAS)->getClassIndex() ].ubRadius;
 			break;
 
-    case VERY_SMALL_CREATURE_GAS:
+		case VERY_SMALL_CREATURE_GAS:
 
 			bSmokeEffectType	=	CREATURE_SMOKE_EFFECT;
 			ubDuration				= 2;
 			ubStartRadius			= 0;
-      break;
-  }
+			break;
+	}
 
 
 
@@ -199,19 +200,19 @@ void NewSmokeEffect(const INT16 sGridNo, const UINT16 usItem, const INT8 bLevel,
 	pSmoke->bType				= bSmokeEffectType;
 	pSmoke->owner       = owner;
 
-  if ( pSmoke->bFlags & SMOKE_EFFECT_INDOORS )
-  {
+	if ( pSmoke->bFlags & SMOKE_EFFECT_INDOORS )
+	{
 		// Duration is increased by 2 turns...indoors
 		pSmoke->ubDuration += 3;
-  }
+	}
 
-  if ( bLevel )
-  {
-    pSmoke->bFlags |= SMOKE_EFFECT_ON_ROOF;
-  }
+	if ( bLevel )
+	{
+		pSmoke->bFlags |= SMOKE_EFFECT_ON_ROOF;
+	}
 
-  // ATE: FALSE into subsequent-- it's the first one!
-  SpreadEffectSmoke(pSmoke, FALSE, bLevel);
+	// ATE: FALSE into subsequent-- it's the first one!
+	SpreadEffectSmoke(pSmoke, FALSE, bLevel);
 }
 
 
@@ -219,13 +220,13 @@ void NewSmokeEffect(const INT16 sGridNo, const UINT16 usItem, const INT8 bLevel,
 // ( Replacement algorithm uses distance away )
 void AddSmokeEffectToTile(SMOKEEFFECT const* const smoke, SmokeEffectKind const bType, INT16 const sGridNo, INT8 const bLevel)
 {
-  BOOLEAN dissipating = FALSE;
+	BOOLEAN dissipating = FALSE;
 	if (smoke->ubDuration - smoke->bAge < 2)
-  {
-    dissipating = TRUE;
-    // Remove old one...
-    RemoveSmokeEffectFromTile(sGridNo, bLevel);
-  }
+	{
+		dissipating = TRUE;
+		// Remove old one...
+		RemoveSmokeEffectFromTile(sGridNo, bLevel);
+	}
 
 	// If smoke effect exists already.... stop
 	if (gpWorldLevelData[sGridNo].ubExtFlags[bLevel] & ANY_SMOKE_EFFECT) return;
@@ -258,8 +259,8 @@ void AddSmokeEffectToTile(SMOKEEFFECT const* const smoke, SmokeEffectKind const 
 				default: throw std::logic_error("Invalid smoke effect type");
 			}
 		}
-    start_frame  = Random(5);
-    ani_flags   |= ANITILE_ALWAYS_TRANSLUCENT;
+		start_frame  = Random(5);
+		ani_flags   |= ANITILE_ALWAYS_TRANSLUCENT;
 	}
 	else
 	{
@@ -271,12 +272,12 @@ void AddSmokeEffectToTile(SMOKEEFFECT const* const smoke, SmokeEffectKind const 
 			case CREATURE_SMOKE_EFFECT:   cached_file = TILECACHEDIR "/spit_gas.sti"; break;
 			default: throw std::logic_error("Invalid smoke effect type");
 		}
-    start_frame  = 0;
-    ani_flags   |= ANITILE_PAUSED;
+		start_frame  = 0;
+		ani_flags   |= ANITILE_PAUSED;
 	}
 
 	ANITILE_PARAMS	ani_params;
-	memset(&ani_params, 0, sizeof(ani_params));
+	ani_params = ANITILE_PARAMS{};
 	ani_params.uiFlags     = ani_flags;
 	ani_params.zCachedFile = cached_file;
 	ani_params.sStartFrame = start_frame;
@@ -328,20 +329,20 @@ void RemoveSmokeEffectFromTile( INT16 sGridNo, INT8 bLevel )
 
 void DecaySmokeEffects( UINT32 uiTime )
 {
-  BOOLEAN fUpdate = FALSE;
-  BOOLEAN fSpreadEffect;
-  INT8    bLevel;
-  UINT16   usNumUpdates = 1;
+	BOOLEAN fUpdate = FALSE;
+	BOOLEAN fSpreadEffect;
+	INT8    bLevel;
+	UINT16  usNumUpdates = 1;
 
 	// reset 'hit by gas' flags
 	FOR_EACH_MERC(i) (*i)->fHitByGasFlags = 0;
 
-  // ATE: 1 ) make first pass and delete/mark any smoke effect for update
-  // all the deleting has to be done first///
+	// ATE: 1 ) make first pass and delete/mark any smoke effect for update
+	// all the deleting has to be done first///
 
-  // age all active tear gas clouds, deactivate those that are just dispersing
+	// age all active tear gas clouds, deactivate those that are just dispersing
 	FOR_EACH_SMOKE_EFFECT(pSmoke)
-  {
+	{
 		fSpreadEffect = TRUE;
 
 		if ( pSmoke->bFlags & SMOKE_EFFECT_ON_ROOF )
@@ -422,9 +423,9 @@ void DecaySmokeEffects( UINT32 uiTime )
 		else
 		{
 			// damage anyone standing in cloud
-			SpreadEffectSmoke(pSmoke, REDO_SPREAD_EFFECT, 0);
+			SpreadEffectSmoke(pSmoke, REDO_SPREAD_EFFECT, bLevel);
 		}
-  }
+	}
 
 	FOR_EACH_SMOKE_EFFECT(pSmoke)
 	{
@@ -443,7 +444,7 @@ void DecaySmokeEffects( UINT32 uiTime )
 			SpreadEffectSmoke(pSmoke, TRUE, bLevel);
 			pSmoke->bFlags &= (~SMOKE_EFFECT_MARK_FOR_UPDATE);
 		}
-  }
+	}
 
 	AllTeamsLookForAll( TRUE );
 }
@@ -454,7 +455,7 @@ void LoadSmokeEffectsFromLoadGameFile(HWFILE const hFile, UINT32 const savegame_
 	UINT32	uiCnt=0;
 
 	//Clear out the old list
-	memset( gSmokeEffectData, 0, sizeof( SMOKEEFFECT ) * NUM_SMOKE_EFFECT_SLOTS );
+	std::fill_n(gSmokeEffectData, NUM_SMOKE_EFFECT_SLOTS, SMOKEEFFECT{});
 
 	//Load the Number of Smoke Effects
 	FileRead(hFile, &guiNumSmokeEffects, sizeof(UINT32));
@@ -554,7 +555,7 @@ void LoadSmokeEffectsFromMapTempFile(INT16 const sMapX, INT16 const sMapY, INT8 
 void ResetSmokeEffects()
 {
 	//Clear out the old list
-	memset( gSmokeEffectData, 0, sizeof( SMOKEEFFECT ) * NUM_SMOKE_EFFECT_SLOTS );
+	std::fill_n(gSmokeEffectData, NUM_SMOKE_EFFECT_SLOTS, SMOKEEFFECT{});
 	guiNumSmokeEffects = 0;
 }
 
@@ -566,5 +567,5 @@ void UpdateSmokeEffectGraphics( )
 		const INT8 bLevel = (s->bFlags & SMOKE_EFFECT_ON_ROOF ? 1 : 0);
 		SpreadEffectSmoke(s, ERASE_SPREAD_EFFECT, bLevel);
 		SpreadEffectSmoke(s, TRUE,                bLevel);
-  }
+	}
 }

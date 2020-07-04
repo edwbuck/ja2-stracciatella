@@ -40,7 +40,10 @@
 
 #include "EditScreen.h"
 #include "JAScreens.h"
-#include "slog/slog.h"
+#include "Logger.h"
+
+#include <string_theory/string>
+
 
 // The InitializeGame function is responsible for setting up all data and Gaming Engine
 // tasks which will run the game
@@ -94,25 +97,25 @@ try
 
 	InitMercPopupBox( );
 
-  if(GameState::getInstance()->isEditorMode())
-  {
-    //UNCOMMENT NEXT LINE TO ALLOW FORCE UPDATES...
-    //LoadGlobalSummary();
-    if( gfMustForceUpdateAllMaps )
-    {
-      ApologizeOverrideAndForceUpdateEverything();
-    }
-  }
+	if(GameState::getInstance()->isEditorMode())
+	{
+		//UNCOMMENT NEXT LINE TO ALLOW FORCE UPDATES...
+		//LoadGlobalSummary();
+		if( gfMustForceUpdateAllMaps )
+		{
+			ApologizeOverrideAndForceUpdateEverything();
+		}
+	}
 
 	switch (GameState::getInstance()->getMode())
 	{
 		case GAME_MODE_EDITOR:
-			SLOGI(DEBUG_TAG_INIT, "Beginning JA2 using -editor commandline argument...");
+			SLOGI("Beginning JA2 using -editor commandline argument...");
 			gfAutoLoadA9 = FALSE;
 			goto editor;
 
 		case GAME_MODE_EDITOR_AUTO:
-			SLOGI(DEBUG_TAG_INIT, "Beginning JA2 using -editorauto commandline argument...");
+			SLOGI("Beginning JA2 using -editorauto commandline argument...");
 			gfAutoLoadA9 = TRUE;
 editor:
 			//For editor purposes, need to know the default map file.
@@ -126,12 +129,16 @@ editor:
 		default: return INIT_SCREEN;
 	}
 }
-catch (...) { return ERROR_SCREEN; }
+catch (const std::runtime_error& ex)
+{
+	SET_ERROR(ST::format("InitializeJA2: {}", ex.what()));
+	return ERROR_SCREEN;
+}
 
 
 void ShutdownJA2(void)
 {
-  UINT32 uiIndex;
+	UINT32 uiIndex;
 
 	FRAME_BUFFER->Fill(Get16BPPColor(FROMRGB(0, 0, 0)));
 	InvalidateScreen( );
@@ -148,12 +155,12 @@ void ShutdownJA2(void)
 	// Shutdown queue system
 	ShutdownDialogueControl();
 
-  // Shutdown Screens
-  for (uiIndex = 0; uiIndex < MAX_SCREENS; uiIndex++)
-  {
+	// Shutdown Screens
+	for (uiIndex = 0; uiIndex < MAX_SCREENS; uiIndex++)
+	{
 		void (*const shutdown)(void) = GameScreens[uiIndex].ShutdownScreen;
 		if (shutdown != NULL) shutdown();
-  }
+	}
 
 
 	ShutdownLightingSystem();

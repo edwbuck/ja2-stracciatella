@@ -28,11 +28,11 @@ struct ITEM_SORT_ENTRY
 };
 
 
-/* This table controls the order items appear in inventory at BR's and dealers,
- * and which kinds of items are sold used */
+// This table controls the order items appear in inventory at BR's and dealers,
+// and which kinds of items are sold used
 static ITEM_SORT_ENTRY const DealerItemSortInfo[] =
 {
-//  item class         weapon class  sold used?
+	//  item class       weapon class  sold used?
 	{ IC_GUN,            HANDGUNCLASS, TRUE  },
 	{ IC_GUN,            SHOTGUNCLASS, TRUE  },
 	{ IC_GUN,            SMGCLASS,     TRUE  },
@@ -60,7 +60,7 @@ static ITEM_SORT_ENTRY const DealerItemSortInfo[] =
 
 INT8 GetDealersMaxItemAmount(ArmsDealerID const ubDealerID, UINT16 const usItemIndex)
 {
-  return GCM->getDealerInventory(ubDealerID)->getMaxItemAmount(GCM->getItem(usItemIndex));
+	return GCM->getDealerInventory(ubDealerID)->getMaxItemAmount(GCM->getItem(usItemIndex));
 }
 
 
@@ -135,8 +135,8 @@ static UINT8 GetCurrentSuitabilityForItem(ArmsDealerID const bArmsDealer, UINT16
 			break;
 
 		default:
-			/* All the other dealers have very limited inventories, so their
-			 * suitability remains constant at all times in game */
+			// All the other dealers have very limited inventories, so their
+			// suitability remains constant at all times in game
 			return ITEM_SUITABILITY_HIGH;
 	}
 
@@ -244,7 +244,7 @@ UINT8 ChanceOfItemTransaction(ArmsDealerID const bArmsDealer, UINT16 const usIte
 			break;
 
 		default:
-			SLOGE(DEBUG_TAG_ASSERTS, "ChanceOfItemTransaction: invalid item suitability");
+			SLOGA("ChanceOfItemTransaction: invalid item suitability");
 			break;
 	}
 
@@ -287,16 +287,13 @@ BOOLEAN ItemTransactionOccurs(ArmsDealerID const bArmsDealer, UINT16 const usIte
 		// mark it as such
 		if (bArmsDealer == ARMS_DEALER_BOBBYR)
 		{
-			if (fUsed)
+			STORE_INVENTORY* pInventory = fUsed ? LaptopSaveInfo.BobbyRayUsedInventory : LaptopSaveInfo.BobbyRayInventory;
+			sInventorySlot = GetInventorySlotForItem(pInventory, usItemIndex, fUsed);
+			if (sInventorySlot == -1)
 			{
-				sInventorySlot = GetInventorySlotForItem(LaptopSaveInfo.BobbyRayUsedInventory, usItemIndex, fUsed);
-				LaptopSaveInfo.BobbyRayUsedInventory[ sInventorySlot ].fPreviouslyEligible = TRUE;
+				return(FALSE);
 			}
-			else
-			{
-				sInventorySlot = GetInventorySlotForItem(LaptopSaveInfo.BobbyRayInventory, usItemIndex, fUsed);
-				LaptopSaveInfo.BobbyRayInventory    [ sInventorySlot ].fPreviouslyEligible = TRUE;
-			}
+			pInventory[ sInventorySlot ].fPreviouslyEligible = TRUE;
 		}
 		else
 		{
@@ -381,10 +378,10 @@ UINT8 HowManyItemsToReorder(UINT8 ubWanted, UINT8 ubStillHave)
 
 int BobbyRayItemQsortCompare(const void *pArg1, const void *pArg2)
 {
-	UINT16	usItem1Index;
-	UINT16	usItem2Index;
-	UINT8		ubItem1Quality;
-	UINT8		ubItem2Quality;
+	UINT16 usItem1Index;
+	UINT16 usItem2Index;
+	UINT8  ubItem1Quality;
+	UINT8  ubItem2Quality;
 
 	usItem1Index = ( ( STORE_INVENTORY * ) pArg1 ) -> usItemIndex;
 	usItem2Index = ( ( STORE_INVENTORY * ) pArg2 ) -> usItemIndex;
@@ -399,10 +396,10 @@ int BobbyRayItemQsortCompare(const void *pArg1, const void *pArg2)
 
 int ArmsDealerItemQsortCompare(const void *pArg1, const void *pArg2)
 {
-	UINT16	usItem1Index;
-	UINT16	usItem2Index;
-	UINT8		ubItem1Quality;
-	UINT8		ubItem2Quality;
+	UINT16 usItem1Index;
+	UINT16 usItem2Index;
+	UINT8  ubItem1Quality;
+	UINT8  ubItem2Quality;
 
 	usItem1Index = ( ( INVENTORY_IN_SLOT * ) pArg1 ) -> sItemIndex;
 	usItem2Index = ( ( INVENTORY_IN_SLOT * ) pArg2 ) -> sItemIndex;

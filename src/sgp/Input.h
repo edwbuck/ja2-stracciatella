@@ -5,6 +5,9 @@
 #include "SDL_events.h"
 #include "SDL_keyboard.h"
 
+#include <string_theory/string>
+
+
 #define KEY_DOWN									0x0001
 #define KEY_UP										0x0002
 #define KEY_REPEAT								0x0004
@@ -35,10 +38,10 @@
 
 struct InputAtom
 {
-  UINT16 usKeyState;
-  UINT16 usEvent;
-  UINT32 usParam;
-	wchar_t Char;
+	UINT16 usKeyState;
+	UINT16 usEvent;
+	UINT32 usParam;
+	ST::utf32_buffer codepoints;
 };
 
 
@@ -69,15 +72,13 @@ void SimulateMouseMovement( UINT32 uiNewXPos, UINT32 uiNewYPos );
 void DequeueAllKeyBoardEvents(void);
 
 
-extern BOOLEAN gfKeyState[SDL_SCANCODE_TO_KEYCODE(SDL_NUM_SCANCODES)]; // TRUE = Pressed, FALSE = Not Pressed
-
 extern UINT16    gusMouseXPos;       // X position of the mouse on screen
 extern UINT16    gusMouseYPos;       // y position of the mouse on screen
 extern BOOLEAN   gfLeftButtonState;  // TRUE = Pressed, FALSE = Not Pressed
 extern BOOLEAN   gfRightButtonState; // TRUE = Pressed, FALSE = Not Pressed
 extern BOOLEAN   gfMiddleButtonState;
 
-#define _KeyDown(a)        gfKeyState[(a)]
+bool _KeyDown(SDL_Keycode);
 #define _LeftButtonDown    gfLeftButtonState
 #define _RightButtonDown   gfRightButtonState
 #define _MiddleButtonDown   gfMiddleButtonState

@@ -13,6 +13,8 @@
 #include "Button_System.h"
 #include "Font_Control.h"
 
+#include <string_theory/string>
+
 
 // buttons
 static BUTTON_PICS* giIMPAttributeFinishButtonImage[2];
@@ -31,21 +33,21 @@ static void CreateAttributeFinishButtons(void);
 
 void EnterIMPAttributeFinish( void )
 {
-   // create the needed buttons
+	// create the needed buttons
 	CreateAttributeFinishButtons( );
 
 	// render screen
-   RenderIMPAttributeFinish( );
+	RenderIMPAttributeFinish( );
 }
 
 
 void RenderIMPAttributeFinish( void )
 {
-  // render background
-		RenderProfileBackGround( );
+	// render background
+	RenderProfileBackGround( );
 
 	// indent for text
-  RenderBeginIndent( 110, 93 );
+	RenderBeginIndent( 110, 93 );
 }
 
 
@@ -54,7 +56,7 @@ static void DestroyAttributeFinishButtons(void);
 
 void ExitIMPAttributeFinish( void )
 {
-  // destroy the buttons for this screen
+	// destroy the buttons for this screen
 	DestroyAttributeFinishButtons( );
 }
 
@@ -63,7 +65,7 @@ void HandleIMPAttributeFinish( void )
 }
 
 
-static void MakeButton(UINT idx, const wchar_t* text, INT16 y, GUI_CALLBACK click)
+static void MakeButton(UINT idx, const ST::string& text, INT16 y, GUI_CALLBACK click)
 {
 	BUTTON_PICS* const img = LoadButtonImage(LAPTOPDIR "/button_2.sti", 0, 1);
 	giIMPAttributeFinishButtonImage[idx] = img;
@@ -90,12 +92,12 @@ static void DestroyAttributeFinishButtons(void)
 	// this procedure will destroy the buttons for the attribute finish screen
 
 	// the yes  button
-  RemoveButton(giIMPAttributeFinishButton[ 0 ] );
-  UnloadButtonImage(giIMPAttributeFinishButtonImage[ 0 ] );
+	RemoveButton(giIMPAttributeFinishButton[ 0 ] );
+	UnloadButtonImage(giIMPAttributeFinishButtonImage[ 0 ] );
 
 	// the no  button
-  RemoveButton(giIMPAttributeFinishButton[ 1 ] );
-  UnloadButtonImage(giIMPAttributeFinishButtonImage[ 1 ] );
+	RemoveButton(giIMPAttributeFinishButton[ 1 ] );
+	UnloadButtonImage(giIMPAttributeFinishButtonImage[ 1 ] );
 }
 
 

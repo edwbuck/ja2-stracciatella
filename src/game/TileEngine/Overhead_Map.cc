@@ -49,13 +49,13 @@ extern SOLDIERINITNODE *gpSelected;
 
 // OK, these are values that are calculated in InitRenderParams( ) with normal view settings.
 // These would be different if we change ANYTHING about the game worlkd map sizes...
-#define	NORMAL_MAP_SCREEN_WIDTH			3160
-#define	NORMAL_MAP_SCREEN_HEIGHT		1540
-#define	NORMAL_MAP_SCREEN_X					1580
-#define	NORMAL_MAP_SCREEN_BY				2400
-#define	NORMAL_MAP_SCREEN_TY				860
+#define NORMAL_MAP_SCREEN_WIDTH		3160
+#define NORMAL_MAP_SCREEN_HEIGHT	1540
+#define NORMAL_MAP_SCREEN_X		1580
+#define NORMAL_MAP_SCREEN_BY		2400
+#define NORMAL_MAP_SCREEN_TY		860
 
-#define FASTMAPROWCOLTOPOS( r, c )									( (r) * WORLD_COLS + (c) )
+#define FASTMAPROWCOLTOPOS( r, c )	( (r) * WORLD_COLS + (c) )
 
 
 struct SMALL_TILE_SURF
@@ -104,7 +104,7 @@ void InitNewOverheadDB(TileSetID const ubTilesetID)
 			use_tileset = GENERIC_1;
 		}
 
-		std::string adjusted_file(GCM->getTilesetResourceName(use_tileset, std::string("t/") + filename));
+		ST::string adjusted_file(GCM->getTilesetResourceName(use_tileset, ST::string("t/") + filename));
 		SGPVObject* vo;
 		try
 		{
@@ -113,7 +113,7 @@ void InitNewOverheadDB(TileSetID const ubTilesetID)
 		catch (...)
 		{
 			// Load one we know about
-			vo = AddVideoObjectFromFile(GCM->getTilesetResourceName(0, std::string("t/") + "grass.sti").c_str());
+			vo = AddVideoObjectFromFile(GCM->getTilesetResourceName(0, ST::string("t/") + "grass.sti").c_str());
 		}
 
 		gSmTileSurf[i].vo = vo;
@@ -252,8 +252,8 @@ static void DisplayMercNameInOverhead(SOLDIERTYPE const& s)
 	INT16 y;
 	GetOverheadScreenXYFromGridNo(s.sGridNo, &x, &y);
 
-  x += STD_SCREEN_X;
-  y += STD_SCREEN_Y;
+	x += STD_SCREEN_X;
+	y += STD_SCREEN_Y;
 
 	y -= s.sHeightAdjustment / 5 + 13;
 
@@ -300,7 +300,7 @@ void HandleOverheadMap(void)
 			RenderClock();
 			RenderTownIDString();
 
-    	HandleAutoFaces();
+			HandleAutoFaces();
 		}
 	}
 
@@ -336,7 +336,7 @@ void HandleOverheadMap(void)
 					gsOveritemPoolGridNo = GetWorldItem(pItemPool->iItemIndex).sGridNo;
 				}
 			}
-    }
+		}
 	}
 
 	RenderOverheadOverlays();
@@ -349,13 +349,13 @@ void HandleOverheadMap(void)
 		gSelectedGuy = NULL;
 		INT16 const usMapPos = GetOverheadMouseGridNoForFullSoldiersGridNo();
 		if (usMapPos != NOWHERE)
-    {
+		{
 			SOLDIERTYPE* const s = GetClosestMercInOverheadMap(usMapPos, 1);
 			if (s != NULL)
 			{
 				if (s->bTeam == OUR_TEAM) gSelectedGuy = s;
 				DisplayMercNameInOverhead(*s);
-      }
+			}
 		}
 	}
 
@@ -766,8 +766,8 @@ static void RenderOverheadOverlays(void)
 		GetOverheadScreenXYFromGridNo(s.sGridNo, &sX, &sY);
 		//Now, draw his "doll"
 
-    sX += STD_SCREEN_X;
-    sY += STD_SCREEN_Y;
+		sX += STD_SCREEN_X;
+		sY += STD_SCREEN_Y;
 
 		//adjust for position.
 		sX += 2;
@@ -804,23 +804,23 @@ static void RenderOverheadOverlays(void)
 	{
 		CFOR_EACH_WORLD_ITEM(wi)
 		{
-			if (wi->bVisible != VISIBLE && !(gTacticalStatus.uiFlags & SHOW_ALL_ITEMS))
+			if (wi.bVisible != VISIBLE && !(gTacticalStatus.uiFlags & SHOW_ALL_ITEMS))
 			{
 				continue;
 			}
 
 			INT16 sX;
 			INT16 sY;
-			GetOverheadScreenXYFromGridNo(wi->sGridNo, &sX, &sY);
+			GetOverheadScreenXYFromGridNo(wi.sGridNo, &sX, &sY);
 
-      sX += STD_SCREEN_X;
-      sY += STD_SCREEN_Y;
+			sX += STD_SCREEN_X;
+			sY += STD_SCREEN_Y;
 
 			//adjust for position.
 			sY += 6;
 
 			UINT32 col;
-			if (gsOveritemPoolGridNo == wi->sGridNo)
+			if (gsOveritemPoolGridNo == wi.sGridNo)
 			{
 				col = FROMRGB(255, 0, 0);
 			}
@@ -828,7 +828,7 @@ static void RenderOverheadOverlays(void)
 			{
 				col = FROMRGB(0, 0, 0);
 			}
-			else switch (wi->bVisible)
+			else switch (wi.bVisible)
 			{
 				case HIDDEN_ITEM:      col = FROMRGB(  0,   0, 255); break;
 				case BURIED:           col = FROMRGB(255,   0,   0); break;
@@ -916,13 +916,13 @@ void CalculateRestrictedMapCoords( INT8 bDirection, INT16 *psX1, INT16 *psY1, IN
 			*psX1 = 0;
 			*psX2 = sEndXS;
 			*psY1 = 0;
-			*psY2 = ( ABS( NORMAL_MAP_SCREEN_TY - gsTLY ) / 5 );
+			*psY2 = ( ABS( NORMAL_MAP_SCREEN_TY - gsTopY ) / 5 );
 			break;
 
 		case WEST:
 
 			*psX1 = 0;
-			*psX2 = ( ABS( -NORMAL_MAP_SCREEN_X - gsTLX ) / 5 );
+			*psX2 = ( ABS( -NORMAL_MAP_SCREEN_X - gsLeftX ) / 5 );
 			*psY1 = 0;
 			*psY2 = sEndYS;
 			break;
@@ -931,13 +931,13 @@ void CalculateRestrictedMapCoords( INT8 bDirection, INT16 *psX1, INT16 *psY1, IN
 
 			*psX1 = 0;
 			*psX2 = sEndXS;
-			*psY1 = ( NORMAL_MAP_SCREEN_HEIGHT - ABS( NORMAL_MAP_SCREEN_BY - gsBLY ) ) / 5;
+			*psY1 = ( NORMAL_MAP_SCREEN_HEIGHT - ABS( NORMAL_MAP_SCREEN_BY - gsBottomY ) ) / 5;
 			*psY2 = sEndYS;
 			break;
 
 		case EAST:
 
-			*psX1 = ( NORMAL_MAP_SCREEN_WIDTH - ABS( NORMAL_MAP_SCREEN_X - gsTRX ) ) / 5;
+			*psX1 = ( NORMAL_MAP_SCREEN_WIDTH - ABS( NORMAL_MAP_SCREEN_X - gsRightX ) ) / 5;
 			*psX2 = sEndXS;
 			*psY1 = 0;
 			*psY2 = sEndYS;

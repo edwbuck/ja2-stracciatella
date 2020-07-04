@@ -1,137 +1,141 @@
-#include "Animation_Control.h"
-#include "Animation_Data.h"
-#include "Directories.h"
-#include "FindLocations.h"
-#include "Font.h"
-#include "HImage.h"
-#include "Handle_Items.h"
-#include "Handle_UI.h"
-#include "Interface.h"
-#include "Isometric_Utils.h"
-#include "Local.h"
-#include "MapScreen.h"
-#include "Structure.h"
-#include "TileDat.h"
-#include "Timer_Control.h"
-#include "VObject.h"
-#include "Video.h"
-#include "Soldier_Control.h"
-#include "Faces.h"
-#include "VSurface.h"
-#include "WCheck.h"
-#include "Render_Dirty.h"
-#include "Soldier_Profile.h"
-#include "SysUtil.h"
 #include "Interface_Dialogue.h"
-#include "Font_Control.h"
-#include "Dialogue_Control.h"
-#include "RenderWorld.h"
-#include "NPC.h"
-#include "MercTextBox.h"
-#include "Message.h"
-#include "Items.h"
-#include "Text.h"
-#include "Overhead.h"
-#include "Assignments.h"
-#include "Strategic.h"
-#include "StrategicMap.h"
-#include "GameScreen.h"
+
 #include "AI.h"
 #include "AIInternals.h"
-#include "Interactive_Tiles.h"
-#include "Interface_Panels.h"
-#include "Quests.h"
-#include "Squads.h"
-#include "Game_Event_Hook.h"
-#include "Game_Clock.h"
-#include "MessageBoxScreen.h"
-#include "Tactical_Save.h"
-#include "Interface_Control.h"
-#include "Cursors.h"
-#include "Fade_Screen.h"
-#include "GameLoop.h"
-#include "SaveLoadMap.h"
+#include "Animation_Control.h"
+#include "Animation_Data.h"
 #include "Arms_Dealer_Init.h"
-#include "ShopKeeper_Interface.h"
-#include "Strategic_Town_Loyalty.h"
-#include "Meanwhile.h"
-#include "GameSettings.h"
-#include "Strategic_Mines.h"
-#include "Boxing.h"
-#include "WorldMan.h"
-#include "Render_Fun.h"
-// including this for Strategic AI.h
-#include "Strategic_Movement.h"
-#include "Strategic_AI.h"
-#include "Handle_Doors.h"
-#include "Soldier_Create.h"
-#include "SkillCheck.h"
-#include "Sound_Control.h"
-#include "Cheats.h"
-#include "OppList.h"
-#include "PreBattle_Interface.h"
-#include "History.h"
-#include "Keys.h"
-#include "Morale.h"
-#include "Personnel.h"
-#include "Map_Screen_Interface.h"
-#include "Queen_Command.h"
-#include "Campaign.h"
+#include "Assignments.h"
 #include "BobbyRMailOrder.h"
-#include "End_Game.h"
-#include "Map_Screen_Helicopter.h"
+#include "Boxing.h"
 #include "Button_System.h"
-#include "Debug.h"
-#include "ScreenIDs.h"
-#include "Files.h"
-#include "UILayout.h"
-#include "GameRes.h"
-#include "slog/slog.h"
+#include "Campaign.h"
+#include "Cheats.h"
 #include "ContentManager.h"
+#include "Cursors.h"
+#include "Debug.h"
+#include "Dialogue_Control.h"
+#include "Directories.h"
+#include "End_Game.h"
+#include "Faces.h"
+#include "Fade_Screen.h"
+#include "Files.h"
+#include "FindLocations.h"
+#include "Font.h"
+#include "Font_Control.h"
 #include "GameInstance.h"
+#include "GameLoop.h"
+#include "GameRes.h"
+#include "GameScreen.h"
+#include "GameSettings.h"
+#include "Game_Clock.h"
+#include "Game_Event_Hook.h"
+#include "HImage.h"
+#include "Handle_Doors.h"
+#include "Handle_Items.h"
+#include "Handle_UI.h"
+#include "History.h"
+#include "Interactive_Tiles.h"
+#include "Interface.h"
+#include "Interface_Control.h"
+#include "Interface_Panels.h"
+#include "Isometric_Utils.h"
+#include "Items.h"
+#include "Keys.h"
+#include "Local.h"
+#include "Logger.h"
+#include "MapScreen.h"
+#include "Map_Screen_Helicopter.h"
+#include "Map_Screen_Interface.h"
+#include "Meanwhile.h"
+#include "MercTextBox.h"
+#include "Message.h"
+#include "MessageBoxScreen.h"
+#include "Morale.h"
+#include "NPC.h"
+#include "NpcActionParamsModel.h"
+#include "OppList.h"
+#include "Overhead.h"
+#include "Personnel.h"
+#include "PreBattle_Interface.h"
+#include "Queen_Command.h"
+#include "Quests.h"
+#include "RenderWorld.h"
+#include "Render_Dirty.h"
+#include "Render_Fun.h"
+#include "SaveLoadMap.h"
+#include "ScreenIDs.h"
+#include "ShopKeeper_Interface.h"
+#include "SkillCheck.h"
+#include "Soldier_Control.h"
+#include "Soldier_Create.h"
+#include "Soldier_Profile.h"
+#include "Sound_Control.h"
+#include "Squads.h"
+#include "Strategic.h"
+#include "StrategicMap.h"
+#include "Strategic_AI.h"
+#include "Strategic_Mines.h"
+#include "Strategic_Movement.h"
+#include "Strategic_Town_Loyalty.h"
+#include "Structure.h"
+#include "SysUtil.h"
+#include "Tactical_Save.h"
+#include "Text.h"
+#include "TileDat.h"
+#include "Timer_Control.h"
+#include "UILayout.h"
+#include "VObject.h"
+#include "VSurface.h"
+#include "Video.h"
+#include "WCheck.h"
+#include "WorldMan.h"
+
+#include <string_theory/format>
+#include <string_theory/string>
 
 
 static const INT16 sBasementEnterGridNos[] = { 13362, 13363, 13364, 13365, 13525, 13524 };
 static const INT16 sBasementExitGridNos[] = { 8047, 8207, 8208, 8048, 7888, 7728, 7727, 7567 };
 
 
-#define		TALK_PANEL_FACE_X				6
-#define		TALK_PANEL_FACE_Y				9
-#define		TALK_PANEL_NAME_X				5
-#define		TALK_PANEL_NAME_Y				114
-#define		TALK_PANEL_NAME_WIDTH		92
-#define		TALK_PANEL_NAME_HEIGHT	15
-#define   TALK_PANEL_REGION_STARTX	102
-#define   TALK_PANEL_REGION_STARTY	14
-#define   TALK_PANEL_REGION_SPACEY	16
-#define   TALK_PANEL_REGION_HEIGHT	12
-#define   TALK_PANEL_REGION_WIDTH		95
+#define TALK_PANEL_FACE_X			6
+#define TALK_PANEL_FACE_Y			9
+#define TALK_PANEL_NAME_X			5
+#define TALK_PANEL_NAME_Y			114
+#define TALK_PANEL_NAME_WIDTH			92
+#define TALK_PANEL_NAME_HEIGHT			15
+#define TALK_PANEL_REGION_STARTX		102
+#define TALK_PANEL_REGION_STARTY		14
+#define TALK_PANEL_REGION_SPACEY		16
+#define TALK_PANEL_REGION_HEIGHT		12
+#define TALK_PANEL_REGION_WIDTH		95
 
-#define   TALK_PANEL_MENUTEXT_STARTX	102
-#define   TALK_PANEL_MENUTEXT_STARTY	16
-#define   TALK_PANEL_MENUTEXT_SPACEY	16
-#define   TALK_PANEL_MENUTEXT_HEIGHT	13
-#define   TALK_PANEL_MENUTEXT_WIDTH		95
-#define   TALK_PANEL_BUTTON_X					112
-#define   TALK_PANEL_BUTTON_Y					114
-#define		TALK_PANEL_SHADOW_AREA_X		97
-#define		TALK_PANEL_SHADOW_AREA_Y		9
-#define		TALK_PANEL_SHADOW_AREA_WIDTH	107
-#define		TALK_PANEL_SHADOW_AREA_HEIGHT	102
+#define TALK_PANEL_MENUTEXT_STARTX		102
+#define TALK_PANEL_MENUTEXT_STARTY		16
+#define TALK_PANEL_MENUTEXT_SPACEY		16
+#define TALK_PANEL_MENUTEXT_HEIGHT		13
+#define TALK_PANEL_MENUTEXT_WIDTH		95
+#define TALK_PANEL_BUTTON_X			112
+#define TALK_PANEL_BUTTON_Y			114
+#define TALK_PANEL_SHADOW_AREA_X		97
+#define TALK_PANEL_SHADOW_AREA_Y		9
+#define TALK_PANEL_SHADOW_AREA_WIDTH		107
+#define TALK_PANEL_SHADOW_AREA_HEIGHT		102
 
-#define		TALK_PANEL_DEFAULT_SUBTITLE_WIDTH	200
+#define TALK_PANEL_DEFAULT_SUBTITLE_WIDTH	200
 
-#define		TALK_PANEL_CALC_SUBTITLE_WIDTH	280
-#define		TALK_PANEL_CALC_SUBTITLE_HEIGHT	125
+#define TALK_PANEL_CALC_SUBTITLE_WIDTH		280
+#define TALK_PANEL_CALC_SUBTITLE_HEIGHT	125
 
 
-#define		TALK_PANEL_POPUP_LEFT					0
-#define		TALK_PANEL_POPUP_TOP					1
-#define		TALK_PANEL_POPUP_BOTTOM				2
-#define		TALK_PANEL_POPUP_RIGHT				3
+#define TALK_PANEL_POPUP_LEFT			0
+#define TALK_PANEL_POPUP_TOP			1
+#define TALK_PANEL_POPUP_BOTTOM		2
+#define TALK_PANEL_POPUP_RIGHT			3
 
 // chance vince will say random quote to player during conv.
-#define CHANCE_FOR_DOCTOR_TO_SAY_RANDOM_QUOTE 20
+#define CHANCE_FOR_DOCTOR_TO_SAY_RANDOM_QUOTE	20
 
 
 static Approach const ubTalkMenuApproachIDs[] =
@@ -146,11 +150,11 @@ static Approach const ubTalkMenuApproachIDs[] =
 
 
 // GLOBAL NPC STRUCT
-NPC_DIALOGUE_TYPE		gTalkPanel;
-BOOLEAN							gfInTalkPanel = FALSE;
-SOLDIERTYPE					*gpSrcSoldier  = NULL;
-SOLDIERTYPE					*gpDestSoldier  = NULL;
-UINT8								gubSrcSoldierProfile;
+NPC_DIALOGUE_TYPE gTalkPanel;
+BOOLEAN gfInTalkPanel = FALSE;
+SOLDIERTYPE *gpSrcSoldier  = NULL;
+SOLDIERTYPE *gpDestSoldier  = NULL;
+UINT8 gubSrcSoldierProfile;
 static UINT8 gubNiceNPCProfile  = NO_PROFILE;
 static UINT8 gubNastyNPCProfile = NO_PROFILE;
 
@@ -158,7 +162,7 @@ static UINT8        gubTargetNPC;
 static UINT8        gubTargetRecord;
 static Approach     gubTargetApproach;
 static BOOLEAN      gfShowDialogueMenu;
-BOOLEAN							gfWaitingForTriggerTimer;
+BOOLEAN gfWaitingForTriggerTimer;
 static UINT32       guiWaitingForTriggerTime;
 MercPopUpBox*       g_interface_dialogue_box;
 static UINT8        ubRecordThatTriggeredLiePrompt;
@@ -192,7 +196,7 @@ try
 {
 	// ATE: OK, let's check the status of the Q
 	// If it has something in it....delay this until after....
-	if ( DialogueQueueIsEmptyOrSomebodyTalkingNow( ) )
+	if (DialogueQueueIsEmptyAndNobodyIsTalking())
 	{
 		gfConversationPending = FALSE;
 
@@ -239,7 +243,8 @@ void HandlePendingInitConv( )
 	if ( gfConversationPending )
 	{
 		// OK, if pending, remove and now call........
-		InternalInitiateConversation(gpPendingDestSoldier, gpPendingSrcSoldier, gbPendingApproach, g_pending_approach_record, g_pending_approach_object);
+		InternalInitiateConversation(gpPendingDestSoldier, gpPendingSrcSoldier, gbPendingApproach,
+						g_pending_approach_record, g_pending_approach_object);
 	}
 }
 
@@ -274,7 +279,7 @@ static void InternalInitiateConversation(SOLDIERTYPE* const pDestSoldier, SOLDIE
 		{
 			gTacticalStatus.uiFlags &= (~ENGAGED_IN_CONV);
 		}
-		SLOGD(DEBUG_TAG_INTERFACE, "Cannot initiate conversation menu.. check for face file for ID: %d.", pDestSoldier->ubProfile );
+		SLOGD("Cannot initiate conversation menu.. check for face file for ID: %d.", pDestSoldier->ubProfile );
 		throw;
 	}
 
@@ -298,7 +303,7 @@ static void InternalInitiateConversation(SOLDIERTYPE* const pDestSoldier, SOLDIE
 	{
 		SetCurrentSquad( gpSrcSoldier->bAssignment, FALSE );
 
-    SelectSoldier(pSrcSoldier, SELSOLDIER_NONE);
+		SelectSoldier(pSrcSoldier, SELSOLDIER_NONE);
 	}
 
 	ConverseFull(gTalkPanel.ubCharNum, gubSrcSoldierProfile, bApproach, approach_record, approach_object);
@@ -328,8 +333,8 @@ static void InternalInitiateConversation(SOLDIERTYPE* const pDestSoldier, SOLDIE
 // This fuction will allocate and setup an NPCDiaogue structure. Loads the face for the character..
 static void InitTalkingMenu(UINT8 const ubCharacterNum, INT16 const sGridNo)
 {
-	INT16							sXMapPos, sYMapPos, sScreenX, sScreenY;
-	INT16							sX, sY;
+	INT16 sXMapPos, sYMapPos, sScreenX, sScreenY;
+	INT16 sX, sY;
 
 	// Get XY values
 	{
@@ -361,7 +366,7 @@ static void DoneTalkingButtonClickCallback(GUI_BUTTON* btn, INT32 reason);
 
 void InternalInitTalkingMenu(UINT8 const ubCharacterNum, INT16 sX, INT16 sY)
 {
-	INT16							sCenterYVal, sCenterXVal;
+	INT16 sCenterYVal, sCenterXVal;
 
 	// disable scroll messages
 	HideMessagesDuringNPCDialogue( );
@@ -370,17 +375,17 @@ void InternalInitTalkingMenu(UINT8 const ubCharacterNum, INT16 sX, INT16 sY)
 	EraseInterfaceMenus( FALSE );
 
 
-	gTalkPanel.ubCharNum		=		ubCharacterNum;
-	gTalkPanel.bCurSelect	= -1;
+	gTalkPanel.ubCharNum = ubCharacterNum;
+	gTalkPanel.bCurSelect = -1;
 	gTalkPanel.bOldCurSelect = -1;
-	gTalkPanel.fHandled		=		FALSE;
-	gTalkPanel.fOnName		=		FALSE;
+	gTalkPanel.fHandled = FALSE;
+	gTalkPanel.fOnName = FALSE;
 
 	gTalkPanel.uiPanelVO = AddVideoObjectFromFile(INTERFACEDIR "/talkbox1.sti");
 
 	ETRLEObject const& ETRLEProps = gTalkPanel.uiPanelVO->SubregionProperties(0);
-	gTalkPanel.usWidth  = ETRLEProps.usWidth;
-	gTalkPanel.usHeight	= ETRLEProps.usHeight;
+	gTalkPanel.usWidth = ETRLEProps.usWidth;
+	gTalkPanel.usHeight = ETRLEProps.usHeight;
 
 	// Check coords
 	{
@@ -418,8 +423,8 @@ void InternalInitTalkingMenu(UINT8 const ubCharacterNum, INT16 sX, INT16 sY)
 	}
 
 	//Set values
-	gTalkPanel.sX					=		sX;
-	gTalkPanel.sY					=		sY;
+	gTalkPanel.sX = sX;
+	gTalkPanel.sY = sY;
 
 	CalculatePopupTextOrientation( TALK_PANEL_CALC_SUBTITLE_WIDTH, TALK_PANEL_CALC_SUBTITLE_HEIGHT );
 
@@ -436,18 +441,26 @@ void InternalInitTalkingMenu(UINT8 const ubCharacterNum, INT16 sX, INT16 sY)
 	MSYS_DefineRegion(&gTalkPanel.ScreenRegion, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, MSYS_PRIORITY_HIGHEST, CURSOR_NORMAL, MSYS_NO_CALLBACK, MSYS_NO_CALLBACK);
 
 	//Define main region
-	MSYS_DefineRegion( &(gTalkPanel.BackRegion), (INT16)(gTalkPanel.sX), (INT16)(gTalkPanel.sY), (INT16)(gTalkPanel.sX + gTalkPanel.usWidth ),(INT16)( gTalkPanel.sY + gTalkPanel.usHeight ), MSYS_PRIORITY_HIGHEST,
-						 CURSOR_NORMAL, MSYS_NO_CALLBACK, TalkPanelBaseRegionClickCallback );
+	MSYS_DefineRegion(&(gTalkPanel.BackRegion), (INT16)(gTalkPanel.sX), (INT16)(gTalkPanel.sY),
+				(INT16)(gTalkPanel.sX + gTalkPanel.usWidth),
+				(INT16)(gTalkPanel.sY + gTalkPanel.usHeight),
+				MSYS_PRIORITY_HIGHEST, CURSOR_NORMAL, MSYS_NO_CALLBACK,
+				TalkPanelBaseRegionClickCallback);
 
 	//Define name region
-	MSYS_DefineRegion( &(gTalkPanel.NameRegion), (INT16)(gTalkPanel.sX + TALK_PANEL_NAME_X ), (INT16)(gTalkPanel.sY + TALK_PANEL_NAME_Y), (INT16)(gTalkPanel.sX + TALK_PANEL_NAME_WIDTH + TALK_PANEL_NAME_X ),(INT16)( gTalkPanel.sY + TALK_PANEL_NAME_HEIGHT + TALK_PANEL_NAME_Y ), MSYS_PRIORITY_HIGHEST,
-						 CURSOR_NORMAL, TalkPanelNameRegionMoveCallback, TalkPanelNameRegionClickCallback );
+	MSYS_DefineRegion(&(gTalkPanel.NameRegion), (INT16)(gTalkPanel.sX + TALK_PANEL_NAME_X),
+				(INT16)(gTalkPanel.sY + TALK_PANEL_NAME_Y),
+				(INT16)(gTalkPanel.sX + TALK_PANEL_NAME_WIDTH + TALK_PANEL_NAME_X),
+				(INT16)(gTalkPanel.sY + TALK_PANEL_NAME_HEIGHT + TALK_PANEL_NAME_Y), MSYS_PRIORITY_HIGHEST, CURSOR_NORMAL, TalkPanelNameRegionMoveCallback,
+				TalkPanelNameRegionClickCallback );
 
 	for (INT32 cnt = 0; cnt < 6; ++cnt)
 	{
 		// Build a mouse region here that is over any others.....
-		MSYS_DefineRegion( &(gTalkPanel.Regions[cnt]), (INT16)(sX), (INT16)(sY), (INT16)(sX + TALK_PANEL_REGION_WIDTH ),(INT16)( sY + TALK_PANEL_REGION_HEIGHT ), MSYS_PRIORITY_HIGHEST,
-							 CURSOR_NORMAL, TalkPanelMoveCallback, TalkPanelClickCallback );
+		MSYS_DefineRegion(&(gTalkPanel.Regions[cnt]), (INT16)(sX), (INT16)(sY),
+					(INT16)(sX + TALK_PANEL_REGION_WIDTH ),
+					(INT16)( sY + TALK_PANEL_REGION_HEIGHT ), MSYS_PRIORITY_HIGHEST,
+					CURSOR_NORMAL, TalkPanelMoveCallback, TalkPanelClickCallback);
 		MSYS_SetRegionUserData( &(gTalkPanel.Regions[cnt]), 0, cnt );
 
 		sY += TALK_PANEL_REGION_SPACEY;
@@ -466,10 +479,11 @@ void InternalInitTalkingMenu(UINT8 const ubCharacterNum, INT16 sX, INT16 sY)
 	gTalkPanel.iButtonImages = LoadButtonImage(INTERFACEDIR "/talkbox2.sti", 3, 4);
 
 	gTalkPanel.uiCancelButton = CreateIconAndTextButton(gTalkPanel.iButtonImages, zDialogActions, MILITARYFONT1,
-														 33, DEFAULT_SHADOW,
-														 33, DEFAULT_SHADOW,
-														 gTalkPanel.sX + TALK_PANEL_BUTTON_X, gTalkPanel.sY + TALK_PANEL_BUTTON_Y, MSYS_PRIORITY_HIGHEST,
-														 DoneTalkingButtonClickCallback );
+								33, DEFAULT_SHADOW, 33, DEFAULT_SHADOW,
+								gTalkPanel.sX + TALK_PANEL_BUTTON_X,
+								gTalkPanel.sY + TALK_PANEL_BUTTON_Y,
+								MSYS_PRIORITY_HIGHEST,
+								DoneTalkingButtonClickCallback );
 
 	gTalkPanel.uiCancelButton->SpecifyHilitedTextColors(FONT_MCOLOR_WHITE, DEFAULT_SHADOW);
 
@@ -604,11 +618,11 @@ void DeleteTalkingMenu( )
 		}
 	}
 
-  if (g_interface_dialogue_box)
-  {
-    RemoveMercPopupBox(g_interface_dialogue_box);
-    g_interface_dialogue_box = 0;
-  }
+	if (g_interface_dialogue_box)
+	{
+		RemoveMercPopupBox(g_interface_dialogue_box);
+		g_interface_dialogue_box = 0;
+	}
 }
 
 
@@ -628,9 +642,9 @@ void RenderTalkingMenu()
 
 	// Render name
 	SetFontAttributes(MILITARYFONT1, tp->fOnName ? FONT_WHITE : 33);
-	wchar_t const* const name = GetProfile(pid).zNickname;
-	INT16                sFontX;
-	INT16                sFontY;
+	ST::string name = GetProfile(pid).zNickname;
+	INT16 sFontX;
+	INT16 sFontY;
 	FindFontCenterCoordinates(tp->sX + TALK_PANEL_NAME_X, tp->sY + TALK_PANEL_NAME_Y, TALK_PANEL_NAME_WIDTH, TALK_PANEL_NAME_HEIGHT, name, MILITARYFONT1, &sFontX, &sFontY);
 	MPrint(sFontX, sFontY, name);
 
@@ -728,21 +742,21 @@ void RenderTalkingMenu()
 			SetFontShadow(MILITARY_SHADOW);
 		}
 
-		wchar_t const* str;
-		wchar_t        buf[512];
+		ST::string str;
+		ST::string buf;
 		if (cnt == 4 && IsMercADealer(pid))
 		{
 			str = zDealerStrings[GetTypeOfArmsDealer(GetArmsDealerIDFromMercID(pid))];
 		}
 		else if (cnt != 0 &&
 #ifndef _DEBUG
-				CHEATER_CHEAT_LEVEL() &&
+			CHEATER_CHEAT_LEVEL() &&
 #endif
-				gubSrcSoldierProfile != NO_PROFILE &&
-				pid                  != NO_PROFILE)
+			gubSrcSoldierProfile != NO_PROFILE &&
+			pid                  != NO_PROFILE)
 		{
 			UINT8 const desire = CalcDesireToTalk(pid, gubSrcSoldierProfile, ubTalkMenuApproachIDs[cnt]);
-			swprintf(buf, lengthof(buf), L"%ls (%d)", zTalkMenuStrings[cnt], desire);
+			buf = ST::format("{} ({})", zTalkMenuStrings[cnt], desire);
 			str = buf;
 		}
 		else
@@ -763,7 +777,7 @@ void RenderTalkingMenu()
 
 static void TalkPanelMoveCallback(MOUSE_REGION* pRegion, INT32 iReason)
 {
-	UINT32					uiItemPos;
+	UINT32 uiItemPos;
 
 	uiItemPos = MSYS_GetRegionUserData( pRegion, 0 );
 
@@ -784,8 +798,8 @@ static void TalkPanelMoveCallback(MOUSE_REGION* pRegion, INT32 iReason)
 
 static void TalkPanelClickCallback(MOUSE_REGION* pRegion, INT32 iReason)
 {
-	UINT32					uiItemPos;
-	BOOLEAN					fDoConverse = TRUE;
+	UINT32  uiItemPos;
+	BOOLEAN fDoConverse = TRUE;
 	uiItemPos = MSYS_GetRegionUserData( pRegion, 0 );
 
 
@@ -818,8 +832,7 @@ static void TalkPanelClickCallback(MOUSE_REGION* pRegion, INT32 iReason)
 						DeleteTalkingMenu( );
 
 						EnterShopKeeperInterfaceScreen( gTalkPanel.ubCharNum );
-					}
-					*/
+					}*/
 				}
 				else
 				{
@@ -859,7 +872,7 @@ static void TalkPanelClickCallback(MOUSE_REGION* pRegion, INT32 iReason)
 
 static void TalkPanelBaseRegionClickCallback(MOUSE_REGION* pRegion, INT32 iReason)
 {
-		static BOOLEAN fLButtonDown = FALSE;
+	static BOOLEAN fLButtonDown = FALSE;
 
 	if (iReason & MSYS_CALLBACK_REASON_LBUTTON_DWN )
 	{
@@ -935,9 +948,9 @@ BOOLEAN HandleTalkingMenu( )
 void TalkingMenuDialogue(UINT16 const usQuoteNum)
 {
 	// Set back current select....
-	gTalkPanel.bCurSelect	= -1;
-	gTalkPanel.fOnName		= FALSE;
-	//gTalkPanel.fHandled		= FALSE;
+	gTalkPanel.bCurSelect = -1;
+	gTalkPanel.fOnName = FALSE;
+	//gTalkPanel.fHandled = FALSE;
 
 	CharacterDialogue(gTalkPanel.ubCharNum, usQuoteNum, gTalkPanel.face, DIALOGUE_NPC_UI, FALSE);
 }
@@ -945,8 +958,7 @@ void TalkingMenuDialogue(UINT16 const usQuoteNum)
 
 bool ProfileCurrentlyTalkingInDialoguePanel(UINT8 const ubProfile)
 {
-	return
-		gfInTalkPanel &&
+	return gfInTalkPanel &&
 		gpDestSoldier &&
 		gpDestSoldier->ubProfile == ubProfile;
 }
@@ -954,7 +966,7 @@ bool ProfileCurrentlyTalkingInDialoguePanel(UINT8 const ubProfile)
 
 BOOLEAN HandleTalkingMenuEscape( BOOLEAN fCanDelete , BOOLEAN fFromEscKey )
 {
-	BOOLEAN					fTalking = FALSE;
+	BOOLEAN fTalking = FALSE;
 
 	if ( !gfInTalkPanel )
 	{
@@ -1035,16 +1047,15 @@ void HandleTalkingMenuBackspace(void)
 	gTalkPanel.fHandled = FALSE;
 
 
-	if ( fTalking )
-	*/
+	if ( fTalking )	*/
 	if (pFace->fTalking) ShutupaYoFace(gTalkPanel.face);
 }
 
 
 static void CalculatePopupTextOrientation(INT16 sWidth, INT16 sHeight)
 {
-	BOOLEAN			fOKLeft = FALSE, fOKTop = FALSE, fOKBottom = FALSE, fOK = FALSE;
-	INT16				sX, sY;
+	BOOLEAN fOKLeft = FALSE, fOKTop = FALSE, fOKBottom = FALSE, fOK = FALSE;
+	INT16   sX, sY;
 
 	// Check Left
 	sX = gTalkPanel.sX - sWidth;
@@ -1211,7 +1222,7 @@ void NPCDoAction(UINT8 const ubTargetNPC, UINT16 const usActionCode, UINT8 const
 
 static BOOLEAN SourceSoldierPointerIsValidAndReachableForGive(SOLDIERTYPE* pGiver)
 {
-	INT16		sAdjGridNo;
+	INT16 sAdjGridNo;
 
 	if ( !gpSrcSoldier )
 	{
@@ -1251,7 +1262,7 @@ void HandleNPCItemGiven( UINT8 ubNPC, OBJECTTYPE *pObject, INT8 bInvPos )
 {
 
 	// Give it to the NPC soldier
-//	AutoPlaceObject( gpDestSoldier, pObject, FALSE );
+	//AutoPlaceObject( gpDestSoldier, pObject, FALSE );
 
 	// OK< if the timer is < 5000, use who was last in the talk panel box.
 	if ( !SourceSoldierPointerIsValidAndReachableForGive( gpDestSoldier ) )
@@ -1290,10 +1301,10 @@ void HandleNPCTriggerNPC(UINT8 const ubTargetNPC, UINT8 const ubTargetRecord, BO
 	}
 
 	// Save values for trigger function
-	gubTargetNPC				= ubTargetNPC;
-	gubTargetRecord			= ubTargetRecord;
-	gubTargetApproach		= ubTargetApproach;
-	gfShowDialogueMenu	= fShowDialogueMenu;
+	gubTargetNPC = ubTargetNPC;
+	gubTargetRecord = ubTargetRecord;
+	gubTargetApproach = ubTargetApproach;
+	gfShowDialogueMenu = fShowDialogueMenu;
 
 
 	if ( pSoldier->bTeam == OUR_TEAM )
@@ -1324,8 +1335,8 @@ void HandleNPCTriggerNPC(UINT8 const ubTargetNPC, UINT8 const ubTargetRecord, BO
 		// SO WE CAN SEE NPC RADIO LOCATOR
 		// THEN AFTER THIS IS DONE, DO THE STUFF
 		// Setup timer!
-		gfWaitingForTriggerTimer		= TRUE;
-		guiWaitingForTriggerTime		= GetJA2Clock( );
+		gfWaitingForTriggerTimer = TRUE;
+		guiWaitingForTriggerTime = GetJA2Clock( );
 
 		// Setup locator!
 		ShowRadioLocator(pSoldier, SHOW_LOCATOR_FAST);
@@ -1353,7 +1364,7 @@ void HandleNPCTriggerNPC(UINT8 const ubTargetNPC, UINT8 const ubTargetRecord, BO
 
 static void HandleNPCTrigger(void)
 {
-	INT16				sPlayerGridNo;
+	INT16 sPlayerGridNo;
 
 	SOLDIERTYPE* const pSoldier = FindSoldierByProfileID(gubTargetNPC);
 	if (!pSoldier)
@@ -1479,7 +1490,7 @@ static void HandleNPCGotoGridNo(UINT8 const ubTargetNPC, UINT16 const usGridNo, 
 	// Go for it!
 
 	// Set flags to do stuff once there...
-	pSoldier->ubQuoteRecord		= ( ubQuoteNum + 1 );
+	pSoldier->ubQuoteRecord = ( ubQuoteNum + 1 );
 	pSoldier->ubQuoteActionID = ActionIDForMovementRecord( ubTargetNPC, ubQuoteNum );
 
 	// Set absolute dest
@@ -1513,7 +1524,7 @@ static void HandleStuffForNPCEscorted(UINT8 ubNPC)
 			SOLDIERTYPE* const pSoldier = FindSoldierByProfileIDOnPlayerTeam(MARY);
 			if ( pSoldier )
 			{
-				ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, TacticalStr[ NOW_BING_ESCORTED_STR ], gMercProfiles[ MARY ].zNickname, ( pSoldier->bAssignment + 1 ) );
+				ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[ NOW_BING_ESCORTED_STR ], gMercProfiles[ MARY ].zNickname, ( pSoldier->bAssignment + 1 )) );
 			}
 
 			if ( gubQuest[ QUEST_ESCORT_TOURISTS ] == QUESTNOTSTARTED )
@@ -1531,7 +1542,7 @@ static void HandleStuffForNPCEscorted(UINT8 ubNPC)
 			SOLDIERTYPE* const pSoldier = FindSoldierByProfileIDOnPlayerTeam(JOHN);
 			if ( pSoldier )
 			{
-				ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, TacticalStr[ NOW_BING_ESCORTED_STR ], gMercProfiles[ JOHN ].zNickname, ( pSoldier->bAssignment + 1 ) );
+				ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[ NOW_BING_ESCORTED_STR ], gMercProfiles[ JOHN ].zNickname, ( pSoldier->bAssignment + 1 )) );
 			}
 
 			if ( gubQuest[ QUEST_ESCORT_TOURISTS ] == QUESTNOTSTARTED )
@@ -1553,7 +1564,7 @@ static void CarmenLeavesSectorCallback(void);
 
 void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum )
 {
-	//ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, L"Handling %ls, action %d at %ld", gMercProfiles[ubTargetNPC].zNickname, usActionCode, GetJA2Clock());
+	//ScreenMsg(FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, ST::format("Handling {}, action {} at {}", gMercProfiles[ubTargetNPC].zNickname, usActionCode, GetJA2Clock());
 
 	// Switch on action code!
 	if (usActionCode > NPC_ACTION_TURN_TO_FACE_NEAREST_MERC && usActionCode < NPC_ACTION_LAST_TURN_TO_FACE_PROFILE)
@@ -1573,6 +1584,7 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 	}
 	else
 	{
+		auto params = GCM->getNpcActionParams(usActionCode);
 		switch( usActionCode )
 		{
 			case NPC_ACTION_DONT_ACCEPT_ITEM:
@@ -1591,7 +1603,7 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 				ExitGrid.usGridNo = 12722;
 
 				{ ApplyMapChangesToMapTempFile app;
-					AddExitGridToWorld( 7887, &ExitGrid );
+					AddExitGridToWorld( params->getGridNo(7887), &ExitGrid );
 				}
 
 				// For one, loop through our current squad and move them over
@@ -1817,22 +1829,22 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 			case NPC_ACTION_RECRUIT:
 				// gonna work for free!
 				gMercProfiles[ ubTargetNPC ].sSalary = 0;
-				// and fall through
+				// fallthrough
 
 			case NPC_ACTION_RECRUIT_WITH_SALARY:
 
 				// Delete menu
 				DeleteTalkingMenu( );
 
-        if ( PlayerTeamFull( ) )
-        {
+				if ( PlayerTeamFull( ) )
+				{
 					ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, TacticalStr[ CANNOT_RECRUIT_TEAM_FULL ] );
-        }
+				}
 				else
 				{
 					RecruitRPC( ubTargetNPC );
 					// OK, update UI with message that we have been recruited
-					ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, TacticalStr[ HAS_BEEN_RECRUITED_STR ], gMercProfiles[ ubTargetNPC ].zNickname );
+					ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[ HAS_BEEN_RECRUITED_STR ], gMercProfiles[ ubTargetNPC ].zNickname) );
 				}
 				break;
 
@@ -2031,8 +2043,9 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 					const INT16 sGridNo = pSoldier->sGridNo + DirectionInc(pSoldier->bDirection);
 					SoldierReadyWeapon(pSoldier, sGridNo, FALSE);
 				}
-				// fall through so that the person faces the nearest merc!
+				// and face the nearest merc!
 			}
+				// fallthrough
 
 			case NPC_ACTION_TURN_TO_FACE_NEAREST_MERC:
 			{
@@ -2057,7 +2070,7 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 			case NPC_ACTION_SEND_PACOS_INTO_HIDING:
 			{
 				SOLDIERTYPE* const pSoldier = FindSoldierByProfileID(PACOS);
-				const INT16 sGridNo = 16028;
+				const INT16 sGridNo = params->getGridNo(16028);
 				if (pSoldier)
 				{
 					if (NewOKDestination( pSoldier, sGridNo, TRUE, 0 ) )
@@ -2080,7 +2093,7 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 			case NPC_ACTION_HAVE_PACOS_FOLLOW:
 			{
 				SOLDIERTYPE* const pSoldier = FindSoldierByProfileID(PACOS);
-				const INT16 sGridNo = 18193;
+				const INT16 sGridNo = params->getGridNo(18193);
 				if (pSoldier)
 				{
 					if (NewOKDestination( pSoldier, sGridNo, TRUE, 0 ) )
@@ -2126,9 +2139,9 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 
 			case NPC_ACTION_REDUCE_CONRAD_SALARY_CONDITIONS:
 				gMercProfiles[ CONRAD ].sSalary = 3300;
-				// and fall through
+				// fallthrough
 			case NPC_ACTION_ASK_ABOUT_ESCORTING_EPC:
- 				// Confirm if we want to start escorting or not....
+				// Confirm if we want to start escorting or not....
 			case NPC_ACTION_ASK_ABOUT_PAYING_RPC:
 			case NPC_ACTION_ASK_ABOUT_PAYING_RPC_WITH_DAILY_SALARY:
 				// Ask whether the player will pay the RPC
@@ -2144,7 +2157,7 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 				// Vince or Willis asks about payment? for medical attention
 				if (ubTargetNPC != gpDestSoldier->ubProfile)
 				{
-					SLOGE(DEBUG_TAG_INTERFACE, "Inconsistency between HandleNPCDoAction and target profile IDs" );
+					SLOGE("Inconsistency between HandleNPCDoAction and target profile IDs" );
 				}
 				else
 				{
@@ -2154,7 +2167,7 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 				break;
 
 			case NPC_ACTION_REPORT_BALANCE:
-				ScreenMsg( FONT_YELLOW, MSG_INTERFACE, TacticalStr[ BALANCE_OWED_STR ], gMercProfiles[ubTargetNPC].zNickname, -gMercProfiles[ubTargetNPC].iBalance );
+				ScreenMsg( FONT_YELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[ BALANCE_OWED_STR ], gMercProfiles[ubTargetNPC].zNickname, -gMercProfiles[ubTargetNPC].iBalance) );
 				break;
 
 			case NPC_ACTION_DELAYED_MAKE_BRENDA_LEAVE:
@@ -2177,13 +2190,15 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 				// add a money item with $10000 to the tile in front of Kyle
 				// and then have him pick it up
 				{
-					OBJECTTYPE	Object;
-					INT16				sGridNo = 14952;
+					OBJECTTYPE Object;
+					INT16      sGridNo  = params->getGridNo(14952);
+					UINT32     uiAmount = params->getAmount(10000);
+					SLOGI(ST::format("add a money item with ${} to tile {} in front of Kyle", uiAmount, sGridNo));
 
 					SOLDIERTYPE* const pSoldier = FindSoldierByProfileID(ubTargetNPC);
 					if (pSoldier)
 					{
-						CreateMoney(10000, &Object);
+						CreateMoney(uiAmount, &Object);
 						INT32 const iWorldItem = AddItemToPool(sGridNo, &Object, INVISIBLE, pSoldier->bLevel, 0, 0);
 
 						// shouldn't have any current action but make sure everything
@@ -2256,12 +2271,12 @@ void HandleNPCDoAction( UINT8 ubTargetNPC, UINT16 usActionCode, UINT8 ubQuoteNum
 				break;
 
 			{
-				INT16 sGridNo;
-				case NPC_ACTION_OPEN_CARLAS_DOOR: sGridNo = 12290; goto unlock;
-				case NPC_ACTION_OPEN_CINDYS_DOOR: sGridNo = 13413; goto unlock;
-				case NPC_ACTION_OPEN_BAMBIS_DOOR: sGridNo = 11173; goto unlock;
-				case NPC_ACTION_OPEN_MARIAS_DOOR: sGridNo = 10852; goto unlock;
-unlock:
+			case NPC_ACTION_OPEN_CARLAS_DOOR: 
+			case NPC_ACTION_OPEN_CINDYS_DOOR: 
+			case NPC_ACTION_OPEN_BAMBIS_DOOR: 
+			case NPC_ACTION_OPEN_MARIAS_DOOR: 
+				INT16 sGridNo = params->getGridNo(10852);
+
 				// JA3Gold: unlock the doors instead of opening them
 				{
 					DOOR* pDoor;
@@ -2301,8 +2316,7 @@ unlock:
 							}
 						}
 					}
-				}
-				*/
+				}*/
 				break;
 			}
 
@@ -2331,7 +2345,8 @@ unlock:
 					TriggerNPCRecord( MADAME, 28 );
 					break;
 				}
-				// else fall through
+				// else
+				// fallthrough
 			case NPC_ACTION_LAYLAS_NEXT_LINE_AFTER_CARLA:
 				if ( CheckFact( FACT_CINDY_AVAILABLE, 0 ) )
 				{
@@ -2339,24 +2354,27 @@ unlock:
 					TriggerNPCRecord( MADAME, 29 );
 					break;
 				}
+				// else
+				// fallthrough
 			case NPC_ACTION_LAYLAS_NEXT_LINE_AFTER_CINDY:
-				// else fall through
 				if ( CheckFact( FACT_BAMBI_AVAILABLE, 0 ) )
 				{
 					// Mention Bambi
 					TriggerNPCRecord( MADAME, 30 );
 					break;
 				}
+				// else
+				// fallthrough
 			case NPC_ACTION_LAYLAS_NEXT_LINE_AFTER_BAMBI:
-				// else fall through
 				if ( gubQuest[ QUEST_RESCUE_MARIA ] == QUESTINPROGRESS )
 				{
 					// Mention Maria
 					TriggerNPCRecord( MADAME, 31);
 					break;
 				}
+				// else
+				// fallthrough
 			case NPC_ACTION_LAYLAS_NEXT_LINE_AFTER_MARIA:
-				// else fall through
 				if ( CheckFact( FACT_MULTIPLE_MERCS_CLOSE, MADAME ) )
 				{
 					// if more than 1 merc nearby, say comment about 2 guys pergirl
@@ -2506,7 +2524,7 @@ unlock:
 					const INT8 bItemIn = FindObj(pSoldier, DEED);
 					if (bItemIn != NO_SLOT)
 					{
-						AddItemToPool(12541, &pSoldier->inv[bItemIn], INVISIBLE, 0, 0, 0);
+						AddItemToPool(params->getGridNo(12541), &pSoldier->inv[bItemIn], INVISIBLE, 0, 0, 0);
 						DeleteObj( &(pSoldier->inv[ bItemIn ]) );
 						RemoveObjectFromSoldierProfile( ubTargetNPC, DEED );
 					}
@@ -2672,7 +2690,7 @@ unlock:
 				// set "don't add to sector" cause he'll only appear after an event...
 				gMercProfiles[ ubTargetNPC ].ubMiscFlags2 |= PROFILE_MISC_FLAG2_DONT_ADD_TO_SECTOR;
 
-				SetCustomizableTimerCallbackAndDelay( 10000, CarmenLeavesSectorCallback, TRUE );
+				SetCustomizableTimerCallbackAndDelay(params->getAmount(10000), CarmenLeavesSectorCallback, TRUE );
 				break;
 
 			case NPC_ACTION_CARMEN_LEAVES_ON_NEXT_SECTOR_LOAD:
@@ -2729,11 +2747,11 @@ unlock:
 				// NOW overwrite name with true name in profile
 				// copy new nickname into soldier structure
 				{
-					wcslcpy(gMercProfiles[ubTargetNPC].zNickname, gMercProfiles[ubTargetNPC].zName, lengthof(gMercProfiles[ubTargetNPC].zNickname));
+					gMercProfiles[ubTargetNPC].zNickname = gMercProfiles[ubTargetNPC].zName;
 					SOLDIERTYPE* const pSoldier = FindSoldierByProfileID(ubTargetNPC);
 					if ( pSoldier )
 					{
-						wcslcpy(pSoldier->name, gMercProfiles[ubTargetNPC].zNickname, lengthof(pSoldier->name));
+						pSoldier->name = gMercProfiles[ubTargetNPC].zNickname;
 					}
 				}
 				break;
@@ -2829,7 +2847,7 @@ unlock:
 				if ( pSoldier && pSoldier2 )
 				{
 					// Give weapon to robot
-					INT8		bSlot;
+					INT8 bSlot;
 
 					bSlot = FindObjClass( pSoldier, IC_GUN );
 					if ( bSlot != NO_SLOT )
@@ -2860,8 +2878,7 @@ unlock:
 						break;
 					default:
 						break;
-				}
-				*/
+				}*/
 				break;
 
 			case NPC_ACTION_DARREN_PAYS_PLAYER:
@@ -2870,9 +2887,9 @@ unlock:
 				SOLDIERTYPE* const pSoldier = FindSoldierByProfileID(ubTargetNPC);
 				if ( pSoldier )
 				{
-					INT16		sNearestPC;
-					INT8		bMoneySlot;
-					INT8		bEmptySlot;
+					INT16 sNearestPC;
+					INT8  bMoneySlot;
+					INT8  bEmptySlot;
 
 					sNearestPC = ClosestPC( pSoldier, NULL );
 					SOLDIERTYPE* const pSoldier2 = (sNearestPC != NOWHERE ? WhoIsThere2(sNearestPC, 0) : NULL);
@@ -2882,8 +2899,8 @@ unlock:
 						bMoneySlot = FindObjClass( pSoldier, IC_MONEY );
 						bEmptySlot = FindObj( pSoldier, NOTHING );
 
-						// have to separate out money from Darren's stash equal to the amount of the bet
-						// times 2 (returning the player's money, after all!)
+						// have to separate out money from Darren's stash equal to the amount
+						// of the bet times 2 (returning the player's money, after all!)
 						if (bMoneySlot != NO_SLOT && bEmptySlot != NO_SLOT)
 						{
 							CreateMoney( gMercProfiles[ ubTargetNPC ].iBalance * 2, &(pSoldier->inv[ bEmptySlot ] ) );
@@ -3075,8 +3092,8 @@ action_punch_pc:
 							CancelAIAction(pSoldier);
 						}
 
-            // change elliot portrait...
-            gMercProfiles[ ELLIOT ].bNPCData = 17;
+						// change elliot portrait...
+						gMercProfiles[ ELLIOT ].bNPCData = 17;
 					}
 				}
 				break;
@@ -3093,8 +3110,8 @@ action_punch_pc:
 				SOLDIERTYPE* const pSoldier = FindSoldierByProfileID(ubTargetNPC);
 				if (pSoldier)
 				{
-					INT32				cnt;
-					BOOLEAN			fGoodTarget = FALSE;
+					INT32 cnt;
+					BOOLEAN fGoodTarget = FALSE;
 
 					for ( cnt = 0; cnt < 3; cnt++ )
 					{
@@ -3262,8 +3279,8 @@ action_punch_pc:
 						if( ubTargetNPC == VINCE )
 						{
 							if (gbHospitalPriceModifier == HOSPITAL_RANDOM_FREEBIE ||
-									gbHospitalPriceModifier == HOSPITAL_FREEBIE        ||
-									(!CheckFact(FACT_HOSPITAL_FREEBIE_DECISION_MADE, 0) && iRandom < CHANCE_FOR_DOCTOR_TO_SAY_RANDOM_QUOTE))
+								gbHospitalPriceModifier == HOSPITAL_FREEBIE        ||
+								(!CheckFact(FACT_HOSPITAL_FREEBIE_DECISION_MADE, 0) && iRandom < CHANCE_FOR_DOCTOR_TO_SAY_RANDOM_QUOTE))
 							{
 								SetFactTrue( FACT_HOSPITAL_FREEBIE_DECISION_MADE );
 								if ( CheckFact( FACT_LOYALTY_HIGH, ubTargetNPC ) && CheckFact( FACT_24_HOURS_SINCE_DOCTOR_TALKED_TO, ubTargetNPC ) )
@@ -3303,11 +3320,9 @@ action_punch_pc:
 								TriggerNPCRecord( ubTargetNPC, 20 );
 							}
 							else if (CheckFact(FACT_LOYALTY_HIGH, ubTargetNPC)               &&
-									CheckFact(FACT_24_HOURS_SINCE_DOCTOR_TALKED_TO, ubTargetNPC) &&
-									(
-										gbHospitalPriceModifier == HOSPITAL_FREEBIE ||
-										(!CheckFact(FACT_HOSPITAL_FREEBIE_DECISION_MADE, 0) && iRandom < CHANCE_FOR_DOCTOR_TO_SAY_RANDOM_QUOTE)
-									))
+								CheckFact(FACT_24_HOURS_SINCE_DOCTOR_TALKED_TO, ubTargetNPC) && (
+								gbHospitalPriceModifier == HOSPITAL_FREEBIE ||
+								(!CheckFact(FACT_HOSPITAL_FREEBIE_DECISION_MADE, 0) && iRandom < CHANCE_FOR_DOCTOR_TO_SAY_RANDOM_QUOTE)))
 							{
 								// loyalty high... freebie
 								gbHospitalPriceModifier = HOSPITAL_FREEBIE;
@@ -3337,9 +3352,9 @@ action_punch_pc:
 						SOLDIERTYPE& s = *i;
 						// Are we in this sector, On the current squad?
 						if (s.bInSector &&
-								0 < s.bLife && s.bLife < s.bLifeMax &&
-								s.bAssignment != ASSIGNMENT_HOSPITAL &&
-								PythSpacesAway(s.sGridNo, pSoldier2->sGridNo) < HOSPITAL_PATIENT_DISTANCE)
+							0 < s.bLife && s.bLife < s.bLifeMax &&
+							s.bAssignment != ASSIGNMENT_HOSPITAL &&
+							PythSpacesAway(s.sGridNo, pSoldier2->sGridNo) < HOSPITAL_PATIENT_DISTANCE)
 						{
 							SetSoldierAssignmentHospital(s);
 							TriggerNPCRecord(s.ubProfile, 2);
@@ -3471,11 +3486,11 @@ action_punch_pc:
 
 				if( ( pSoldier ) && ( pSoldier2 ) )
 				{
-					if( pSoldier->sGridNo == 10343 )
+					if( pSoldier->sGridNo == params->getGridNo(10343) )
 					{
 						pSoldier2 = NULL;
 					}
-					else if( pSoldier2->sGridNo == 10343 )
+					else if( pSoldier2->sGridNo == params->getGridNo(10343) )
 					{
 						pSoldier = NULL;
 					}
@@ -3697,7 +3712,7 @@ action_punch_pc:
 			{
 				gMercProfiles[ MANNY ].ubMiscFlags3 |= PROFILE_MISC_FLAG3_PERMANENT_INSERTION_CODE;
 				gMercProfiles[ MANNY ].ubStrategicInsertionCode = INSERTION_CODE_GRIDNO;
-				gMercProfiles[ MANNY ].usStrategicInsertionData = 19904;
+				gMercProfiles[ MANNY ].usStrategicInsertionData = params->getGridNo(19904);
 				gMercProfiles[ MANNY ].fUseProfileInsertionInfo = TRUE;
 				SOLDIERTYPE* const pSoldier = FindSoldierByProfileID(MANNY);
 				if ( pSoldier )
@@ -3742,7 +3757,8 @@ action_punch_pc:
 				{
 					TriggerNPCRecord( DARREN, 25 );
 				}
-				// else FALL THROUGH to check for Kingpin being impressed
+				// else check for Kingpin being impressed
+				// fallthrough
 			case NPC_ACTION_TRIGGER_KINGPIN_IMPRESSED:
 				if ( gfLastBoxingMatchWonByPlayer && !BoxerAvailable() )
 				{
@@ -3845,36 +3861,91 @@ action_punch_pc:
 
 			{
 				UINT8 code;
-				case NPC_ACTION_HISTORY_GOT_ROCKET_RIFLES:     code = HISTORY_GOT_ROCKET_RIFLES;     goto add_log;
-				case NPC_ACTION_HISTORY_DEIDRANNA_DEAD_BODIES: code = HISTORY_DEIDRANNA_DEAD_BODIES; goto add_log;
-				case NPC_ACTION_HISTORY_BOXING_MATCHES:        code = HISTORY_BOXING_MATCHES;        goto add_log;
-				case NPC_ACTION_HISTORY_SOMETHING_IN_MINES:    code = HISTORY_SOMETHING_IN_MINES;    goto add_log;
-				case NPC_ACTION_HISTORY_DEVIN:                 code = HISTORY_DEVIN;                 goto add_log;
-				case NPC_ACTION_HISTORY_MIKE:                  code = HISTORY_MIKE;                  goto add_log;
-				case NPC_ACTION_HISTORY_TONY:                  code = HISTORY_TONY;                  goto add_log;
-				case NPC_ACTION_HISTORY_KROTT:                 code = HISTORY_KROTT;                 goto add_log;
-				case NPC_ACTION_HISTORY_KYLE:                  code = HISTORY_KYLE;                  goto add_log;
-				case NPC_ACTION_HISTORY_MADLAB:                code = HISTORY_MADLAB;                goto add_log;
-				case NPC_ACTION_HISTORY_GABBY:                 code = HISTORY_GABBY;                 goto add_log;
-				case NPC_ACTION_HISTORY_KEITH_OUT_OF_BUSINESS: code = HISTORY_KEITH_OUT_OF_BUSINESS; goto add_log;
-				case NPC_ACTION_HISTORY_HOWARD_CYANIDE:        code = HISTORY_HOWARD_CYANIDE;        goto add_log;
-				case NPC_ACTION_HISTORY_KEITH:                 code = HISTORY_KEITH;                 goto add_log;
-				case NPC_ACTION_HISTORY_HOWARD:                code = HISTORY_HOWARD;                goto add_log;
-				case NPC_ACTION_HISTORY_PERKO:                 code = HISTORY_PERKO;                 goto add_log;
-				case NPC_ACTION_HISTORY_SAM:                   code = HISTORY_SAM;                   goto add_log;
-				case NPC_ACTION_HISTORY_FRANZ:                 code = HISTORY_FRANZ;                 goto add_log;
-				case NPC_ACTION_HISTORY_ARNOLD:                code = HISTORY_ARNOLD;                goto add_log;
-				case NPC_ACTION_HISTORY_FREDO:                 code = HISTORY_FREDO;                 goto add_log;
-				case NPC_ACTION_HISTORY_RICHGUY_BALIME:        code = HISTORY_RICHGUY_BALIME;        goto add_log;
-				case NPC_ACTION_HISTORY_JAKE:                  code = HISTORY_JAKE;                  goto add_log;
-				case NPC_ACTION_HISTORY_BUM_KEYCARD:           code = HISTORY_BUM_KEYCARD;           goto add_log;
-				case NPC_ACTION_HISTORY_WALTER:                code = HISTORY_WALTER;                goto add_log;
-				case NPC_ACTION_HISTORY_DAVE:                  code = HISTORY_DAVE;                  goto add_log;
-				case NPC_ACTION_HISTORY_PABLO:                 code = HISTORY_PABLO;                 goto add_log;
-				case NPC_ACTION_HISTORY_KINGPIN_MONEY:         code = HISTORY_KINGPIN_MONEY;         goto add_log;
+				case NPC_ACTION_HISTORY_GOT_ROCKET_RIFLES:
+					code = HISTORY_GOT_ROCKET_RIFLES;
+					goto add_log;
+				case NPC_ACTION_HISTORY_DEIDRANNA_DEAD_BODIES:
+					code = HISTORY_DEIDRANNA_DEAD_BODIES;
+					goto add_log;
+				case NPC_ACTION_HISTORY_BOXING_MATCHES:
+					code = HISTORY_BOXING_MATCHES;
+					goto add_log;
+				case NPC_ACTION_HISTORY_SOMETHING_IN_MINES:
+					code = HISTORY_SOMETHING_IN_MINES;
+					goto add_log;
+				case NPC_ACTION_HISTORY_DEVIN:
+					code = HISTORY_DEVIN;
+					goto add_log;
+				case NPC_ACTION_HISTORY_MIKE:
+					code = HISTORY_MIKE;
+					goto add_log;
+				case NPC_ACTION_HISTORY_TONY:
+					code = HISTORY_TONY;
+					goto add_log;
+				case NPC_ACTION_HISTORY_KROTT:
+					code = HISTORY_KROTT;
+					goto add_log;
+				case NPC_ACTION_HISTORY_KYLE:
+					code = HISTORY_KYLE;
+					goto add_log;
+				case NPC_ACTION_HISTORY_MADLAB:
+					code = HISTORY_MADLAB;
+					goto add_log;
+				case NPC_ACTION_HISTORY_GABBY:
+					code = HISTORY_GABBY;
+					goto add_log;
+				case NPC_ACTION_HISTORY_KEITH_OUT_OF_BUSINESS:
+					code = HISTORY_KEITH_OUT_OF_BUSINESS;
+					goto add_log;
+				case NPC_ACTION_HISTORY_HOWARD_CYANIDE:
+					code = HISTORY_HOWARD_CYANIDE;
+					goto add_log;
+				case NPC_ACTION_HISTORY_KEITH:
+					code = HISTORY_KEITH;
+					goto add_log;
+				case NPC_ACTION_HISTORY_HOWARD:
+					code = HISTORY_HOWARD;
+					goto add_log;
+				case NPC_ACTION_HISTORY_PERKO:
+					code = HISTORY_PERKO;
+					goto add_log;
+				case NPC_ACTION_HISTORY_SAM:
+					code = HISTORY_SAM;
+					goto add_log;
+				case NPC_ACTION_HISTORY_FRANZ:
+					code = HISTORY_FRANZ;
+					goto add_log;
+				case NPC_ACTION_HISTORY_ARNOLD:
+					code = HISTORY_ARNOLD;
+					goto add_log;
+				case NPC_ACTION_HISTORY_FREDO:
+					code = HISTORY_FREDO;
+					goto add_log;
+				case NPC_ACTION_HISTORY_RICHGUY_BALIME:
+					code = HISTORY_RICHGUY_BALIME;
+					goto add_log;
+				case NPC_ACTION_HISTORY_JAKE:
+					code = HISTORY_JAKE;
+					goto add_log;
+				case NPC_ACTION_HISTORY_BUM_KEYCARD:
+					code = HISTORY_BUM_KEYCARD;
+					goto add_log;
+				case NPC_ACTION_HISTORY_WALTER:
+					code = HISTORY_WALTER;
+					goto add_log;
+				case NPC_ACTION_HISTORY_DAVE:
+					code = HISTORY_DAVE;
+					goto add_log;
+				case NPC_ACTION_HISTORY_PABLO:
+					code = HISTORY_PABLO;
+					goto add_log;
+				case NPC_ACTION_HISTORY_KINGPIN_MONEY:
+					code = HISTORY_KINGPIN_MONEY;
+					goto add_log;
 add_log:
-				AddHistoryToPlayersLog(code, 0, GetWorldTotalMin(), gWorldSectorX, gWorldSectorY);
-				break;
+					AddHistoryToPlayersLog(code, 0, GetWorldTotalMin(),
+								gWorldSectorX, gWorldSectorY);
+					break;
 			}
 
 			case NPC_ACTION_SEND_TROOPS_TO_SAM:
@@ -3885,7 +3956,8 @@ add_log:
 				gMercProfiles[ PACOS ].bSectorZ = 0;
 				break;
 			case NPC_ACTION_HISTORY_ASSASSIN:
-				AddHistoryToPlayersLog( HISTORY_ASSASSIN, 0, GetWorldTotalMin(), gWorldSectorX, gWorldSectorY );
+				AddHistoryToPlayersLog(HISTORY_ASSASSIN, 0, GetWorldTotalMin(),
+							gWorldSectorX, gWorldSectorY);
 				break;
 			case NPC_ACTION_TRIGGER_HANS_BY_ROOM:
 				{
@@ -3970,7 +4042,7 @@ add_log:
 			}
 
 			case NPC_ACTION_WALTER_GIVEN_MONEY_INITIALLY:
-				if ( gMercProfiles[ WALTER ].iBalance >= WALTER_BRIBE_AMOUNT )
+				if ( gMercProfiles[ WALTER ].iBalance >= params->getGridNo(WALTER_BRIBE_AMOUNT) )
 				{
 					TriggerNPCRecord( WALTER, 16 );
 				}
@@ -3980,7 +4052,7 @@ add_log:
 				}
 				break;
 			case NPC_ACTION_WALTER_GIVEN_MONEY:
-				if ( gMercProfiles[ WALTER ].iBalance >= WALTER_BRIBE_AMOUNT )
+				if ( gMercProfiles[ WALTER ].iBalance >= params->getGridNo(WALTER_BRIBE_AMOUNT) )
 				{
 					TriggerNPCRecord( WALTER, 16 );
 				}
@@ -3990,7 +4062,7 @@ add_log:
 				}
 				break;
 			default:
-				SLOGW(DEBUG_TAG_INTERFACE, "No code support for NPC action %d", usActionCode );
+				SLOGW("No code support for NPC action %d", usActionCode );
 				break;
 		}
 	}
@@ -3999,7 +4071,7 @@ add_log:
 
 UINT32 CalcPatientMedicalCost(const SOLDIERTYPE* const pSoldier)
 {
-	UINT32	uiCost;
+	UINT32 uiCost;
 
 	if ( !pSoldier )
 	{
@@ -4053,8 +4125,8 @@ UINT32 CalcPatientMedicalCost(const SOLDIERTYPE* const pSoldier)
 
 UINT32 CalcMedicalCost( UINT8 ubId )
 {
-	UINT32	uiCostSoFar;
-	INT16		sGridNo = 0;
+	UINT32 uiCostSoFar;
+	INT16  sGridNo = 0;
 
 	uiCostSoFar = 0;
 
@@ -4070,9 +4142,9 @@ UINT32 CalcMedicalCost( UINT8 ubId )
 	CFOR_EACH_IN_TEAM(s, OUR_TEAM)
 	{
 		if (s->bInSector &&
-				0 < s->bLife && s->bLife < s->bLifeMax &&
-				s->bAssignment != ASSIGNMENT_HOSPITAL &&
-				PythSpacesAway(sGridNo, s->sGridNo) <= HOSPITAL_PATIENT_DISTANCE)
+			0 < s->bLife && s->bLife < s->bLifeMax &&
+			s->bAssignment != ASSIGNMENT_HOSPITAL &&
+			PythSpacesAway(sGridNo, s->sGridNo) <= HOSPITAL_PATIENT_DISTANCE)
 		{
 			uiCostSoFar += CalcPatientMedicalCost(s);
 		}
@@ -4097,28 +4169,30 @@ static void DialogueMessageBoxCallBack(MessageBoxReturnValue);
 
 static void StartDialogueMessageBox(UINT8 ubProfileID, UINT16 usMessageBoxType)
 {
-	INT32			iTemp;
-	wchar_t		zTemp[256], zTemp2[256];
+	INT32   iTemp;
+	ST::string zTemp;
+	ST::string zTemp2;
 
 	gusDialogueMessageBoxType = usMessageBoxType;
 	switch( gusDialogueMessageBoxType )
 	{
 		case NPC_ACTION_ASK_ABOUT_ESCORTING_EPC:
-			if ( (ubProfileID == JOHN && gMercProfiles[ MARY ].bMercStatus != MERC_IS_DEAD) || (ubProfileID == MARY && gMercProfiles[ JOHN ].bMercStatus != MERC_IS_DEAD) )
+			if ((ubProfileID == JOHN && gMercProfiles[MARY].bMercStatus != MERC_IS_DEAD) ||
+				(ubProfileID == MARY && gMercProfiles[JOHN].bMercStatus != MERC_IS_DEAD) )
 			{
-				swprintf(zTemp, lengthof(zTemp), gzLateLocalizedString[STR_LATE_57]);
+				zTemp = gzLateLocalizedString[STR_LATE_57];
 			}
 			else
 			{
-				swprintf( zTemp, lengthof(zTemp), TacticalStr[ ESCORT_PROMPT ], gMercProfiles[ubProfileID].zNickname );
+				zTemp = st_format_printf(TacticalStr[ ESCORT_PROMPT ], gMercProfiles[ubProfileID].zNickname);
 			}
 			DoMessageBox(MSG_BOX_BASIC_STYLE, zTemp, GAME_SCREEN, MSG_BOX_FLAG_YESNO, DialogueMessageBoxCallBack, NULL);
 			break;
 		case NPC_ACTION_ASK_ABOUT_PAYING_RPC:
 		case NPC_ACTION_ASK_ABOUT_PAYING_RPC_WITH_DAILY_SALARY:
 		case NPC_ACTION_REDUCE_CONRAD_SALARY_CONDITIONS:
-			swprintf(zTemp2, lengthof(zTemp2), L"$%d", gMercProfiles[ubProfileID].sSalary);
-			swprintf( zTemp, lengthof(zTemp), TacticalStr[ HIRE_PROMPT ], gMercProfiles[ubProfileID].zNickname, zTemp2 );
+			zTemp2 = ST::format("${}", gMercProfiles[ubProfileID].sSalary);
+			zTemp = st_format_printf(TacticalStr[ HIRE_PROMPT ], gMercProfiles[ubProfileID].zNickname, zTemp2);
 			DoMessageBox(MSG_BOX_BASIC_STYLE, zTemp, GAME_SCREEN, MSG_BOX_FLAG_YESNO, DialogueMessageBoxCallBack, NULL);
 			break;
 		case NPC_ACTION_DARREN_REQUESTOR:
@@ -4126,8 +4200,8 @@ static void StartDialogueMessageBox(UINT8 ubProfileID, UINT16 usMessageBoxType)
 			DoMessageBox(MSG_BOX_BASIC_STYLE, TacticalStr[BOXING_PROMPT], GAME_SCREEN, MSG_BOX_FLAG_YESNO, DialogueMessageBoxCallBack, NULL);
 			break;
 		case NPC_ACTION_BUY_LEATHER_KEVLAR_VEST:
-			swprintf(zTemp2, lengthof(zTemp2), L"$%d", GCM->getItem(LEATHER_JACKET_W_KEVLAR)->getPrice());
-			swprintf( zTemp, lengthof(zTemp), TacticalStr[ BUY_VEST_PROMPT ], ItemNames[LEATHER_JACKET_W_KEVLAR], zTemp2 );
+			zTemp2 = ST::format("${}", GCM->getItem(LEATHER_JACKET_W_KEVLAR)->getPrice());
+			zTemp = st_format_printf(TacticalStr[ BUY_VEST_PROMPT ], ItemNames[LEATHER_JACKET_W_KEVLAR], zTemp2);
 			DoMessageBox(MSG_BOX_BASIC_STYLE, zTemp, GAME_SCREEN, MSG_BOX_FLAG_YESNO, DialogueMessageBoxCallBack, NULL);
 			break;
 		case NPC_ACTION_PROMPT_PLAYER_TO_LIE:
@@ -4146,13 +4220,13 @@ static void StartDialogueMessageBox(UINT8 ubProfileID, UINT16 usMessageBoxType)
 			{
 				iTemp -= giHospitalRefund;
 			}
-			swprintf(zTemp2, lengthof(zTemp2), L"$%ld", iTemp);
-			swprintf( zTemp, lengthof(zTemp), TacticalStr[ PAY_MONEY_PROMPT ], zTemp2 );
+			zTemp2 = ST::format("${}", iTemp);
+			zTemp = st_format_printf(TacticalStr[ PAY_MONEY_PROMPT ], zTemp2);
 
 			DoMessageBox(MSG_BOX_BASIC_STYLE, zTemp, GAME_SCREEN, MSG_BOX_FLAG_YESNO, DialogueMessageBoxCallBack, NULL);
 			break;
 		case NPC_ACTION_BUY_VEHICLE_REQUESTOR:
-			swprintf(zTemp, lengthof(zTemp), TacticalStr[PAY_MONEY_PROMPT], L"$10000");
+			zTemp = st_format_printf(TacticalStr[PAY_MONEY_PROMPT], "$10000");
 			DoMessageBox(MSG_BOX_BASIC_STYLE, zTemp, GAME_SCREEN, MSG_BOX_FLAG_YESNO, DialogueMessageBoxCallBack, NULL);
 			break;
 		case NPC_ACTION_TRIGGER_MARRY_DARYL_PROMPT:
@@ -4169,8 +4243,8 @@ static void StartDialogueMessageBox(UINT8 ubProfileID, UINT16 usMessageBoxType)
 
 static void DialogueMessageBoxCallBack(MessageBoxReturnValue const ubExitValue)
 {
-	UINT8						ubProfile;
-	SOLDIERTYPE			*pSoldier;
+	UINT8 ubProfile;
+	SOLDIERTYPE *pSoldier;
 
 	ubProfile = gpDestSoldier->ubProfile;
 
@@ -4193,7 +4267,7 @@ static void DialogueMessageBoxCallBack(MessageBoxReturnValue const ubExitValue)
 						// Mary might be alive, and if so we need to ensure two places
 						pSoldier = FindSoldierByProfileID(MARY);
 						if (pSoldier != NULL &&
-								NumberOfMercsOnPlayerTeam() > gTacticalStatus.Team[OUR_TEAM].bLastID - 3)
+								NumberOfMercsOnPlayerTeam() > gTacticalStatus.Team[OUR_TEAM].bLastID - 3u)
 						{
 							ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_UI_FEEDBACK, TacticalStr[ CANNOT_RECRUIT_TEAM_FULL ] );
 							break;
@@ -4210,7 +4284,7 @@ static void DialogueMessageBoxCallBack(MessageBoxReturnValue const ubExitValue)
 					}
 
 					// OK, update UI with message that we have been recruited
-					ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, TacticalStr[ NOW_BING_ESCORTED_STR ], gMercProfiles[ ubProfile ].zNickname, ( pSoldier->bAssignment + 1 ) );
+					ScreenMsg( FONT_MCOLOR_LTYELLOW, MSG_INTERFACE, st_format_printf(TacticalStr[ NOW_BING_ESCORTED_STR ], gMercProfiles[ ubProfile ].zNickname, ( pSoldier->bAssignment + 1 )) );
 
 					// Change Squads....
 					SetCurrentSquad( pSoldier ->bAssignment, FALSE );
@@ -4288,9 +4362,9 @@ static void DialogueMessageBoxCallBack(MessageBoxReturnValue const ubExitValue)
 				FOR_EACH_IN_TEAM(s, OUR_TEAM)
 				{
 					if (s->bInSector &&
-							s->bLife >= OKLIFE &&
-							s->bBreath >= OKBREATH &&
-							(!pLier || (EffectiveWisdom(s) + EffectiveLeadership(s) > EffectiveWisdom(pLier) + EffectiveLeadership(s))))
+						s->bLife >= OKLIFE &&
+						s->bBreath >= OKBREATH &&
+						(!pLier || (EffectiveWisdom(s) + EffectiveLeadership(s) > EffectiveWisdom(pLier) + EffectiveLeadership(s))))
 					{
 						pLier = s;
 					}
@@ -4516,12 +4590,12 @@ static void DoneFadeInActionLeaveBasement(void)
 
 static BOOLEAN NPCOpenThing(SOLDIERTYPE* pSoldier, BOOLEAN fDoor)
 {
-	STRUCTURE					*pStructure;
-	INT16							sStructGridNo;
-	INT16							sActionGridNo;
-	UINT8							ubDirection;
-	INT16							sGridNo;
-	DOOR *						pDoor;
+	STRUCTURE *pStructure;
+	INT16 sStructGridNo;
+	INT16 sActionGridNo;
+	UINT8 ubDirection;
+	INT16 sGridNo;
+	DOOR  *pDoor;
 
 	// Find closest door and get struct data for it!
 	if ( fDoor )

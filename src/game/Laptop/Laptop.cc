@@ -88,6 +88,12 @@
 #include "JAScreens.h"
 #include "UILayout.h"
 
+#include <string_theory/format>
+#include <string_theory/string>
+
+#include <algorithm>
+#include <iterator>
+
 // laptop programs
 enum
 {
@@ -174,6 +180,8 @@ static BOOLEAN gfTitleBarSurfaceAlreadyActive = FALSE;
 // Mode values
 LaptopMode        guiCurrentLaptopMode;
 LaptopMode        guiPreviousLaptopMode;
+// Used to prevent double free problems. Fixes Stracciatella issue #68:
+LaptopMode        guiLastExitedLaptopMode = LAPTOP_MODE_NONE;
 static LaptopMode guiCurrentWWWMode = LAPTOP_MODE_NONE;
 INT32  giCurrentSubPage;
 
@@ -277,9 +285,6 @@ static BOOLEAN fMinizingProgram = FALSE;
 static INT32 gLaptopProgramQueueList[6];
 
 
-// state of createion of minimize button
-static BOOLEAN fCreateMinimizeButton = FALSE;
-
 BOOLEAN fExitingLaptopFlag = FALSE;
 
 // HD and power lights on
@@ -354,7 +359,7 @@ static void InitBookMarkList(void);
 void LaptopScreenInit(void)
 {
 	//Memset the whole structure, to make sure of no 'JUNK'
-	memset(&LaptopSaveInfo, 0, sizeof(LaptopSaveInfoStruct));
+	LaptopSaveInfo = LaptopSaveInfoStruct{};
 
 	LaptopSaveInfo.gfNewGameLaptop = TRUE;
 
@@ -382,7 +387,7 @@ void LaptopScreenInit(void)
 	GameInitPersonnel();
 
 	// init program states
-	memset(&gLaptopProgramStates, LAPTOP_PROGRAM_MINIMIZED, sizeof(gLaptopProgramStates));
+	std::fill(std::begin(gLaptopProgramStates), std::end(gLaptopProgramStates), LAPTOP_PROGRAM_MINIMIZED);
 
 	gfAtLeastOneMercWasHired = FALSE;
 
@@ -506,10 +511,10 @@ static void EnterLaptop(void)
 	fFirstTimeInLaptop = TRUE;
 
 	// reset all bookmark visits
-	memset(&LaptopSaveInfo.fVisitedBookmarkAlready, 0, sizeof(LaptopSaveInfo.fVisitedBookmarkAlready));
+	std::fill(std::begin(LaptopSaveInfo.fVisitedBookmarkAlready), std::end(LaptopSaveInfo.fVisitedBookmarkAlready), 0);
 
 	// init program states
-	memset(&gLaptopProgramStates, LAPTOP_PROGRAM_MINIMIZED, sizeof(gLaptopProgramStates));
+	std::fill(std::begin(gLaptopProgramStates), std::end(gLaptopProgramStates), LAPTOP_PROGRAM_MINIMIZED);
 
 	// turn the power on
 	fPowerLightOn = TRUE;
@@ -554,7 +559,7 @@ static void DeleteDesktopBackground(void);
 static void DeleteLapTopButtons(void);
 static void DeleteLapTopMouseRegions(void);
 static void DeleteLoadPending(void);
-static void ExitLaptopMode(UINT32 uiMode);
+static void ExitLaptopMode(LaptopMode uiMode);
 
 
 void ExitLaptop(void)
@@ -721,8 +726,8 @@ static void RenderLaptop(void)
 		case LAPTOP_MODE_WWW:                      DrawDeskTopBackground();   break;
 
 		case LAPTOP_MODE_BROKEN_LINK:              RenderBrokenLink();        break;
-        default:
-            break;
+				default:
+						break;
 	}
 
 	if (guiCurrentLaptopMode >= LAPTOP_MODE_WWW)
@@ -744,7 +749,7 @@ static void RenderLaptop(void)
 }
 
 
-static void InitTitleBarMaximizeGraphics(const SGPVObject* uiBackgroundGraphic, const wchar_t* pTitle, const SGPVObject* uiIconGraphic, UINT16 usIconGraphicIndex);
+static void InitTitleBarMaximizeGraphics(const SGPVObject* uiBackgroundGraphic, const ST::string& str, const SGPVObject* uiIconGraphic, UINT16 usIconGraphicIndex);
 static void SetSubSiteAsVisted(void);
 
 
@@ -758,7 +763,7 @@ static void EnterNewLaptopMode(void)
 
 	// handle maximizing of programs
 	UINT           prog;
-	const wchar_t* title;
+	ST::string title;
 	UINT16         gfx_idx;
 	switch (guiCurrentLaptopMode)
 	{
@@ -865,6 +870,8 @@ do_nothing:
 		if (guiPreviousLaptopMode >= LAPTOP_MODE_WWW) gfShowBookmarks = FALSE;
 	}
 
+	guiLastExitedLaptopMode = LAPTOP_MODE_NONE;
+
 	//Initialize the new mode.
 	switch (guiCurrentLaptopMode)
 	{
@@ -912,8 +919,8 @@ do_nothing:
 		case LAPTOP_MODE_EMAIL:                    EnterEmail();             break;
 
 		case LAPTOP_MODE_BROKEN_LINK:              EnterBrokenLink();        break;
-        default:
-            break;
+				default:
+						break;
 	}
 
 	// first time using webbrowser in this laptop session
@@ -964,8 +971,8 @@ static void HandleLapTopHandles(void)
 		case LAPTOP_MODE_PERSONNEL:                HandlePersonnel();         break;
 		case LAPTOP_MODE_FILES:                    HandleFiles();             break;
 		case LAPTOP_MODE_EMAIL:                    HandleEmail();             break;
-        default:
-            break;
+				default:
+						break;
 	}
 }
 
@@ -1241,8 +1248,12 @@ ScreenID LaptopScreenHandle()
 }
 
 
-static void ExitLaptopMode(UINT32 uiMode)
+static void ExitLaptopMode(LaptopMode uiMode)
 {
+	if (guiLastExitedLaptopMode == uiMode) {
+		return;
+	}
+
 	// Deallocate the previous mode that you were in.
 	switch (uiMode)
 	{
@@ -1289,16 +1300,21 @@ static void ExitLaptopMode(UINT32 uiMode)
 		case LAPTOP_MODE_FILES:                    ExitFiles();             break;
 		case LAPTOP_MODE_EMAIL:                    ExitEmail();             break;
 		case LAPTOP_MODE_BROKEN_LINK:              ExitBrokenLink();        break;
+
+		// nothing to do for other subwindows
+		default: break;
 	}
 
 	if (uiMode != LAPTOP_MODE_NONE && uiMode < LAPTOP_MODE_WWW)
 	{
 		CreateDestroyMinimizeButtonForCurrentMode();
 	}
+
+	guiLastExitedLaptopMode = uiMode;
 }
 
 
-static void MakeButton(UINT idx, INT16 y, GUI_CALLBACK click, INT8 off_x, const wchar_t* text, const wchar_t* help_text)
+static void MakeButton(UINT idx, INT16 y, GUI_CALLBACK click, INT8 off_x, const ST::string& text, const ST::string& help_text)
 {
 	GUIButtonRef const btn = QuickCreateButtonImg(LAPTOPDIR "/buttonsforlaptop.sti", idx, idx + 8, (29 + STD_SCREEN_X), (y + STD_SCREEN_Y), MSYS_PRIORITY_HIGH, click);
 	gLaptopButton[idx] = btn;
@@ -1360,7 +1376,7 @@ static void LeaveLapTopScreen(void)
 		if (gfAtLeastOneMercWasHired)
 		{
 			if (LaptopSaveInfo.gfNewGameLaptop)
-	{
+			{
 				LaptopSaveInfo.gfNewGameLaptop = FALSE;
 				fExitingLaptopFlag = TRUE;
 				InitNewGame();
@@ -1391,7 +1407,7 @@ static void LeaveLapTopScreen(void)
 
 			//Step 2:  The mapscreen image is in the EXTRABUFFER, and laptop is in the SAVEBUFFER
 			//         Start transitioning the screen.
-      SGPBox const DstRect = { STD_SCREEN_X, STD_SCREEN_Y, MAP_SCREEN_WIDTH, MAP_SCREEN_HEIGHT };
+			SGPBox const SrcRect = { STD_SCREEN_X, STD_SCREEN_Y, MAP_SCREEN_WIDTH, MAP_SCREEN_HEIGHT };
 			const UINT32 uiTimeRange = 1000;
 			INT32 iPercentage     = 100;
 			INT32 iRealPercentage = 100;
@@ -1420,13 +1436,7 @@ static void LeaveLapTopScreen(void)
 					iPercentage += (100-iPercentage) * iFactor * 0.01 + 0.5;
 				}
 
-				//Mapscreen source rect
-				SGPRect SrcRect1;
-				SrcRect1.iLeft   =                 464 * iPercentage / 100;
-				SrcRect1.iRight  = SCREEN_WIDTH  - 163 * iPercentage / 100;
-				SrcRect1.iTop    =                 417 * iPercentage / 100;
-				SrcRect1.iBottom = SCREEN_HEIGHT -  55 * iPercentage / 100;
-				//Laptop source rect
+				//Scaled laptop
 				INT32 iScalePercentage;
 				if (iPercentage < 99)
 				{
@@ -1441,9 +1451,9 @@ static void LeaveLapTopScreen(void)
 				const UINT16 uX = 472 - (472 - 320) * iScalePercentage / 5333;
 				const UINT16 uY = 424 - (424 - 240) * iScalePercentage / 5333;
 
-				SGPBox const SrcRect2 = { (UINT16)(STD_SCREEN_X + uX - uWidth / 2), (UINT16)(STD_SCREEN_Y + uY - uHeight / 2), uWidth, uHeight };
+				SGPBox const DstRect = { (UINT16)(STD_SCREEN_X + uX - uWidth / 2), (UINT16)(STD_SCREEN_Y + uY - uHeight / 2), uWidth, uHeight };
 
-				BltStretchVideoSurface(FRAME_BUFFER, guiSAVEBUFFER, &DstRect, &SrcRect2);
+				BltStretchVideoSurface(FRAME_BUFFER, guiSAVEBUFFER, &SrcRect, &DstRect);
 				InvalidateScreen();
 				RefreshScreen();
 			}
@@ -1616,7 +1626,7 @@ static void FilesRegionButtonCallback(GUI_BUTTON *btn, INT32 reason)
 static void InitBookMarkList(void)
 {
 	// sets bookmark list to -1
-	memset(LaptopSaveInfo.iBookMarkList, -1, sizeof(LaptopSaveInfo.iBookMarkList));
+	std::fill(std::begin(LaptopSaveInfo.iBookMarkList), std::end(LaptopSaveInfo.iBookMarkList), -1);
 }
 
 
@@ -1671,7 +1681,7 @@ static void DisplayBookMarks(void)
 
 		SetFontForeground(highlighted ? FONT_WHITE : FONT_BLACK);
 		INT32          const idx = LaptopSaveInfo.iBookMarkList[i];
-		wchar_t const* const txt = pBookMarkStrings[idx != -1 ? idx : CANCEL_STRING];
+		ST::string txt = pBookMarkStrings[idx != -1 ? idx : CANCEL_STRING];
 		INT16                sX;
 		INT16                sY;
 		FindFontCenterCoordinates(BOOK_X + 3, y + 2, BOOK_WIDTH - 3, h, txt, BOOK_FONT, &sX, &sY);
@@ -1899,8 +1909,8 @@ static void DisplayLoadPending(void)
 	}
 	else if (guiCurrentLaptopMode == LAPTOP_MODE_MERC && !LaptopSaveInfo.fMercSiteHasGoneDownYet)
 	{
-		/* if we are connecting the MERC site, and the MERC site hasnt yet moved
-		 * to their new site, have the sloooww wait */
+		// if we are connecting the MERC site, and the MERC site hasnt yet moved
+		// to their new site, have the sloooww wait
 		iUnitTime = LONG_UNIT_TIME;
 	}
 	else
@@ -1961,7 +1971,7 @@ static void DisplayLoadPending(void)
 	SetFontAttributes(DOWNLOAD_FONT, FONT_WHITE, NO_SHADOW);
 
 	// reload or download?
-	const wchar_t* const str = (fFastLoadFlag ? pDownloadString[1] : pDownloadString[0]);
+	ST::string str = (fFastLoadFlag ? pDownloadString[1] : pDownloadString[0]);
 	INT16 sXPosition = 0;
 	INT16 sYPosition = 0;
 	FindFontCenterCoordinates(328, 0, 446 - 328, 0, str, DOWNLOAD_FONT, &sXPosition, &sYPosition);
@@ -2033,8 +2043,8 @@ static void PostButtonRendering(void)
 	switch (guiCurrentLaptopMode)
 	{
 		case LAPTOP_MODE_AIM_MEMBERS: RenderAIMMembersTopLevel(); break;
-        default:
-            break;
+				default:
+						break;
 	}
 }
 
@@ -2044,8 +2054,8 @@ static void ShouldNewMailBeDisplayed(void)
 	switch (guiCurrentLaptopMode)
 	{
 		case LAPTOP_MODE_AIM_MEMBERS: DisableNewMailMessage(); break;
-        default:
-            break;
+				default:
+						break;
 	}
 }
 
@@ -2162,27 +2172,27 @@ void LapTopScreenCallBack(MOUSE_REGION* pRegion, INT32 iReason)
 }
 
 
-void DoLapTopMessageBox(MessageBoxStyleID const ubStyle, wchar_t const* const zString, ScreenID const uiExitScreen, MessageBoxFlags const ubFlags, MSGBOX_CALLBACK const ReturnCallback)
+void DoLapTopMessageBox(MessageBoxStyleID ubStyle, const ST::string& str, ScreenID uiExitScreen, MessageBoxFlags ubFlags, MSGBOX_CALLBACK ReturnCallback)
 {
 	SGPBox const centering_rect = { LAPTOP_SCREEN_UL_X, LAPTOP_SCREEN_UL_Y, LAPTOP_SCREEN_WIDTH, LAPTOP_SCREEN_HEIGHT };
-	DoLapTopSystemMessageBoxWithRect(ubStyle, zString, uiExitScreen, ubFlags, ReturnCallback, &centering_rect);
+	DoLapTopSystemMessageBoxWithRect(ubStyle, str, uiExitScreen, ubFlags, ReturnCallback, &centering_rect);
 }
 
 
-void DoLapTopSystemMessageBoxWithRect(MessageBoxStyleID const ubStyle, wchar_t const* const zString, ScreenID const uiExitScreen, MessageBoxFlags const usFlags, MSGBOX_CALLBACK const ReturnCallback, SGPBox const* const centering_rect)
+void DoLapTopSystemMessageBoxWithRect(MessageBoxStyleID ubStyle, const ST::string& str, ScreenID uiExitScreen, MessageBoxFlags usFlags, MSGBOX_CALLBACK ReturnCallback, SGPBox const* centering_rect)
 {
 	// reset exit mode
 	fExitDueToMessageBox = TRUE;
 
 	// do message box and return
-	DoMessageBox(ubStyle, zString, uiExitScreen, usFlags, ReturnCallback, centering_rect);
+	DoMessageBox(ubStyle, str, uiExitScreen, usFlags, ReturnCallback, centering_rect);
 }
 
 
-void DoLapTopSystemMessageBox(wchar_t const* const zString, ScreenID const uiExitScreen, MessageBoxFlags const usFlags, MSGBOX_CALLBACK const ReturnCallback)
+void DoLapTopSystemMessageBox(const ST::string& str, ScreenID uiExitScreen, MessageBoxFlags usFlags, MSGBOX_CALLBACK ReturnCallback)
 {
 	SGPBox const centering_rect = { 0, 0, SCREEN_WIDTH, INV_INTERFACE_START_Y };
-	DoLapTopSystemMessageBoxWithRect(MSG_BOX_LAPTOP_DEFAULT, zString, uiExitScreen, usFlags, ReturnCallback, &centering_rect);
+	DoLapTopSystemMessageBoxWithRect(MSG_BOX_LAPTOP_DEFAULT, str, uiExitScreen, usFlags, ReturnCallback, &centering_rect);
 }
 
 
@@ -2203,19 +2213,19 @@ void WebPageTileBackground(const UINT8 ubNumX, const UINT8 ubNumY, const UINT16 
 }
 
 
-static void InitTitleBarMaximizeGraphics(const SGPVObject* const uiBackgroundGraphic, const wchar_t* const pTitle, const SGPVObject* const uiIconGraphic, const UINT16 usIconGraphicIndex)
+static void InitTitleBarMaximizeGraphics(const SGPVObject* uiBackgroundGraphic, const ST::string& str, const SGPVObject* uiIconGraphic, UINT16 usIconGraphicIndex)
 {
 	Assert(uiBackgroundGraphic);
 
 	// Create a background video surface to blt the title bar onto
 	guiTitleBarSurface = AddVideoSurface(LAPTOP_TITLE_BAR_WIDTH + LAPTOP_TITLE_BAR_ICON_OFFSET_X,
-                                       LAPTOP_TITLE_BAR_HEIGHT + LAPTOP_TITLE_BAR_ICON_OFFSET_Y, PIXEL_DEPTH);
+						LAPTOP_TITLE_BAR_HEIGHT + LAPTOP_TITLE_BAR_ICON_OFFSET_Y, PIXEL_DEPTH);
 
 	BltVideoObject(guiTitleBarSurface, uiBackgroundGraphic, 0, 0, 0);
 	BltVideoObject(guiTitleBarSurface, uiIconGraphic, usIconGraphicIndex, LAPTOP_TITLE_BAR_ICON_OFFSET_X, LAPTOP_TITLE_BAR_ICON_OFFSET_Y);
 
 	SetFontDestBuffer(guiTitleBarSurface);
-	DrawTextToScreen(pTitle, LAPTOP_TITLE_BAR_TEXT_OFFSET_X, LAPTOP_TITLE_BAR_TEXT_OFFSET_Y, 0, FONT14ARIAL, FONT_MCOLOR_WHITE, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
+	DrawTextToScreen(str, LAPTOP_TITLE_BAR_TEXT_OFFSET_X, LAPTOP_TITLE_BAR_TEXT_OFFSET_Y, 0, FONT14ARIAL, FONT_MCOLOR_WHITE, FONT_MCOLOR_BLACK, LEFT_JUSTIFIED);
 	SetFontDestBuffer(FRAME_BUFFER);
 }
 
@@ -2493,6 +2503,8 @@ static void CreateDestroyMinimizeButtonForCurrentMode(void)
 {
 	// will create the minimize button
 	static BOOLEAN fAlreadyCreated = FALSE;
+	// state of creation of minimize button
+	BOOLEAN fCreateMinimizeButton = FALSE;
 	// check to see if created, if so, do nothing
 
 	// check current mode
@@ -2558,7 +2570,7 @@ static void LaptopMinimizeProgramButtonCallback(GUI_BUTTON* btn, INT32 reason)
 	if (reason & MSYS_CALLBACK_REASON_LBUTTON_UP)
 	{
 		UINT           prog;
-		const wchar_t* title;
+		ST::string title;
 		UINT16         gfx_idx;
 		switch (guiCurrentLaptopMode)
 		{
@@ -2719,8 +2731,7 @@ void PrintBalance(void)
 {
 	SetFontAttributes(FONT10ARIAL, FONT_BLACK, NO_SHADOW);
 
-	wchar_t pString[32];
-	SPrintMoney(pString, LaptopSaveInfo.iCurrentBalance);
+	ST::string pString = SPrintMoney(LaptopSaveInfo.iCurrentBalance);
 
 	INT32 x = STD_SCREEN_X + 47;
 	INT32 y = STD_SCREEN_Y + 257 + 15;
@@ -2748,7 +2759,7 @@ void PrintNumberOnTeam(void)
 		++usPosX;
 		++usPosY;
 	}
-	mprintf(usPosX, usPosY, L"%ls %d", pPersonnelString, iCounter);
+	MPrint(usPosX, usPosY, ST::format("{} {}", pPersonnelString, iCounter));
 
 	SetFontShadow(DEFAULT_SHADOW);
 }
@@ -2831,6 +2842,7 @@ void HandleKeyBoardShortCutsForLapTop(UINT16 usEvent, UINT32 usParam, UINT16 usK
 			break;
 
 		case '=':
+		case '+':
 			if (CHEATER_CHEAT_LEVEL())
 			{
 				// adding money
@@ -2870,7 +2882,7 @@ void RenderWWWProgramTitleBar(void)
 	else
 	{
 		const INT32 iIndex = guiCurrentLaptopMode - LAPTOP_MODE_WWW-1;
-		mprintf(STD_SCREEN_X + 140, STD_SCREEN_Y + 33, L"%ls  -  %ls", pWebTitle, pWebPagesTitles[iIndex]);
+		MPrint(STD_SCREEN_X + 140, STD_SCREEN_Y + 33, ST::format("{}  -  {}", pWebTitle, pWebPagesTitles[iIndex]));
 	}
 
 	BlitTitleBarIcons();
@@ -3258,31 +3270,29 @@ void ClearOutTempLaptopFiles(void)
 }
 
 
-static BYTE* InjectStoreInvetory(BYTE* const data, STORE_INVENTORY const& i)
+static void InjectStoreInvetory(DataWriter& d, STORE_INVENTORY const& i)
 {
-	BYTE* d = data;
+	size_t start = d.getConsumed();
 	INJ_U16( d, i.usItemIndex)
 	INJ_U8(  d, i.ubQtyOnHand)
 	INJ_U8(  d, i.ubQtyOnOrder)
 	INJ_U8(  d, i.ubItemQuality)
 	INJ_BOOL(d, i.fPreviouslyEligible)
 	INJ_SKIP(d, 2)
-	Assert(d == data + 8);
-	return d;
+	Assert(d.getConsumed() == start + 8);
 }
 
 
-static BYTE const* ExtractStoreInvetory(BYTE const* const data, STORE_INVENTORY& i)
+static void ExtractStoreInvetory(DataReader& d, STORE_INVENTORY& i)
 {
-	BYTE const* d = data;
+	size_t start = d.getConsumed();
 	EXTR_U16( d, i.usItemIndex)
 	EXTR_U8(  d, i.ubQtyOnHand)
 	EXTR_U8(  d, i.ubQtyOnOrder)
 	EXTR_U8(  d, i.ubItemQuality)
 	EXTR_BOOL(d, i.fPreviouslyEligible)
 	EXTR_SKIP(d, 2)
-	Assert(d == data + 8);
-	return d;
+	Assert(d.getConsumed() == start + 8);
 }
 
 
@@ -3291,7 +3301,7 @@ void SaveLaptopInfoToSavedGame(HWFILE const f)
 	LaptopSaveInfoStruct const& l = LaptopSaveInfo;
 
 	BYTE  data[7440];
-	BYTE* d = data;
+	DataWriter d{data};
 	INJ_BOOL( d, l.gfNewGameLaptop)
 	INJ_BOOLA(d, l.fVisitedBookmarkAlready, lengthof(l.fVisitedBookmarkAlready))
 	INJ_SKIP( d, 3)
@@ -3309,17 +3319,20 @@ void SaveLaptopInfoToSavedGame(HWFILE const f)
 	INJ_SKIP( d, 1)
 	FOR_EACH(STORE_INVENTORY const, i, l.BobbyRayInventory)
 	{
-		d = InjectStoreInvetory(d, *i);
+		InjectStoreInvetory(d, *i);
 	}
 	FOR_EACH(STORE_INVENTORY const, i, l.BobbyRayUsedInventory)
 	{
-		d = InjectStoreInvetory(d, *i);
+		InjectStoreInvetory(d, *i);
 	}
 	INJ_SKIP( d, 6)
-	INJ_U8(   d, l.usNumberOfBobbyRayOrderItems)
+	Assert(l.BobbyRayOrdersOnDeliveryArray.size() <= UINT8_MAX);
+	INJ_U8(   d, static_cast<UINT8>(l.BobbyRayOrdersOnDeliveryArray.size()))
 	INJ_U8(   d, l.usNumberOfBobbyRayOrderUsed)
 	INJ_SKIP( d, 6)
-	INJ_U8(   d, l.ubNumberLifeInsurancePayouts)
+	Assert(l.pLifeInsurancePayouts.size() <= UINT8_MAX);
+	INJ_U8(   d, static_cast<UINT8>(l.pLifeInsurancePayouts.size()))
+	Assert(l.ubNumberLifeInsurancePayoutUsed <= l.pLifeInsurancePayouts.size());
 	INJ_U8(   d, l.ubNumberLifeInsurancePayoutUsed)
 	INJ_BOOL( d, l.fBobbyRSiteCanBeAccessed)
 	INJ_U8(   d, l.ubPlayerBeenToMercSiteStatus)
@@ -3347,20 +3360,19 @@ void SaveLaptopInfoToSavedGame(HWFILE const f)
 	INJ_U32(  d, l.uiTotalMoneyPaidToSpeck)
 	INJ_U8(   d, l.ubLastMercAvailableId)
 	INJ_SKIP( d, 87)
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 
 	FileWrite(f, data, sizeof(data));
 
 	if (l.usNumberOfBobbyRayOrderUsed != 0)
 	{ // There is anything in the Bobby Ray Orders on delivery
-		UINT32 const size = sizeof(*l.BobbyRayOrdersOnDeliveryArray) * l.usNumberOfBobbyRayOrderItems;
-		FileWrite(f, l.BobbyRayOrdersOnDeliveryArray, size);
+		size_t const size = sizeof(*l.BobbyRayOrdersOnDeliveryArray.data()) * l.BobbyRayOrdersOnDeliveryArray.size();
+		FileWrite(f, l.BobbyRayOrdersOnDeliveryArray.data(), size);
 	}
 
 	if (l.ubNumberLifeInsurancePayoutUsed != 0)
 	{ // There are any insurance payouts in progress
-		UINT32 const size = sizeof(*l.pLifeInsurancePayouts) * l.ubNumberLifeInsurancePayouts;
-		FileWrite(f, l.pLifeInsurancePayouts, size);
+		FileWrite(f, l.pLifeInsurancePayouts.data(), sizeof(LIFE_INSURANCE_PAYOUT) * l.pLifeInsurancePayouts.size());
 	}
 }
 
@@ -3369,21 +3381,14 @@ void LoadLaptopInfoFromSavedGame(HWFILE const f)
 {
 	LaptopSaveInfoStruct& l = LaptopSaveInfo;
 
-	if (l.usNumberOfBobbyRayOrderItems)
-	{ // There is memory allocated for the BobbyR orders
-		FreeNull(l.BobbyRayOrdersOnDeliveryArray);
-	}
+	l.BobbyRayOrdersOnDeliveryArray.clear();
 
-	if (l.ubNumberLifeInsurancePayouts)
-	{ // There is memory allocated for life insurance payouts
-		Assert(l.pLifeInsurancePayouts);
-		FreeNull(l.pLifeInsurancePayouts);
-	}
+	l.pLifeInsurancePayouts.clear();
 
 	BYTE data[7440];
 	FileRead(f, data, sizeof(data));
 
-	BYTE const* d = data;
+	DataReader d{data};
 	EXTR_BOOL( d, l.gfNewGameLaptop)
 	EXTR_BOOLA(d, l.fVisitedBookmarkAlready, lengthof(l.fVisitedBookmarkAlready))
 	EXTR_SKIP( d, 3)
@@ -3401,18 +3406,21 @@ void LoadLaptopInfoFromSavedGame(HWFILE const f)
 	EXTR_SKIP( d, 1)
 	FOR_EACH(STORE_INVENTORY, i, l.BobbyRayInventory)
 	{
-		d = ExtractStoreInvetory(d, *i);
+		ExtractStoreInvetory(d, *i);
 	}
 	FOR_EACH(STORE_INVENTORY, i, l.BobbyRayUsedInventory)
 	{
-		d = ExtractStoreInvetory(d, *i);
+		ExtractStoreInvetory(d, *i);
 	}
 	EXTR_SKIP( d, 6)
-	EXTR_U8(   d, l.usNumberOfBobbyRayOrderItems)
+	UINT8 BobbyRayOrdersOnDeliveryArraySize;
+	EXTR_U8(   d, BobbyRayOrdersOnDeliveryArraySize)
 	EXTR_U8(   d, l.usNumberOfBobbyRayOrderUsed)
 	EXTR_SKIP( d, 6)
-	EXTR_U8(   d, l.ubNumberLifeInsurancePayouts)
+	UINT8 numLifeInsurancePayouts;
+	EXTR_U8(   d, numLifeInsurancePayouts)
 	EXTR_U8(   d, l.ubNumberLifeInsurancePayoutUsed)
+	Assert(l.ubNumberLifeInsurancePayoutUsed <= numLifeInsurancePayouts);
 	EXTR_BOOL( d, l.fBobbyRSiteCanBeAccessed)
 	EXTR_U8(   d, l.ubPlayerBeenToMercSiteStatus)
 	EXTR_BOOL( d, l.fFirstVisitSinceServerWentDown)
@@ -3439,30 +3447,27 @@ void LoadLaptopInfoFromSavedGame(HWFILE const f)
 	EXTR_U32(  d, l.uiTotalMoneyPaidToSpeck)
 	EXTR_U8(   d, l.ubLastMercAvailableId)
 	EXTR_SKIP( d, 87)
-	Assert(d == endof(data));
+	Assert(d.getConsumed() == lengthof(data));
 
 	if (l.usNumberOfBobbyRayOrderUsed != 0)
 	{ // There is anything in the Bobby Ray Orders on Delivery
-		UINT32 const size = sizeof(*l.BobbyRayOrdersOnDeliveryArray) * l.usNumberOfBobbyRayOrderItems;
-		l.BobbyRayOrdersOnDeliveryArray = MALLOCN(BobbyRayOrderStruct, l.usNumberOfBobbyRayOrderItems);
-		FileRead(f, l.BobbyRayOrdersOnDeliveryArray, size);
+		l.BobbyRayOrdersOnDeliveryArray.resize(BobbyRayOrdersOnDeliveryArraySize);
+		size_t const size = sizeof(*l.BobbyRayOrdersOnDeliveryArray.data()) * BobbyRayOrdersOnDeliveryArraySize;
+		FileRead(f, l.BobbyRayOrdersOnDeliveryArray.data(), size);
 	}
 	else
 	{
-		l.usNumberOfBobbyRayOrderItems  = 0;
-		l.BobbyRayOrdersOnDeliveryArray = 0;
+		l.BobbyRayOrdersOnDeliveryArray.clear();
 	}
 
 	if (l.ubNumberLifeInsurancePayoutUsed != 0)
 	{ // There are any Insurance Payouts in progress
-		UINT32 const size = sizeof(*l.pLifeInsurancePayouts) * l.ubNumberLifeInsurancePayouts;
-		l.pLifeInsurancePayouts = MALLOCN(LIFE_INSURANCE_PAYOUT, l.ubNumberLifeInsurancePayouts);
-		FileRead(f, l.pLifeInsurancePayouts, size);
+		l.pLifeInsurancePayouts.assign(numLifeInsurancePayouts, LIFE_INSURANCE_PAYOUT{});
+		FileRead(f, l.pLifeInsurancePayouts.data(), sizeof(LIFE_INSURANCE_PAYOUT) * numLifeInsurancePayouts);
 	}
 	else
 	{
-		l.ubNumberLifeInsurancePayouts = 0;
-		l.pLifeInsurancePayouts        = 0;
+		l.pLifeInsurancePayouts.clear();
 	}
 }
 
@@ -3509,11 +3514,11 @@ void CreateFileAndNewEmailIconFastHelpText(UINT32 uiHelpTextID, BOOLEAN fClearHe
 		case LAPTOP_BN_HLP_TXT_YOU_HAVE_NEW_FILE: pRegion = &gNewFileIconRegion; break;
 
 		default:
-			SLOGE(DEBUG_TAG_ASSERTS, "CreateFileAndNewEmailIconFastHelpText: invalid HelpTextID");
+			SLOGA("CreateFileAndNewEmailIconFastHelpText: invalid HelpTextID");
 			return;
 	}
 
-	const wchar_t* help = (fClearHelpText ? L"" : gzLaptopHelpText[uiHelpTextID]);
+	ST::string help = (fClearHelpText ? ST::null : gzLaptopHelpText[uiHelpTextID]);
 	pRegion->SetFastHelpText(help);
 }
 
@@ -3523,9 +3528,9 @@ void CreateFileAndNewEmailIconFastHelpText(UINT32 uiHelpTextID, BOOLEAN fClearHe
 
 TEST(Laptop, asserts)
 {
-  EXPECT_EQ(sizeof(LIFE_INSURANCE_PAYOUT), 8);
-  EXPECT_EQ(sizeof(BobbyRayPurchaseStruct), 8);
-  EXPECT_EQ(sizeof(BobbyRayOrderStruct), 84);
+	EXPECT_EQ(sizeof(LIFE_INSURANCE_PAYOUT), 8u);
+	EXPECT_EQ(sizeof(BobbyRayPurchaseStruct), 8u);
+	EXPECT_EQ(sizeof(BobbyRayOrderStruct), 84u);
 }
 
 #endif

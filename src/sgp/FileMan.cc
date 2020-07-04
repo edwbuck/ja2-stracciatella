@@ -1,249 +1,209 @@
-#include <stdexcept>
-
-#include <errno.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+#include "Debug.h"
 #include "FileMan.h"
-#include "LibraryDataBase.h"
+#include "Logger.h"
 #include "MemMan.h"
-#include "PODObj.h"
+#include "RustInterface.h"
 
-#include "boost/filesystem.hpp"
+#include <SDL_rwops.h>
+#include <string_theory/string>
 
-#include "slog/slog.h"
-
-#if _WIN32
-#include <shlobj.h>
-#else
-#include <pwd.h>
-#endif
-
-#include "PlatformIO.h"
-
-#if MACOS_USE_RESOURCES_FROM_BUNDLE && defined __APPLE__  && defined __MACH__
-#include <CoreFoundation/CFBundle.h>
-#endif
-
-#if CASE_SENSITIVE_FS
-#include <dirent.h>
-#endif
+#include <stdexcept>
 
 // XXX: remove FileMan class and make it into a namespace
 
 #define LOCAL_CURRENT_DIR "tmp"
+#define SDL_RWOPS_SGP 222
 
-enum FileOpenFlags
-{
-	FILE_ACCESS_READ      = 1U << 0,
-	FILE_ACCESS_WRITE     = 1U << 1,
-	FILE_ACCESS_READWRITE = FILE_ACCESS_READ | FILE_ACCESS_WRITE,
-	FILE_ACCESS_APPEND    = 1U << 2
-};
-ENUM_BITSET(FileOpenFlags)
-
-
-static void SetFileManCurrentDirectory(char const* const pcDirectory);
-
-/** Get file open modes from our enumeration.
- * Abort program if conversion is not found.
- * @return file mode for fopen call and posix mode using parameter 'posixMode' */
-static const char* GetFileOpenModes(FileOpenFlags flags, int *posixMode);
-
-#if MACOS_USE_RESOURCES_FROM_BUNDLE && defined __APPLE__  && defined __MACH__
-
-void SetBinDataDirFromBundle(void)
-{
-	CFBundleRef const app_bundle = CFBundleGetMainBundle();
-	if (app_bundle == NULL)
-	{
-		fputs("WARNING: Failed to get main bundle.\n", stderr);
-		return;
-	}
-
-	CFURLRef const app_url = CFBundleCopyBundleURL(app_bundle);
-	if (app_url == NULL)
-	{
-		fputs("WARNING: Failed to get URL of bundle.\n", stderr);
-		return;
-	}
-
-#define RESOURCE_PATH "/Contents/Resources/ja2"
-	char app_path[PATH_MAX + lengthof(RESOURCE_PATH)];
-	if (!CFURLGetFileSystemRepresentation(app_url, TRUE, (UInt8*)app_path, PATH_MAX))
-	{
-		fputs("WARNING: Failed to get application path.\n", stderr);
-		return;
-	}
-
-	strcat(app_path, RESOURCE_PATH);
-	ConfigSetValue(BinDataDir, app_path);
-#undef RESOURCE_PATH
-}
-
-#endif
 
 /** Find config folder and switch into it. */
-std::string FileMan::switchTmpFolder(std::string home)
+void FileMan::switchTmpFolder(const ST::string& home)
 {
-  // Create another directory and set is as the current directory for the process
-  // Temporary files will be created in this directory.
-  // ----------------------------------------------------------------------------
+	// Create another directory and set is as the current directory for the process
+	// Temporary files will be created in this directory.
+	// ----------------------------------------------------------------------------
 
-  std::string tmpPath = FileMan::joinPaths(home, LOCAL_CURRENT_DIR);
-	if (mkdir(tmpPath.c_str(), 0700) != 0 && errno != EEXIST)
+	RustPointer<char> tmpPath{Path_push(home.c_str(), LOCAL_CURRENT_DIR)};
+	if (!Fs_isDir(tmpPath.get()) && !Fs_createDir(tmpPath.get()))
 	{
-	  SLOGE(DEBUG_TAG_FILEMAN, "Unable to create tmp directory '%s'", tmpPath.c_str());
-	  throw std::runtime_error("Unable to create tmp directory");
+		RustPointer<char> err{getRustError()};
+		SLOGE(ST::format("Unable to create tmp directory '{}': {}", tmpPath.get(), err.get()));
+		throw std::runtime_error("Unable to create tmp directory");
 	}
-  else
-  {
-    SetFileManCurrentDirectory(tmpPath.c_str());
-  }
-
-  return home;
-}
-
-
-/** Open file in the given folder in case-insensitive manner.
- * @return file descriptor or -1 if file is not found. */
-int FileMan::openFileCaseInsensitive(const std::string &folderPath, const char *filename, int mode)
-{
-  std::string path = FileMan::joinPaths(folderPath, filename);
-  int d = open(path.c_str(), mode);
-  if (d < 0)
-  {
-#if CASE_SENSITIVE_FS
-    // on case-sensitive file system need to try to find another name
-    std::string newFileName;
-    if(findObjectCaseInsensitive(folderPath.c_str(), filename, true, false, newFileName))
-    {
-      path = FileMan::joinPaths(folderPath, newFileName);
-      d = open(path.c_str(), mode);
-    }
-#endif
-  }
-  return d;
-}
-
-void FileDelete(const std::string &path)
-{
-  FileDelete(path.c_str());
-}
-
-void FileDelete(char const* const path)
-{
-	if (unlink(path) == 0) return;
-
-	switch (errno)
+	if (!Env_setCurrentDir(tmpPath.get()))
 	{
-		case ENOENT: return;
-
-#ifdef _WIN32
-		/* On WIN32 read-only files cannot be deleted, so try to make the file
-		 * writable and unlink() again */
-		case EACCES:
-			if ((chmod(path, S_IREAD | S_IWRITE) == 0 && unlink(path) == 0) ||
-					errno == ENOENT)
-			{
-				return;
-			}
-			break;
-#endif
-
-		default: break;
+		RustPointer<char> err{getRustError()};
+		SLOGE(ST::format("Unable to switch to tmp directory '{}': {}", tmpPath.get(), err.get()));
+		throw std::runtime_error("Unable to switch to tmp directory");
 	}
-
-	throw std::runtime_error("Deleting file failed");
 }
 
 
-/** Get file open modes from reading. */
-const char* GetFileOpenModeForReading(int *posixMode)
+RustPointer<File> FileMan::openFileCaseInsensitive(const ST::string& folderPath, const ST::string& filename, uint8_t open_options)
 {
-  return GetFileOpenModes(FILE_ACCESS_READ, posixMode);
+	RustPointer<char> path{Fs_resolveExistingComponents(filename.c_str(), folderPath.c_str(), true)};
+	return RustPointer<File>{File_open(path.get(), open_options)};
 }
 
-/** Get file open modes from our enumeration.
- * Abort program if conversion is not found.
- * @return file mode for fopen call and posix mode using parameter 'posixMode' */
-static const char* GetFileOpenModes(FileOpenFlags flags, int *posixMode)
+void FileDelete(const ST::string& path)
 {
-  const char *cMode = NULL;
-
-#ifndef _WIN32
-  *posixMode = 0;
-#else
-	*posixMode = O_BINARY;
-#endif
-
-	switch (flags & (FILE_ACCESS_READWRITE | FILE_ACCESS_APPEND))
+	if (Fs_exists(path.c_str()) && !Fs_removeFile(path.c_str()))
 	{
-		case FILE_ACCESS_READ:      cMode = "rb";  *posixMode |= O_RDONLY;            break;
-		case FILE_ACCESS_WRITE:     cMode = "wb";  *posixMode |= O_WRONLY;            break;
-		case FILE_ACCESS_READWRITE: cMode = "r+b"; *posixMode |= O_RDWR;              break;
-		case FILE_ACCESS_APPEND:    cMode = "ab";  *posixMode |= O_WRONLY | O_APPEND; break;
-
-		default: abort();
+		RustPointer<char> err{getRustError()};
+		SLOGE(ST::format("Deleting file '{}' failed: {}", path, err.get()));
+		throw std::runtime_error("Deleting file failed");
 	}
-  return cMode;
 }
+
 
 void FileClose(SGPFile* f)
 {
 	if (f->flags & SGPFILE_REAL)
 	{
-		fclose(f->u.file);
+		File_close(f->u.file);
 	}
 	else
 	{
-		CloseLibraryFile(&f->u.lib);
+		VfsFile_close(f->u.vfile);
 	}
-	MemFree(f);
+	delete f;
 }
 
 void FileRead(SGPFile* const f, void* const pDest, size_t const uiBytesToRead)
 {
-	BOOLEAN ret;
+	bool success;
 	if (f->flags & SGPFILE_REAL)
 	{
-		ret = fread(pDest, uiBytesToRead, 1, f->u.file) == 1;
+		success = File_readExact(f->u.file, reinterpret_cast<uint8_t*>(pDest), uiBytesToRead);
 	}
 	else
 	{
-		ret = LoadDataFromLibrary(&f->u.lib, pDest, (UINT32)uiBytesToRead);
+		success = VfsFile_readExact(f->u.vfile, static_cast<uint8_t *>(pDest), uiBytesToRead);
 	}
 
-	if (!ret) throw std::runtime_error("Reading from file failed");
+	if (!success)
+	{
+		RustPointer<char> err{getRustError()};
+		SLOGE("FileRead: %s", err.get());
+		throw std::runtime_error("Reading from file failed");
+	}
 }
 
 
 void FileWrite(SGPFile* const f, void const* const pDest, size_t const uiBytesToWrite)
 {
-	if (!(f->flags & SGPFILE_REAL)) throw std::logic_error("Tried to write to library file");
-	if (fwrite(pDest, uiBytesToWrite, 1, f->u.file) != 1) throw std::runtime_error("Writing to file failed");
+	bool success;
+	if (f->flags & SGPFILE_REAL)
+	{
+		success = File_writeAll(f->u.file, reinterpret_cast<const uint8_t*>(pDest), uiBytesToWrite);
+	}
+	else
+	{
+		success = VfsFile_writeAll(f->u.vfile, reinterpret_cast<const uint8_t *>(pDest), uiBytesToWrite);
+	}
+
+	if (!success)
+	{
+		RustPointer<char> err{getRustError()};
+		SLOGE("FileWrite: %s", err.get());
+		throw std::runtime_error("Writing to file failed");
+	}
 }
 
+static int64_t SGPSeekRW(SDL_RWops *context, int64_t offset, int whence)
+{
+	SGPFile* sgpFile = (SGPFile*)(context->hidden.unknown.data1);
+	FileSeekMode mode = FILE_SEEK_FROM_CURRENT;
+	switch (whence) {
+		case RW_SEEK_SET:
+			mode = FILE_SEEK_FROM_START;
+			break;
+		case RW_SEEK_END:
+			mode = FILE_SEEK_FROM_END;
+			break;
+		default:
+			break;
+	}
+
+	FileSeek(sgpFile, offset, mode);
+
+	return int64_t(FileGetPos(sgpFile));
+}
+
+static int64_t SGPSizeRW(SDL_RWops *context)
+{
+	SGPFile* sgpFile = (SGPFile*)(context->hidden.unknown.data1);
+
+	return FileGetSize(sgpFile);
+}
+
+static size_t SGPReadRW(SDL_RWops *context, void *ptr, size_t size, size_t maxnum)
+{
+	SGPFile* sgpFile = (SGPFile*)(context->hidden.unknown.data1);
+	UINT32 posBefore = UINT32(FileGetPos(sgpFile));
+
+	FileRead(sgpFile, ptr, size * maxnum);
+
+	UINT32 posAfter = UINT32(FileGetPos(sgpFile));
+
+	return (posAfter - posBefore) / size;
+}
+
+static size_t SGPWriteRW(SDL_RWops *context, const void *ptr, size_t size, size_t num)
+{
+	AssertMsg(false, "SGPWriteRW not supported");
+	return 0;
+}
+
+static int SGPCloseRW(SDL_RWops *context)
+{
+	if(context->type != SDL_RWOPS_SGP)
+	{
+		return SDL_SetError("Wrong kind of SDL_RWops for SGPCloseRW()");
+	}
+	SGPFile* sgpFile = (SGPFile*)(context->hidden.unknown.data1);
+
+	FileClose(sgpFile);
+	SDL_FreeRW(context);
+
+	return 0;
+}
+
+SDL_RWops* FileGetRWOps(SGPFile* const f) {
+	SDL_RWops* rwOps = SDL_AllocRW();
+	if(rwOps == NULL) {
+		return NULL;
+	}
+	rwOps->type = SDL_RWOPS_SGP;
+	rwOps->size = SGPSizeRW;
+	rwOps->seek = SGPSeekRW;
+	rwOps->read = SGPReadRW;
+	rwOps->write= SGPWriteRW;
+	rwOps->close= SGPCloseRW;
+	rwOps->hidden.unknown.data1 = f;
+
+	return rwOps;
+}
 
 void FileSeek(SGPFile* const f, INT32 distance, FileSeekMode const how)
 {
 	bool success;
 	if (f->flags & SGPFILE_REAL)
 	{
-		int whence;
 		switch (how)
 		{
-			case FILE_SEEK_FROM_START: whence = SEEK_SET; break;
-			case FILE_SEEK_FROM_END:   whence = SEEK_END; break;
-			default:                   whence = SEEK_CUR; break;
+			case FILE_SEEK_FROM_START: success = distance >= 0 && File_seekFromStart(f->u.file, static_cast<uint64_t>(distance)) != UINT64_MAX; break;
+			case FILE_SEEK_FROM_END:   success = File_seekFromEnd(f->u.file, distance) != UINT64_MAX; break;
+			default:                   success = File_seekFromCurrent(f->u.file, distance) != UINT64_MAX; break;
 		}
-
-		success = fseek(f->u.file, distance, whence) == 0;
 	}
 	else
 	{
-		success = LibraryFileSeek(&f->u.lib, distance, how);
+		switch (how)
+		{
+			case FILE_SEEK_FROM_START: success = distance >= 0 && VfsFile_seekFromStart(f->u.vfile, static_cast<uint64_t>(distance), nullptr); break;
+			case FILE_SEEK_FROM_END:   success = VfsFile_seekFromEnd(f->u.vfile, distance, nullptr); break;
+			default:                   success = VfsFile_seekFromCurrent(f->u.vfile, distance, nullptr); break;
+		}
 	}
 	if (!success) throw std::runtime_error("Seek in file failed");
 }
@@ -251,501 +211,374 @@ void FileSeek(SGPFile* const f, INT32 distance, FileSeekMode const how)
 
 INT32 FileGetPos(const SGPFile* f)
 {
-	return f->flags & SGPFILE_REAL ? (INT32)ftell(f->u.file) : f->u.lib.uiFilePosInFile;
+	bool success;
+	uint64_t position = 0;
+	if (f->flags & SGPFILE_REAL)
+	{
+		position = File_seekFromCurrent(f->u.file, 0);
+		success = position != UINT64_MAX;
+	}
+	else
+	{
+		success = VfsFile_seekFromCurrent(f->u.vfile, 0, &position);
+	}
+
+	if (!success)
+	{
+		RustPointer<char> err{getRustError()};
+		SLOGE(ST::format("FileGetPos: {}", err.get()));
+		throw std::runtime_error("Getting file position failed");
+	}
+	if (position > INT32_MAX)
+	{
+		SLOGW(ST::format("FileGetPos: truncating from {} to {}", position, INT32_MAX));
+		position = INT32_MAX;
+	}
+	return static_cast<INT32>(position);
 }
 
 
 UINT32 FileGetSize(const SGPFile* f)
 {
+	bool success;
+	uint64_t len = 0;
 	if (f->flags & SGPFILE_REAL)
 	{
-		struct stat sb;
-		if (fstat(fileno(f->u.file), &sb) != 0)
-		{
-			throw std::runtime_error("Getting file size failed");
-		}
-		return (UINT32)sb.st_size;
+		len = File_len(f->u.file);
+		success = len != UINT64_MAX;
 	}
 	else
 	{
-		return f->u.lib.pFileHeader->uiFileLength;
+		success = VfsFile_len(f->u.vfile, &len);
 	}
-}
 
-
-static void SetFileManCurrentDirectory(char const* const pcDirectory)
-{
-#if 1 // XXX TODO
-	if (chdir(pcDirectory) != 0)
-#else
-	if (!SetCurrentDirectory(pcDirectory))
-#endif
+	if (!success)
 	{
-		throw std::runtime_error("Changing directory failed");
+		RustPointer<char> err{getRustError()};
+		SLOGE(ST::format("FileGetSize: {}", err.get()));
+		throw std::runtime_error("Getting file size failed");
 	}
-}
-
-
-void FileMan::createDir(char const* const path)
-{
-	if (mkdir(path, 0755) == 0) return;
-
-	if (errno == EEXIST)
+	if (len > UINT32_MAX)
 	{
-		FileAttributes const attr = FileGetAttributes(path);
-		if (attr != FILE_ATTR_ERROR && attr & FILE_ATTR_DIRECTORY) return;
+		SLOGW(ST::format("FileGetSize: truncating from {} to {}", len, UINT32_MAX));
+		len = UINT32_MAX;
 	}
-
-	throw std::runtime_error("Failed to create directory");
+	return static_cast<UINT32>(len);
 }
 
 
-void EraseDirectory(char const* const dirPath)
+void FileMan::createDir(const ST::string& path)
 {
-  std::vector<std::string> paths = FindAllFilesInDir(dirPath);
-  for (std::vector<std::string>::const_iterator it(paths.begin()); it != paths.end(); ++it)
-  {
+	if (!Fs_isDir(path.c_str()) && !Fs_createDir(path.c_str()))
+	{
+		RustPointer<char> err{getRustError()};
+		SLOGE(ST::format("Failed to created directory '{}': {}", path, err.get()));
+		throw std::runtime_error("Failed to create directory");
+	}
+}
+
+
+void EraseDirectory(const ST::string& dirPath)
+{
+	std::vector<ST::string> paths = FindAllFilesInDir(dirPath);
+	for (const ST::string& path : paths)
+	{
 		try
 		{
-			FileDelete(it->c_str());
+			FileDelete(path);
 		}
-		catch (...)
+		catch (const std::runtime_error& ex)
 		{
-			const FileAttributes attr = FileGetAttributes(it->c_str());
-			if (attr != FILE_ATTR_ERROR && attr & FILE_ATTR_DIRECTORY) continue;
+			if (Fs_isDir(path.c_str())) continue;
+			SLOGE(ST::format("EraseDirectory '{}' '{}': {}", dirPath, path, ex.what()));
 			throw;
 		}
 	}
 }
 
 
-FileAttributes FileGetAttributes(const char* const filename)
+File* GetRealFileHandleFromFileManFileHandle(const SGPFile* f)
 {
-	FileAttributes attr = FILE_ATTR_NONE;
-#ifndef _WIN32 // XXX TODO
-	struct stat sb;
-	if (stat(filename, &sb) != 0) return FILE_ATTR_ERROR;
-
-	if (S_ISDIR(sb.st_mode))     attr |= FILE_ATTR_DIRECTORY;
-	if (!(sb.st_mode & S_IWUSR)) attr |= FILE_ATTR_READONLY;
-#else
-	const UINT32 w32attr = GetFileAttributes(filename);
-	if (w32attr == INVALID_FILE_ATTRIBUTES) return FILE_ATTR_ERROR;
-
-	if (w32attr & FILE_ATTRIBUTE_READONLY)  attr |= FILE_ATTR_READONLY;
-	if (w32attr & FILE_ATTRIBUTE_DIRECTORY) attr |= FILE_ATTR_DIRECTORY;
-#endif
-	return attr;
+	return f->flags & SGPFILE_REAL ? f->u.file : nullptr;
 }
 
-
-BOOLEAN FileClearAttributes(const std::string &filename)
+uint64_t GetFreeSpaceOnHardDriveWhereGameIsRunningFrom(void)
 {
-  return FileClearAttributes(filename.c_str());
-}
-
-BOOLEAN FileClearAttributes(const char* const filename)
-{
-  using namespace boost::filesystem;
-  
-  permissions(filename, ( add_perms | owner_read | owner_write | group_read | group_write ));
-  return true;
-}
-
-
-BOOLEAN GetFileManFileTime(const char* fileName, time_t* const pLastWriteTime)
-{
-  using namespace boost::filesystem;
-  *pLastWriteTime = last_write_time(fileName);
-  if(*pLastWriteTime == -1)
-  {
-    return FALSE;
-  }
-  return TRUE;
-}
-
-
-INT32 CompareSGPFileTimes(const time_t* const pFirstFileTime, const time_t* const pSecondFileTime)
-{
-  if ( *pFirstFileTime < *pSecondFileTime )
-  {
-    return -1;
-  }
-  if ( *pFirstFileTime > *pSecondFileTime )
-  {
-    return 1;
-  }
-  return 0;
-}
-
-
-FILE* GetRealFileHandleFromFileManFileHandle(const SGPFile* f)
-{
-	return f->flags & SGPFILE_REAL ? f->u.file : f->u.lib.lib->hLibraryHandle;
-}
-
-uintmax_t GetFreeSpaceOnHardDriveWhereGameIsRunningFrom(void)
-{
-  using namespace boost::filesystem;
-  space_info si = space(current_path());
-  if (si.available == -1)
-  {
-    /* something is wrong, tell everyone no space available */
-    return 0;
-  }
-  else
-  {
-    return si.available;
-  }
-}
-
-/** Join two path components. */
-std::string FileMan::joinPaths(const std::string &first, const char *second)
-{
-  std::string result = first;
-  if((result.length() == 0) || (result[result.length()-1] != PATH_SEPARATOR))
-  {
-    if(second[0] != PATH_SEPARATOR)
-    {
-      result += PATH_SEPARATOR;
-    }
-  }
-  result += second;
-  return result;
-}
-
-/** Join two path components. */
-std::string FileMan::joinPaths(const std::string &first, const std::string &second)
-{
-  return joinPaths(first, second.c_str());
-}
-
-/** Join two path components. */
-std::string FileMan::joinPaths(const char *first, const char *second)
-{
-  return joinPaths(std::string(first), second);
-}
-
-#if CASE_SENSITIVE_FS
-
-/**
- * Find an object (file or subdirectory) in the given directory in case-independent manner.
- * @return true when found, return the found name using foundName. */
-bool FileMan::findObjectCaseInsensitive(const char *directory, const char *name, bool lookForFiles, bool lookForSubdirs, std::string &foundName)
-{
-  bool result = false;
-
-  // if name contains directories, than we have to find actual case-sensitive name of the directory
-  // and only then look for a file
-  const char *splitter = strstr(name, "/");
-  int dirNameLen = (int)(splitter - name);
-  if(splitter && (dirNameLen > 0) && splitter[1] != 0)
-  {
-    // we have directory in the name
-    // let's find its correct name first
-    char newDirectory[128];
-    std::string actualSubdirName;
-    strncpy(newDirectory, name, sizeof(newDirectory));
-    newDirectory[dirNameLen] = 0;
-
-    if(findObjectCaseInsensitive(directory, newDirectory, false, true, actualSubdirName))
-    {
-      // found subdirectory; let's continue the full search
-      std::string pathInSubdir;
-      std::string newDirectory = FileMan::joinPaths(directory, actualSubdirName.c_str());
-      if(findObjectCaseInsensitive(newDirectory.c_str(), splitter + 1, lookForFiles, lookForSubdirs, pathInSubdir))
-      {
-        // found name in subdir
-        foundName = FileMan::joinPaths(actualSubdirName, pathInSubdir);
-        result = true;
-      }
-    }
-  }
-  else
-  {
-    // name contains only file, no directories
-    DIR *d;
-    struct dirent *entry;
-    uint8_t objectTypes = (lookForFiles ? DT_REG : 0) | (lookForSubdirs ? DT_DIR : 0);
-
-    d = opendir(directory);
-    if (d)
-    {
-      while ((entry = readdir(d)) != NULL)
-      {
-        if((entry->d_type & objectTypes)
-           && !strcasecmp(name, entry->d_name))
-        {
-          foundName = entry->d_name;
-          result = true;
-        }
-      }
-      closedir(d);
-    }
-  }
-
-  // SLOGI(DEBUG_TAG_FILEMAN,"Looking for %s/[ %s ] : %s", directory, name, result ? "success" : "failure");
-  return result;
-}
-#endif
-
-
-/** Convert file descriptor to HWFile.
- * Raise runtime_error if not possible. */
-SGPFile* FileMan::getSGPFileFromFD(int fd, const char *filename, const char *fmode)
-{
-	if (fd < 0)
-  {
-    char buf[128];
-    snprintf(buf, sizeof(buf), "Opening file '%s' failed", filename);
-    throw std::runtime_error(buf);
-  }
-
-	FILE* const f = fdopen(fd, fmode);
-	if (!f)
+	RustPointer<char> path(Env_currentDir());
+	if (!path)
 	{
-    char buf[128];
-    snprintf(buf, sizeof(buf), "Opening file '%s' failed", filename);
-    throw std::runtime_error(buf);
+		RustPointer<char> msg(getRustError());
+		SLOGW("%s", msg.get());
+		return 0;
 	}
+	uint64_t bytes;
+	if (!Fs_freeSpace(path.get(), &bytes))
+	{
+		RustPointer<char> msg(getRustError());
+		SLOGW("%s", msg.get());
+		return 0;
+	}
+	return bytes;
+}
 
-  SGPFile *file = MALLOCZ(SGPFile);
-	file->flags  = SGPFILE_REAL;
-	file->u.file = f;
-	return file;
+
+ST::string FileMan::joinPaths(const ST::string& first, const ST::string& second)
+{
+	RustPointer<char> path{Path_push(first.c_str(), second.c_str())};
+	return path.get();
+}
+
+ST::string FileMan::joinPaths(const std::vector<ST::string> parts)
+{
+	if (parts.size() < 1) return ST::null;
+
+	ST::string path = parts[0];
+	for (size_t i = 1; i < parts.size(); i++)
+	{
+		path = joinPaths(path, parts[i]);
+	}
+	return path;
+}
+
+
+SGPFile* FileMan::getSGPFileFromFile(File* f)
+{
+	Assert(f);
+	SGPFile *sgp_file = new SGPFile{};
+	sgp_file->flags  = SGPFILE_REAL;
+	sgp_file->u.file = f;
+	return sgp_file;
 }
 
 
 /** Open file for writing.
  * If file is missing it will be created.
  * If file exists, it's content will be removed. */
-SGPFile* FileMan::openForWriting(const char *filename, bool truncate)
+SGPFile* FileMan::openForWriting(const ST::string& filename, bool truncate)
 {
-	int mode;
-	const char* fmode = GetFileOpenModes(FILE_ACCESS_WRITE, &mode);
+	uint8_t open_options = FILE_OPEN_WRITE | FILE_OPEN_CREATE;
+	if (truncate)
+	{
+		open_options |= FILE_OPEN_TRUNCATE;
+	}
 
-  if(truncate)
-  {
-    mode |= O_TRUNC;
-  }
-
-	int d = open3(filename, mode | O_CREAT, 0600);
-  return getSGPFileFromFD(d, filename, fmode);
+	RustPointer<File> file{File_open(filename.c_str(), open_options)};
+	if (!file)
+	{
+		RustPointer<char> err{getRustError()};
+		SLOGE(ST::format("FileMan::openForWriting '{}' {}: {}", filename, truncate, err.get()));
+		throw std::runtime_error("FileMan::openForWriting failed");
+	}
+	return getSGPFileFromFile(file.release());
 }
 
 
 /** Open file for appending data.
  * If file doesn't exist, it will be created. */
-SGPFile* FileMan::openForAppend(const char *filename)
+SGPFile* FileMan::openForAppend(const ST::string& filename)
 {
-	int         mode;
-	const char* fmode = GetFileOpenModes(FILE_ACCESS_APPEND, &mode);
-
-  int d = open3(filename, mode | O_CREAT, 0600);
-  return getSGPFileFromFD(d, filename, fmode);
+	RustPointer<File> file{File_open(filename.c_str(), FILE_OPEN_APPEND | FILE_OPEN_CREATE)};
+	if (!file)
+	{
+		RustPointer<char> err{getRustError()};
+		SLOGE(ST::format("FileMan::openForAppend '{}': {}", filename, err.get()));
+		throw std::runtime_error("FileMan::openForAppend failed");
+	}
+	return getSGPFileFromFile(file.release());
 }
 
 
 /** Open file for reading and writing.
  * If file doesn't exist, it will be created. */
-SGPFile* FileMan::openForReadWrite(const char *filename)
+SGPFile* FileMan::openForReadWrite(const ST::string& filename)
 {
-	int         mode;
-	const char* fmode = GetFileOpenModes(FILE_ACCESS_READWRITE, &mode);
-
-  int d = open3(filename, mode | O_CREAT, 0600);
-  return getSGPFileFromFD(d, filename, fmode);
+	RustPointer<File> file{File_open(filename.c_str(), FILE_OPEN_READ | FILE_OPEN_WRITE | FILE_OPEN_CREATE)};
+	if (!file)
+	{
+		RustPointer<char> err{getRustError()};
+		SLOGE(ST::format("FileMan::openForReadWrite '{}': {}", filename, err.get()));
+		throw std::runtime_error("FileMan::openForReadWrite failed");
+	}
+	return getSGPFileFromFile(file.release());
 }
 
 /** Open file for reading. */
-SGPFile* FileMan::openForReading(const char *filename)
+SGPFile* FileMan::openForReading(const ST::string &filename)
 {
-	int         mode;
-	const char* fmode = GetFileOpenModes(FILE_ACCESS_READ, &mode);
-  int d = open3(filename, mode, 0600);
-  return getSGPFileFromFD(d, filename, fmode);
-}
-
-/** Open file for reading. */
-SGPFile* FileMan::openForReading(const std::string &filename)
-{
-  return openForReading(filename.c_str());
+	RustPointer<File> file{File_open(filename.c_str(), FILE_OPEN_READ)};
+	if (!file)
+	{
+		RustPointer<char> err{getRustError()};
+		SLOGE(ST::format("FileMan::openForReading '{}': {}", filename, err.get()));
+		throw std::runtime_error("FileMan::openForReading failed");
+	}
+	return getSGPFileFromFile(file.release());
 }
 
 /** Open file for reading.  Look file in folderPath in case-insensitive manner. */
-FILE* FileMan::openForReadingCaseInsensitive(const std::string &folderPath, const char *filename)
+RustPointer<File> FileMan::openForReadingCaseInsensitive(const ST::string& folderPath, const ST::string& filename)
 {
-	int mode;
-	const char* fmode = GetFileOpenModes(FILE_ACCESS_READ, &mode);
-
-  int d = openFileCaseInsensitive(folderPath, filename, mode);
-  if(d >= 0)
-  {
-    FILE* hFile = fdopen(d, fmode);
-    if (hFile == NULL)
-    {
-      close(d);
-    }
-    else
-    {
-      return hFile;
-    }
-  }
-  return NULL;
+	return openFileCaseInsensitive(folderPath, filename, FILE_OPEN_READ);
 }
 
-/**
- * Find all files with the given extension in the given directory.
- * @param dirPath Path to the directory
- * @param extension Extension with dot (e.g. ".txt")
- * @param caseIncensitive When True, do case-insensitive search even of case-sensitive file-systems. * * @return List of paths (dir + filename). */
-std::vector<std::string>
-FindFilesInDir(const std::string &dirPath,
-               const std::string &ext,
-               bool caseIncensitive,
-               bool returnOnlyNames,
-               bool sortResults)
+std::vector<ST::string>
+FindFilesInDir(const ST::string& dirPath,
+		const ST::string& ext,
+		bool caseInsensitive,
+		bool returnOnlyNames,
+		bool sortResults,
+		bool recursive)
 {
-  std::string ext_copy = ext;
-  if(caseIncensitive)
-  {
-    std::transform(ext_copy.begin(), ext_copy.end(), ext_copy.begin(), ::tolower);
-  }
-
-  std::vector<std::string> paths;
-  boost::filesystem::path path(dirPath);
-  boost::filesystem::directory_iterator end;
-  for(boost::filesystem::directory_iterator it(path); it != end; it++)
-  {
-    if(boost::filesystem::is_regular_file(it->status()))
-    {
-      std::string file_ext = it->path().extension().string();
-      if(caseIncensitive)
-      {
-        std::transform(file_ext.begin(), file_ext.end(), file_ext.begin(), ::tolower);
-      }
-      if(file_ext.compare(ext_copy) == 0)
-      {
-        if(returnOnlyNames)
-        {
-          paths.push_back(it->path().filename().string());
-        }
-        else
-        {
-          paths.push_back(it->path().string());
-        }
-      }
-    }
-  }
-  if(sortResults)
-  {
-    std::sort(paths.begin(), paths.end());
-  }
-  return paths;
+	std::vector<ST::string> results;
+	std::vector<ST::string> paths = FindAllFilesInDir(dirPath, sortResults, recursive);
+	for (ST::string& path : paths)
+	{
+		// the extension must match
+		RustPointer<char> path_ext(Path_extension(path.c_str()));
+		if (path_ext)
+		{
+			int cmp = caseInsensitive ? ext.compare_i(path_ext.get()) : ext.compare(path_ext.get());
+			if (cmp != 0)
+			{
+				continue;
+			}
+		}
+		else if (!ext.empty())
+		{
+			continue;
+		}
+		// keep filename or path
+		if (returnOnlyNames && !recursive)
+		{
+			RustPointer<char> filename{Path_filename(path.c_str())};
+			Assert(filename);
+			results.emplace_back(filename.get());
+		}
+		else
+		{
+			results.emplace_back(std::move(path));
+		}
+	}
+	if(sortResults)
+	{
+		std::sort(results.begin(), results.end());
+	}
+	return results;
 }
 
-/**
- * Find all files in a directory.
- * @return List of paths (dir + filename). */
-std::vector<std::string>
-FindAllFilesInDir(const std::string &dirPath, bool sortResults)
+std::vector<ST::string>
+FindAllFilesInDir(const ST::string& dirPath, bool sortResults, bool recursive)
 {
-  std::vector<std::string> paths;
-  boost::filesystem::path path(dirPath);
-  boost::filesystem::directory_iterator end;
-  for(boost::filesystem::directory_iterator it(path); it != end; it++)
-  {
-    if(boost::filesystem::is_regular_file(it->status()))
-    {
-      paths.push_back(it->path().string());
-    }
-  }
-  if(sortResults)
-  {
-    std::sort(paths.begin(), paths.end());
-  }
-  return paths;
+	std::vector<ST::string> paths;
+	RustPointer<VecCString> vec{Fs_readDirPaths(dirPath.c_str(), false)};
+	if (!vec)
+	{
+		RustPointer<char> err{getRustError()};
+		SLOGW(ST::format("FindAllFilesInDir: {}", err.get()));
+		return paths;
+	}
+	size_t len = VecCString_len(vec.get());
+	for (size_t i = 0; i < len; i++)
+	{
+		RustPointer<char> path{VecCString_get(vec.get(), i)};
+		if (Fs_isFile(path.get()))
+		{
+			paths.emplace_back(path.get());
+		}
+		else if (recursive && Fs_isDir(path.get()))
+		{
+			std::vector<ST::string> subDirFiles = FindAllFilesInDir(path.get(), false, true);
+			paths.insert(paths.end(), subDirFiles.begin(), subDirFiles.end());
+		}
+	}
+	if(sortResults)
+	{
+		std::sort(paths.begin(), paths.end());
+	}
+	return paths;
 }
 
-/** Replace extension of a file. */
-std::string FileMan::replaceExtension(const std::string &_path, const char *newExtensionWithDot)
+ST::string FileMan::replaceExtension(const ST::string& path, const ST::string& newExtension)
 {
-  boost::filesystem::path path(_path);
-  boost::filesystem::path foo = boost::filesystem::path(newExtensionWithDot);
-  return path.replace_extension(newExtensionWithDot).string();
+	RustPointer<char> newPath{Path_setExtension(path.c_str(), newExtension.c_str())};
+	return newPath.get();
 }
 
-/** Get parent path (e.g. directory path from the full path). */
-std::string FileMan::getParentPath(const std::string &_path, bool absolute)
+ST::string FileMan::getParentPath(const ST::string &path, bool absolute)
 {
-  boost::filesystem::path path(_path);
-  boost::filesystem::path parent = path.parent_path();
-  if(absolute)
-  {
-    parent = boost::filesystem::absolute(parent);
-  }
-  return parent.string();
+	RustPointer<char> parent(Path_parent(path.c_str()));
+	if (!parent)
+	{
+		return ST::string();
+	}
+	if (absolute && !Path_isAbsolute(path.c_str()))
+	{
+		RustPointer<char> dir(Env_currentDir());
+		if (!dir)
+		{
+			RustPointer<char> msg(getRustError());
+			SLOGW("%s", msg.get());
+			throw new std::runtime_error("expected the current directory");
+		}
+		return joinPaths(dir.get(), parent.get());
+	}
+	return parent.get();
 }
 
 /** Get filename from the path. */
-std::string FileMan::getFileName(const std::string &_path)
+ST::string FileMan::getFileName(const ST::string &path)
 {
-  boost::filesystem::path path(_path);
-  return path.filename().string();
+	RustPointer<char> filename(Path_filename(path.c_str()));
+	if (!filename)
+	{
+		return ST::string();
+	}
+	return ST::string(filename.get());
 }
 
-/** Get filename from the path without extension. */
-std::string FileMan::getFileNameWithoutExt(const char *path)
+ST::string FileMan::getFileNameWithoutExt(const ST::string& path)
 {
-  return replaceExtension(getFileName(path), "");
+	RustPointer<char> filestem{Path_filestem(path.c_str())};
+	return filestem ? ST::string(filestem.get()) : ST::null;
 }
 
-std::string FileMan::getFileNameWithoutExt(const std::string &path)
+RustPointer<File> FileMan::openFileForReading(const ST::string& path)
 {
-  return getFileNameWithoutExt(path.c_str());
-}
-
-int FileMan::openFileForReading(const char *filename, int mode)
-{
-  return open(filename, mode);
+	return RustPointer<File>{File_open(path.c_str(), FILE_OPEN_READ)};
 }
 
 /** Replace all \ with / */
-void FileMan::slashifyPath(std::string &path)
+void FileMan::slashifyPath(ST::string &path)
 {
-  int len = path.size();
-  for(int i = 0; i < len; i++)
-  {
-    if(path[i] == '\\')
-    {
-      path[i] = '/';
-    }
-  }
+	path = path.replace("\\", "/");
 }
 
-/** Read the whole file as text. */
-std::string FileMan::fileReadText(SGPFile* file)
+ST::string FileMan::fileReadText(SGPFile* file)
 {
-  uint32_t size = FileGetSize(file);
-  char *data = new char[size+1];
-  FileRead(file, data, size);
-  data[size] = 0;
-  std::string result(data);
-  delete[] data;
-  return result;
+	uint32_t size = FileGetSize(file);
+	ST::char_buffer buf{size, '\0'};
+	FileRead(file, buf.data(), size);
+	return ST::string{buf};
 }
 
 /** Check file existance. */
-bool FileMan::checkFileExistance(const char *folder, const char *fileName)
+bool FileMan::checkFileExistance(const ST::string& folder, const ST::string& fileName)
 {
-  boost::filesystem::path path(folder);
-  path /= fileName;
-  return boost::filesystem::exists(path);
+	return checkPathExistance(joinPaths(folder, fileName));
 }
 
-void FileMan::moveFile(const char *from, const char *to)
+/**  Check path existence. */
+bool FileMan::checkPathExistance(const ST::string& path)
 {
-  boost::filesystem::path fromPath(from);
-  boost::filesystem::path toPath(to);
-  boost::filesystem::rename(fromPath, toPath);
+	return Fs_exists(path.c_str());
+}
+
+void FileMan::moveFile(const ST::string& from, const ST::string& to)
+{
+	if (!Fs_rename(from.c_str(), to.c_str()))
+	{
+		RustPointer<char> err{getRustError()};
+		SLOGE(ST::format("FileMan::moveFile '{}' '{}': {}", from, to, err.get()));
+		throw std::runtime_error("FileMan::moveFile failed");
+	}
 }

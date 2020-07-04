@@ -5,6 +5,8 @@
 
 #include "JA2Types.h"
 
+#include <string_theory/string>
+
 
 // how many militia of all ranks can be in any one sector at once
 #define MAX_ALLOWABLE_MILITIA_PER_SECTOR 20
@@ -30,9 +32,9 @@ INT8 SoldierClassToMilitiaRank(UINT8 soldier_class);
 void StrategicRemoveMilitiaFromSector(INT16 sMapX, INT16 sMapY, UINT8 ubRank, UINT8 ubHowMany);
 
 // Check for promotions and handle them
-UINT8 CheckOneMilitiaForPromotion(INT16 x, INT16 y, UINT8 current_rank, UINT8 kill_points);
+UINT8 CheckOneMilitiaForPromotion(INT16 x, INT16 y, UINT8 &current_rank, UINT8 kill_points);
 
-void BuildMilitiaPromotionsString( wchar_t *str, size_t Length);
+ST::string BuildMilitiaPromotionsString();
 
 UINT8 CountAllMilitiaInSector(INT16 sMapX, INT16 sMapY);
 UINT8 MilitiaInSectorOfRank(INT16 sMapX, INT16 sMapY, UINT8 ubRank);

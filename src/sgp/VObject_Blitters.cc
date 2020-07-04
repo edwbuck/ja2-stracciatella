@@ -11,14 +11,18 @@
 
 
 SGPRect	ClippingRect;
-													//555      565
+							//555      565
 UINT32	guiTranslucentMask=0x3def; //0x7bef;		// mask for halving 5,6,5
 
 
-/* Difference or Zero */
-template<typename T> static inline T DoZ(T const a, T const b)
+/*
+ * Difference or Zero
+ * NB: the types of the parameters are int32_t to ensure the compiler can
+ * safely promote 16 bit unsigned integers.
+ */
+static uint16_t DoZ(int32_t const a, int32_t const b)
 {
-	return a > b ? a - b : 0;
+	return a > b ? static_cast<uint16_t>(a - b) : 0;
 }
 
 
@@ -36,12 +40,12 @@ void Blt8BPPDataTo16BPPBufferTransZNBClipTranslucent(UINT16* const buf, UINT32 c
 
 	// Get offsets from index into structure.
 	ETRLEObject const& e      = hSrcVObject->SubregionProperties(usIndex);
-	UINT16      const  height = e.usHeight;
-	UINT16      const  width  = e.usWidth;
+	int32_t      const height = e.usHeight; // NB: safe automatic conversion
+	int32_t      const width  = e.usWidth;
 
 	// Add to start position of dest buffer.
-	UINT16 const x = iX + e.sOffsetX;
-	UINT16 const y = iY + e.sOffsetY;
+	int32_t const x = iX + e.sOffsetX;
+	int32_t const y = iY + e.sOffsetY;
 
 	if (!clipregion) clipregion = &ClippingRect;
 
@@ -51,14 +55,14 @@ void Blt8BPPDataTo16BPPBufferTransZNBClipTranslucent(UINT16* const buf, UINT32 c
 	if (left_skip   >= width)  return;
 	UINT16       top_skip    = DoZ(clipregion->iTop,  y);
 	if (top_skip    >= height) return;
-	UINT16 const right_skip  = DoZ((UINT16)(x + width),  clipregion->iRight);
+	UINT16 const right_skip  = DoZ(x + width,  clipregion->iRight);
 	if (right_skip  >= width)  return;
-	UINT16 const bottom_skip = DoZ((UINT16)(y + height), clipregion->iBottom);
+	UINT16 const bottom_skip = DoZ(y + height, clipregion->iBottom);
 	if (bottom_skip >= height) return;
 
 	// Calculate the remaining rows and columns to blit.
-	INT32 const blit_length = (INT32)width  - left_skip - right_skip;
-	INT32       blit_height = (INT32)height - top_skip  - bottom_skip;
+	INT32 const blit_length = width  - left_skip - right_skip;
+	INT32       blit_height = height - top_skip  - bottom_skip;
 
 	UINT32         const pitch     = uiDestPitchBYTES / 2;
 	UINT8   const*       src       = hSrcVObject->PixData(e);
@@ -89,7 +93,7 @@ void Blt8BPPDataTo16BPPBufferTransZNBClipTranslucent(UINT16* const buf, UINT32 c
 			if (px_count & 0x80)
 			{
 				px_count &= 0x7F;
-				if (px_count > ls_count)
+				if (px_count > static_cast<UINT32>(ls_count))
 				{
 					px_count -= ls_count;
 					ls_count  = blit_length;
@@ -98,7 +102,7 @@ void Blt8BPPDataTo16BPPBufferTransZNBClipTranslucent(UINT16* const buf, UINT32 c
 			}
 			else
 			{
-				if (px_count > ls_count)
+				if (px_count > static_cast<UINT32>(ls_count))
 				{
 					src      += ls_count;
 					px_count -= ls_count;
@@ -117,7 +121,7 @@ void Blt8BPPDataTo16BPPBufferTransZNBClipTranslucent(UINT16* const buf, UINT32 c
 			{ // Skip transparent pixels.
 				px_count &= 0x7F;
 BlitTransparent:
-				if (px_count > ls_count) px_count = ls_count;
+				if (px_count > static_cast<UINT32>(ls_count)) px_count = ls_count;
 				ls_count -= px_count;
 				dst      += px_count;
 				zdst     += px_count;
@@ -126,7 +130,7 @@ BlitTransparent:
 			{ // Blit non-transparent pixels.
 BlitNonTransLoop:
 				UINT32 unblitted = 0;
-				if (px_count > ls_count)
+				if (px_count > static_cast<UINT32>(ls_count))
 				{
 					unblitted = px_count - ls_count;
 					px_count  = ls_count;
@@ -154,7 +158,7 @@ BlitNonTransLoop:
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransZTranslucent
+Blt8BPPDataTo16BPPBufferTransZTranslucent
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -173,8 +177,8 @@ void Blt8BPPDataTo16BPPBufferTransZTranslucent( UINT16* const buf, UINT32 const 
 	Assert( buf );
 
 	// Get Offsets from Index into structure
-	ETRLEObject const& e    	= hSrcVObject->SubregionProperties(usIndex);
-	UINT32      			 height = e.usHeight;
+	ETRLEObject const& e      = hSrcVObject->SubregionProperties(usIndex);
+	UINT32             height = e.usHeight;
 	UINT32      const  width  = e.usWidth;
 
 	// Add to start position of dest buffer
@@ -185,13 +189,13 @@ void Blt8BPPDataTo16BPPBufferTransZTranslucent( UINT16* const buf, UINT32 const 
 	CHECKV(x >= 0);
 	CHECKV(y >= 0);
 
-	UINT32	const	 pitch			= uiDestPitchBYTES / 2;
-	UINT8 	const* src				= hSrcVObject->PixData(e);
-	UINT16	 		 * dst				= buf + pitch * y + x;
-	UINT16			 * zdst  			= zbuf + pitch * y + x;
-	UINT16	const* const pal 	= hSrcVObject->CurrentShade();
-	UINT32 				 line_skip	= pitch - width;
-	UINT32	const translucent_mask = guiTranslucentMask;
+	UINT32 const  pitch           = uiDestPitchBYTES / 2;
+	UINT8  const* src             = hSrcVObject->PixData(e);
+	UINT16 * dst                  = buf + pitch * y + x;
+	UINT16 * zdst                 = zbuf + pitch * y + x;
+	UINT16 const* const pal       = hSrcVObject->CurrentShade();
+	UINT32 line_skip              = pitch - width;
+	UINT32 const translucent_mask = guiTranslucentMask;
 
 	do
 	{
@@ -292,18 +296,18 @@ void Blt8BPPDataTo16BPPBufferTransZNBTranslucent(UINT16* const buf, UINT32 const
 
 UINT16* InitZBuffer(const UINT32 width, const UINT32 height)
 {
-	return MALLOCNZ(UINT16, width * height);
+	return new UINT16[width * height]{};
 }
 
 
 void ShutdownZBuffer(UINT16* const pBuffer)
 {
-	MemFree(pBuffer);
+	delete[] pBuffer;
 }
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferMonoShadowClip
+Blt8BPPDataTo16BPPBufferMonoShadowClip
 
 	Uses a bitmap an 8BPP template for blitting. Anywhere a 1 appears in the bitmap, a shadow
 	is blitted to the destination (a black pixel). Any other value above zero is considered a
@@ -314,9 +318,9 @@ void ShutdownZBuffer(UINT16* const pBuffer)
 void Blt8BPPDataTo16BPPBufferMonoShadowClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect *clipregion, UINT16 usForeground, UINT16 usBackground, UINT16 usShadow )
 {
 	UINT32 Unblitted;
-	UINT8	 *DestPtr;
+	UINT8  *DestPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -391,7 +395,7 @@ void Blt8BPPDataTo16BPPBufferMonoShadowClip( UINT16 *pBuffer, UINT32 uiDestPitch
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -400,7 +404,7 @@ void Blt8BPPDataTo16BPPBufferMonoShadowClip( UINT16 *pBuffer, UINT32 uiDestPitch
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -419,7 +423,7 @@ void Blt8BPPDataTo16BPPBufferMonoShadowClip( UINT16 *pBuffer, UINT32 uiDestPitch
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				if (usBackground == 0)
 				{
@@ -437,7 +441,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -494,7 +498,7 @@ void Blt16BPPTo16BPP(UINT16 *pDest, UINT32 uiDestPitch, UINT16 *pSrc, UINT32 uiS
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransZPixelateObscured
+Blt8BPPDataTo16BPPBufferTransZPixelateObscured
 
 	// OK LIKE NORMAL PIXELATE BUT ONLY PIXELATES STUFF BELOW Z level
 
@@ -509,9 +513,9 @@ void Blt16BPPTo16BPP(UINT16 *pDest, UINT32 uiDestPitch, UINT16 *pSrc, UINT32 uiS
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferTransZPixelateObscured( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex )
 {
-UINT32 LineSkip;
-UINT8	 *DestPtr, *ZPtr;
-UINT32 uiLineFlag;
+	UINT32 LineSkip;
+	UINT8  *DestPtr, *ZPtr;
+	UINT32 uiLineFlag;
 
 	// Assertions
 	Assert( hSrcVObject != NULL );
@@ -641,7 +645,7 @@ void Blt8BPPDataTo16BPPBufferTransZ(UINT16* const buf, UINT32 const uiDestPitchB
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransZNB
+Blt8BPPDataTo16BPPBufferTransZNB
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -652,7 +656,7 @@ void Blt8BPPDataTo16BPPBufferTransZ(UINT16* const buf, UINT32 const uiDestPitchB
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferTransZNB( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex )
 {
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -714,7 +718,7 @@ void Blt8BPPDataTo16BPPBufferTransZNB( UINT16 *pBuffer, UINT32 uiDestPitchBYTES,
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransShadow
+Blt8BPPDataTo16BPPBufferTransShadow
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -726,7 +730,7 @@ void Blt8BPPDataTo16BPPBufferTransZNB( UINT16 *pBuffer, UINT32 uiDestPitchBYTES,
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferTransShadow(UINT16* pBuffer, UINT32 uiDestPitchBYTES, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, const UINT16* p16BPPPalette)
 {
-	UINT8	 *DestPtr;
+	UINT8  *DestPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -735,8 +739,8 @@ void Blt8BPPDataTo16BPPBufferTransShadow(UINT16* pBuffer, UINT32 uiDestPitchBYTE
 
 	// Get Offsets from Index into structure
 	ETRLEObject const& pTrav = hSrcVObject->SubregionProperties(usIndex);
-	UINT32      			 usHeight = pTrav.usHeight;
-	UINT32      const  usWidth  = pTrav.usWidth;
+	UINT32          usHeight = pTrav.usHeight;
+	UINT32   const  usWidth  = pTrav.usWidth;
 
 	// Add to start position of dest buffer
 	INT32 const iTempX = iX + pTrav.sOffsetX;
@@ -788,7 +792,7 @@ void Blt8BPPDataTo16BPPBufferTransShadow(UINT16* pBuffer, UINT32 uiDestPitchBYTE
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransShadowZ
+Blt8BPPDataTo16BPPBufferTransShadowZ
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -800,7 +804,7 @@ void Blt8BPPDataTo16BPPBufferTransShadow(UINT16* pBuffer, UINT32 uiDestPitchBYTE
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferTransShadowZ(UINT16* pBuffer, UINT32 uiDestPitchBYTES, UINT16* pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, const UINT16* p16BPPPalette)
 {
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -809,8 +813,8 @@ void Blt8BPPDataTo16BPPBufferTransShadowZ(UINT16* pBuffer, UINT32 uiDestPitchBYT
 
 	// Get Offsets from Index into structure
 	ETRLEObject const& pTrav = hSrcVObject->SubregionProperties(usIndex);
-	UINT32      			 usHeight = pTrav.usHeight;
-	UINT32      const  usWidth  = pTrav.usWidth;
+	UINT32          usHeight = pTrav.usHeight;
+	UINT32    const usWidth  = pTrav.usWidth;
 
 	// Add to start position of dest buffer
 	INT32 const iTempX = iX + pTrav.sOffsetX;
@@ -869,7 +873,7 @@ void Blt8BPPDataTo16BPPBufferTransShadowZ(UINT16* pBuffer, UINT32 uiDestPitchBYT
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransShadowZNB
+Blt8BPPDataTo16BPPBufferTransShadowZNB
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -881,7 +885,7 @@ void Blt8BPPDataTo16BPPBufferTransShadowZ(UINT16* pBuffer, UINT32 uiDestPitchBYT
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferTransShadowZNB(UINT16* pBuffer, UINT32 uiDestPitchBYTES, UINT16* pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, const UINT16* p16BPPPalette)
 {
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -953,7 +957,7 @@ void Blt8BPPDataTo16BPPBufferTransShadowZNB(UINT16* pBuffer, UINT32 uiDestPitchB
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransShadowZNBObscured
+Blt8BPPDataTo16BPPBufferTransShadowZNBObscured
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -965,7 +969,7 @@ void Blt8BPPDataTo16BPPBufferTransShadowZNB(UINT16* pBuffer, UINT32 uiDestPitchB
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferTransShadowZNBObscured(UINT16* pBuffer, UINT32 uiDestPitchBYTES, UINT16* pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, const UINT16* p16BPPPalette)
 {
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
 	UINT32 uiLineFlag;
 
@@ -1041,7 +1045,7 @@ void Blt8BPPDataTo16BPPBufferTransShadowZNBObscured(UINT16* pBuffer, UINT32 uiDe
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransShadowZClip
+Blt8BPPDataTo16BPPBufferTransShadowZClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -1053,9 +1057,9 @@ void Blt8BPPDataTo16BPPBufferTransShadowZNBObscured(UINT16* pBuffer, UINT32 uiDe
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferTransShadowZClip(UINT16* pBuffer, UINT32 uiDestPitchBYTES, UINT16* pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect* clipregion, const UINT16* p16BPPPalette)
 {
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -1109,109 +1113,108 @@ void Blt8BPPDataTo16BPPBufferTransShadowZClip(UINT16* pBuffer, UINT32 uiDestPitc
 	ZPtr = (UINT8 *)pZBuffer + (uiDestPitchBYTES*(iTempY+TopSkip)) + ((iTempX+LeftSkip)*2);
 	LineSkip=(uiDestPitchBYTES-(BlitLength*2));
 
-	UINT8 PxCount, px;
+	UINT8 PxCount, px = 0;
 	UINT32 Unblitted, LSCount;
-	
-	
-  while (TopSkip)
-  {
-    px = *SrcPtr++;
-    if (px & 0x80)  continue;
-    if (px)
-    {
-      SrcPtr += px;
-      continue;
-    }
-    TopSkip--;
-  }
 
-  do
-  {
-    Unblitted = 0;
-    for (LSCount = LeftSkip; LSCount > 0; LSCount -= PxCount)
-    {
-      PxCount = *SrcPtr++;
-      if (PxCount & 0x80)
-      {
-        PxCount &= 0x7F;
-        if (PxCount > LSCount)
-        {
-          PxCount -= LSCount;
-          LSCount = BlitLength;
-          Unblitted = 0;
-          goto BlitTransparent;
-        }
-      }
-      else
-      {
-        if (px > LSCount)
-        {
-          SrcPtr += LSCount;
-          PxCount -= LSCount;
-          LSCount = BlitLength;
-          Unblitted = 0;
-          goto BlitNonTransLoop;
-        }
-        SrcPtr += PxCount;
-      }
-    }
 
-    LSCount = BlitLength;
-    Unblitted = 0;
-    while (LSCount > 0)
-    {
-      PxCount = *SrcPtr++;
-      if (PxCount & 0x80)
-      {
-BlitTransparent:  //skip transparent pixels
-        PxCount &= 0x7f;
-        if (PxCount > LSCount)
-          PxCount = LSCount;
-      
-        LSCount -= PxCount;
-        DestPtr += 2 * PxCount;
-        ZPtr    += 2 * PxCount;
-      }
-      else
-      {
-BlitNonTransLoop:								// blit non-transparent pixels
-        if (PxCount > LSCount)
-        {
-          PxCount -= LSCount;
-          Unblitted = PxCount;
-          PxCount = LSCount;
-        }
-        LSCount -= PxCount;
+	while (TopSkip)
+	{
+		px = *SrcPtr++;
+		if (px & 0x80)  continue;
+		if (px)
+		{
+			SrcPtr += px;
+			continue;
+		}
+		TopSkip--;
+	}
 
-        do
-        {
-          if (*ZPtr < usZValue )
-          {
-            *ZPtr = usZValue;
-            px = *SrcPtr++;
-            if (px != 254)
-              *(UINT16*)DestPtr = p16BPPPalette[px];
-              
-            else
-              *(UINT16*)DestPtr = ShadeTable[*(UINT16*)DestPtr];
-          }
+	do
+	{
+		Unblitted = 0;
+		for (LSCount = LeftSkip; LSCount > 0; LSCount -= PxCount)
+		{
+			PxCount = *SrcPtr++;
+			if (PxCount & 0x80)
+			{
+				PxCount &= 0x7F;
+				if (PxCount > static_cast<UINT32>(LSCount))
+				{
+					PxCount -= LSCount;
+					LSCount = BlitLength;
+					Unblitted = 0;
+					goto BlitTransparent;
+				}
+			}
+			else
+			{
+				if (px > LSCount)
+				{
+					SrcPtr += LSCount;
+					PxCount -= LSCount;
+					LSCount = BlitLength;
+					Unblitted = 0;
+					goto BlitNonTransLoop;
+				}
+				SrcPtr += PxCount;
+			}
+		}
 
-          DestPtr += 2;
-          ZPtr += 2;
-        }
-        while ( --px > 0 );
-        SrcPtr += Unblitted;
-      }
-    }
-    while (*SrcPtr++ != 0);
-    DestPtr += LineSkip;
-    ZPtr += LineSkip;
-  }
-  while ( --BlitHeight > 0 );
+		LSCount = BlitLength;
+		Unblitted = 0;
+		while (LSCount > 0)
+		{
+			PxCount = *SrcPtr++;
+			if (PxCount & 0x80)
+			{
+BlitTransparent: // skip transparent pixels
+				PxCount &= 0x7f;
+				if (PxCount > static_cast<UINT32>(LSCount))
+					PxCount = LSCount;
+
+				LSCount -= PxCount;
+				DestPtr += 2 * PxCount;
+				ZPtr    += 2 * PxCount;
+			}
+			else
+			{
+BlitNonTransLoop: // blit non-transparent pixels
+				if (PxCount > static_cast<UINT32>(LSCount))
+				{
+					PxCount -= LSCount;
+					Unblitted = PxCount;
+					PxCount = LSCount;
+				}
+				LSCount -= PxCount;
+
+				do
+				{
+					if (*ZPtr < usZValue )
+					{
+						*ZPtr = usZValue;
+						px = *SrcPtr++;
+						if (px != 254)
+							*(UINT16*)DestPtr = p16BPPPalette[px];
+						else
+							*(UINT16*)DestPtr = ShadeTable[*(UINT16*)DestPtr];
+					}
+
+					DestPtr += 2;
+					ZPtr += 2;
+				}
+				while ( --px > 0 );
+				SrcPtr += Unblitted;
+			}
+		}
+		while (*SrcPtr++ != 0);
+		DestPtr += LineSkip;
+		ZPtr += LineSkip;
+	}
+	while ( --BlitHeight > 0 );
 }
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransShadowClip
+Blt8BPPDataTo16BPPBufferTransShadowClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -1223,9 +1226,9 @@ BlitNonTransLoop:								// blit non-transparent pixels
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferTransShadowClip(UINT16* pBuffer, UINT32 uiDestPitchBYTES, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect* clipregion, const UINT16* p16BPPPalette)
 {
-	UINT8	 *DestPtr;
+	UINT8  *DestPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -1278,100 +1281,100 @@ void Blt8BPPDataTo16BPPBufferTransShadowClip(UINT16* pBuffer, UINT32 uiDestPitch
 	DestPtr = (UINT8 *)pBuffer + (uiDestPitchBYTES*(iTempY+TopSkip)) + ((iTempX+LeftSkip)*2);
 	LineSkip=(uiDestPitchBYTES-(BlitLength*2));
 
-	UINT8 px, PxCount;
+	UINT8 PxCount, px = 0;
 	UINT32 Unblitted;
 	INT32 LSCount;
 
-  while (TopSkip)
-  {
-    px = *SrcPtr++;
-    if (px & 0x80)  continue;
-    if (px)
-    {
-      SrcPtr += px;
-      continue;
-    }
-    TopSkip--;
-  }
+	while (TopSkip)
+	{
+		px = *SrcPtr++;
+		if (px & 0x80)  continue;
+		if (px)
+		{
+			SrcPtr += px;
+			continue;
+		}
+		TopSkip--;
+	}
 
-  do
-  {
-    Unblitted = 0;
-    for (LSCount = LeftSkip; LSCount > 0; LSCount -= PxCount)
-    {
-      PxCount = *SrcPtr++;
-      if (PxCount & 0x80)
-      {
-        PxCount &= 0x7F;
-        if (PxCount > LSCount)
-        {
-          PxCount -= LSCount;
-          LSCount = BlitLength;
-          Unblitted = 0;
-          goto BlitTransparent;
-        }
-      }
-      else
-      {
-        if (px > LSCount)
-        {
-          SrcPtr += LSCount;
-          PxCount -= LSCount;
-          LSCount = BlitLength;
-          Unblitted = 0;
-          goto BlitNonTransLoop;
-        }
-        SrcPtr += PxCount;
-      }
-    }
+	do
+	{
+		Unblitted = 0;
+		for (LSCount = LeftSkip; LSCount > 0; LSCount -= PxCount)
+		{
+			PxCount = *SrcPtr++;
+			if (PxCount & 0x80)
+			{
+				PxCount &= 0x7F;
+				if (PxCount > static_cast<UINT32>(LSCount))
+				{
+					PxCount -= LSCount;
+					LSCount = BlitLength;
+					Unblitted = 0;
+					goto BlitTransparent;
+				}
+			}
+			else
+			{
+				if (px > LSCount)
+				{
+					SrcPtr += LSCount;
+					PxCount -= LSCount;
+					LSCount = BlitLength;
+					Unblitted = 0;
+					goto BlitNonTransLoop;
+				}
+				SrcPtr += PxCount;
+			}
+		}
 
-    LSCount = BlitLength;
-    Unblitted = 0;
-    while (LSCount > 0)
-    {
-      PxCount = *SrcPtr++;
-      if (PxCount & 0x80)
-      {
-BlitTransparent:  //skip transparent pixels
-        PxCount &= 0x7f;
-        if (PxCount > LSCount)
-          PxCount = LSCount;
-      
-        LSCount -= PxCount;
-        DestPtr += 2 * PxCount;
-      }
-      else
-      {
-BlitNonTransLoop:								// blit non-transparent pixels
-        if (PxCount > LSCount)
-        {
-          PxCount -= LSCount;
-          Unblitted = PxCount;
-          PxCount = LSCount;
-        }
-        LSCount -= PxCount;
+		LSCount = BlitLength;
+		Unblitted = 0;
+		while (LSCount > 0)
+		{
+			PxCount = *SrcPtr++;
+			if (PxCount & 0x80)
+			{
+BlitTransparent: // skip transparent pixels
+				PxCount &= 0x7f;
+				if (PxCount > static_cast<UINT32>(LSCount))
+					PxCount = LSCount;
 
-        do
-        {
-          px = *SrcPtr++;
-          if (px != 254)
-            *(UINT16*)DestPtr = p16BPPPalette[px];
-          else
-            *(UINT16*)DestPtr = ShadeTable[*(UINT16*)DestPtr];
-          DestPtr += 2;
-        }
-        while ( --px > 0 );
-        SrcPtr += Unblitted;
-      }
-    }
-    while (*SrcPtr++ != 0);
-    DestPtr += LineSkip;
-  }
-  while ( --BlitHeight > 0 );
+				LSCount -= PxCount;
+				DestPtr += 2 * PxCount;
+			}
+			else
+			{
+BlitNonTransLoop: // blit non-transparent pixels
+				if (PxCount > static_cast<UINT32>(LSCount))
+				{
+					PxCount -= LSCount;
+					Unblitted = PxCount;
+					PxCount = LSCount;
+				}
+				LSCount -= PxCount;
+
+				do
+				{
+					px = *SrcPtr++;
+					if (px != 254)
+						*(UINT16*)DestPtr = p16BPPPalette[px];
+					else
+						*(UINT16*)DestPtr = ShadeTable[*(UINT16*)DestPtr];
+					DestPtr += 2;
+				}
+				while ( --px > 0 );
+				SrcPtr += Unblitted;
+			}
+		}
+		while (*SrcPtr++ != 0);
+		DestPtr += LineSkip;
+	}
+	while ( --BlitHeight > 0 );
 }
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransShadowZNBClip
+Blt8BPPDataTo16BPPBufferTransShadowZNBClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -1384,9 +1387,9 @@ BlitNonTransLoop:								// blit non-transparent pixels
 void Blt8BPPDataTo16BPPBufferTransShadowZNBClip(UINT16* pBuffer, UINT32 uiDestPitchBYTES, UINT16* pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect* clipregion, const UINT16* p16BPPPalette)
 {
 	UINT32 Unblitted;
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -1462,7 +1465,7 @@ void Blt8BPPDataTo16BPPBufferTransShadowZNBClip(UINT16* pBuffer, UINT32 uiDestPi
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -1471,7 +1474,7 @@ void Blt8BPPDataTo16BPPBufferTransShadowZNBClip(UINT16* pBuffer, UINT32 uiDestPi
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -1490,7 +1493,7 @@ void Blt8BPPDataTo16BPPBufferTransShadowZNBClip(UINT16* pBuffer, UINT32 uiDestPi
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -1498,7 +1501,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -1544,7 +1547,7 @@ BlitNonTransLoop: // blit non-transparent pixels
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransShadowZNBClip
+Blt8BPPDataTo16BPPBufferTransShadowZNBClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -1557,9 +1560,9 @@ BlitNonTransLoop: // blit non-transparent pixels
 void Blt8BPPDataTo16BPPBufferTransShadowZNBObscuredClip(UINT16* pBuffer, UINT32 uiDestPitchBYTES, UINT16* pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect* clipregion, const UINT16* p16BPPPalette)
 {
 	UINT32 Unblitted, uiLineFlag;
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -1637,7 +1640,7 @@ void Blt8BPPDataTo16BPPBufferTransShadowZNBObscuredClip(UINT16* pBuffer, UINT32 
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -1646,7 +1649,7 @@ void Blt8BPPDataTo16BPPBufferTransShadowZNBObscuredClip(UINT16* pBuffer, UINT32 
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -1665,7 +1668,7 @@ void Blt8BPPDataTo16BPPBufferTransShadowZNBObscuredClip(UINT16* pBuffer, UINT32 
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -1673,7 +1676,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -1721,7 +1724,7 @@ BlitNonTransLoop: // blit non-transparent pixels
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferShadowZ
+Blt8BPPDataTo16BPPBufferShadowZ
 
 	Creates a shadow using a brush, but modifies the destination buffer only if the current
 	Z level is equal to higher than what's in the Z buffer at that pixel location. It
@@ -1730,7 +1733,7 @@ BlitNonTransLoop: // blit non-transparent pixels
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferShadowZ( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex )
 {
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -1738,7 +1741,7 @@ void Blt8BPPDataTo16BPPBufferShadowZ( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, 
 	Assert( pBuffer != NULL );
 
 	// Get Offsets from Index into structure
-	ETRLEObject const& pTrav = hSrcVObject->SubregionProperties(usIndex);
+	ETRLEObject const& pTrav    = hSrcVObject->SubregionProperties(usIndex);
 	UINT32             usHeight = pTrav.usHeight;
 	UINT32      const  usWidth  = pTrav.usWidth;
 
@@ -1792,7 +1795,7 @@ void Blt8BPPDataTo16BPPBufferShadowZ( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, 
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferShadowZClip
+Blt8BPPDataTo16BPPBufferShadowZClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -1803,9 +1806,9 @@ void Blt8BPPDataTo16BPPBufferShadowZ( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, 
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferShadowZClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect *clipregion)
 {
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -1881,7 +1884,7 @@ void Blt8BPPDataTo16BPPBufferShadowZClip( UINT16 *pBuffer, UINT32 uiDestPitchBYT
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -1890,7 +1893,7 @@ void Blt8BPPDataTo16BPPBufferShadowZClip( UINT16 *pBuffer, UINT32 uiDestPitchBYT
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -1909,7 +1912,7 @@ void Blt8BPPDataTo16BPPBufferShadowZClip( UINT16 *pBuffer, UINT32 uiDestPitchBYT
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -1918,7 +1921,7 @@ BlitTransparent: // skip transparent pixels
 			{
 BlitNonTransLoop: // blit non-transparent pixels
 				SrcPtr += PxCount;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 
 				do
@@ -1944,7 +1947,7 @@ BlitNonTransLoop: // blit non-transparent pixels
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferShadowZNB
+Blt8BPPDataTo16BPPBufferShadowZNB
 
 	Creates a shadow using a brush, but modifies the destination buffer only if the current
 	Z level is equal to higher than what's in the Z buffer at that pixel location. It does
@@ -1953,7 +1956,7 @@ BlitNonTransLoop: // blit non-transparent pixels
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferShadowZNB( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex )
 {
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -1961,7 +1964,7 @@ void Blt8BPPDataTo16BPPBufferShadowZNB( UINT16 *pBuffer, UINT32 uiDestPitchBYTES
 	Assert( pBuffer != NULL );
 
 	// Get Offsets from Index into structure
-	ETRLEObject const& pTrav = hSrcVObject->SubregionProperties(usIndex);
+	ETRLEObject const& pTrav    = hSrcVObject->SubregionProperties(usIndex);
 	UINT32             usHeight = pTrav.usHeight;
 	UINT32      const  usWidth  = pTrav.usWidth;
 
@@ -2011,7 +2014,7 @@ void Blt8BPPDataTo16BPPBufferShadowZNB( UINT16 *pBuffer, UINT32 uiDestPitchBYTES
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferShadowZNBClip
+Blt8BPPDataTo16BPPBufferShadowZNBClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -2023,9 +2026,9 @@ void Blt8BPPDataTo16BPPBufferShadowZNB( UINT16 *pBuffer, UINT32 uiDestPitchBYTES
 void Blt8BPPDataTo16BPPBufferShadowZNBClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect *clipregion)
 {
 	UINT32 Unblitted;
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -2101,7 +2104,7 @@ void Blt8BPPDataTo16BPPBufferShadowZNBClip( UINT16 *pBuffer, UINT32 uiDestPitchB
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -2110,7 +2113,7 @@ void Blt8BPPDataTo16BPPBufferShadowZNBClip( UINT16 *pBuffer, UINT32 uiDestPitchB
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -2129,7 +2132,7 @@ void Blt8BPPDataTo16BPPBufferShadowZNBClip( UINT16 *pBuffer, UINT32 uiDestPitchB
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -2137,7 +2140,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -2169,7 +2172,7 @@ BlitNonTransLoop: // blit non-transparent pixels
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransZClip
+Blt8BPPDataTo16BPPBufferTransZClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -2181,9 +2184,9 @@ BlitNonTransLoop: // blit non-transparent pixels
 void Blt8BPPDataTo16BPPBufferTransZClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect *clipregion)
 {
 	UINT32 Unblitted;
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -2260,7 +2263,7 @@ void Blt8BPPDataTo16BPPBufferTransZClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTE
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -2269,7 +2272,7 @@ void Blt8BPPDataTo16BPPBufferTransZClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTE
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -2288,7 +2291,7 @@ void Blt8BPPDataTo16BPPBufferTransZClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTE
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -2296,7 +2299,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -2332,7 +2335,7 @@ BlitNonTransLoop: // blit non-transparent pixels
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransZNBClip
+Blt8BPPDataTo16BPPBufferTransZNBClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -2343,9 +2346,9 @@ BlitNonTransLoop: // blit non-transparent pixels
 void Blt8BPPDataTo16BPPBufferTransZNBClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect *clipregion)
 {
 	UINT32 Unblitted;
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -2422,7 +2425,7 @@ void Blt8BPPDataTo16BPPBufferTransZNBClip( UINT16 *pBuffer, UINT32 uiDestPitchBY
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -2431,7 +2434,7 @@ void Blt8BPPDataTo16BPPBufferTransZNBClip( UINT16 *pBuffer, UINT32 uiDestPitchBY
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -2450,7 +2453,7 @@ void Blt8BPPDataTo16BPPBufferTransZNBClip( UINT16 *pBuffer, UINT32 uiDestPitchBY
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -2458,7 +2461,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -2530,15 +2533,14 @@ void Blt8BPPDataSubTo16BPPBuffer(UINT16* const buf, UINT32 const uiDestPitchBYTE
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBuffer
+Blt8BPPDataTo16BPPBuffer
 
 	Blits from a flat surface to a 16-bit buffer.
 
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBuffer( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, SGPVSurface* hSrcVSurface, UINT8 *pSrcBuffer, INT32 iX, INT32 iY)
 {
-	UINT32 LineSkip;
-	INT32	 iTempX, iTempY;
+	INT32  iTempX, iTempY;
 
 	// Assertions
 	Assert( hSrcVSurface != NULL );
@@ -2560,7 +2562,6 @@ void Blt8BPPDataTo16BPPBuffer( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, SGPVSur
 	UINT8*  SrcPtr        = pSrcBuffer;
 	UINT16* DestPtr       = pBuffer + uiDestPitchBYTES / 2 * iTempY + iTempX;
 	UINT16* p16BPPPalette = hSrcVSurface->p16BPPPalette;
-	LineSkip=(uiDestPitchBYTES-(usWidth*2));
 
 	for (size_t h = usHeight; h != 0; --h)
 	{
@@ -2658,11 +2659,11 @@ void GetClippingRect(SGPRect *clip)
 		This function now takes a color field (which previously was
 		always black.  The 3rd assembler line in this function:
 
-				mov		ax, usColor				// color of pixel
+				mov	ax, usColor	// color of pixel
 
 		used to be:
 
-				xor   eax, eax					// color of pixel (black or 0)
+				xor	eax, eax	// color of pixel (black or 0)
 
 	  This was the only internal modification I made other than adding the usColor argument.
 
@@ -2746,7 +2747,7 @@ void Blt16BPPBufferLooseHatchRectWithColor(UINT16 *pBuffer, UINT32 uiDestPitchBY
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferShadow
+Blt8BPPDataTo16BPPBufferShadow
 
 	Modifies the destination buffer. Darkens the destination pixels by 25%, using the source
 	image as a mask. Any Non-zero index pixels are used to darken destination pixels.
@@ -2754,7 +2755,7 @@ void Blt16BPPBufferLooseHatchRectWithColor(UINT16 *pBuffer, UINT32 uiDestPitchBY
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferShadow( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex)
 {
-	UINT8	 *DestPtr;
+	UINT8  *DestPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -2762,7 +2763,7 @@ void Blt8BPPDataTo16BPPBufferShadow( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, H
 	Assert( pBuffer != NULL );
 
 	// Get Offsets from Index into structure
-	ETRLEObject const& pTrav = hSrcVObject->SubregionProperties(usIndex);
+	ETRLEObject const& pTrav    = hSrcVObject->SubregionProperties(usIndex);
 	UINT32             usHeight = pTrav.usHeight;
 	UINT32      const  usWidth  = pTrav.usWidth;
 
@@ -2857,7 +2858,7 @@ void Blt8BPPDataTo16BPPBufferTransparent(UINT16* const buf, UINT32 const uiDestP
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransparentClip
+Blt8BPPDataTo16BPPBufferTransparentClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. Clips the brush.
@@ -2866,9 +2867,9 @@ void Blt8BPPDataTo16BPPBufferTransparent(UINT16* const buf, UINT32 const uiDestP
 void Blt8BPPDataTo16BPPBufferTransparentClip(UINT16* const pBuffer, const UINT32 uiDestPitchBYTES, const SGPVObject* const hSrcVObject, const INT32 iX, const INT32 iY, const UINT16 usIndex, const SGPRect* const clipregion)
 {
 	UINT32 Unblitted;
-	UINT8	 *DestPtr;
+	UINT8  *DestPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -2945,7 +2946,7 @@ void Blt8BPPDataTo16BPPBufferTransparentClip(UINT16* const pBuffer, const UINT32
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -2954,7 +2955,7 @@ void Blt8BPPDataTo16BPPBufferTransparentClip(UINT16* const pBuffer, const UINT32
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -2973,14 +2974,14 @@ void Blt8BPPDataTo16BPPBufferTransparentClip(UINT16* const pBuffer, const UINT32
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 			}
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -3009,7 +3010,7 @@ BlitNonTransLoop: // blit non-transparent pixels
 
 
 /**********************************************************************************************
- BltIsClipped
+BltIsClipped
 
 	Determines whether a given blit will need clipping or not. Returns TRUE/FALSE.
 
@@ -3065,7 +3066,7 @@ BOOLEAN BltIsClipped(const SGPVObject* const hSrcVObject, const INT32 iX, const 
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferShadowClip
+Blt8BPPDataTo16BPPBufferShadowClip
 
 	Modifies the destination buffer. Darkens the destination pixels by 25%, using the source
 	image as a mask. Any Non-zero index pixels are used to darken destination pixels. Blitter
@@ -3074,9 +3075,9 @@ BOOLEAN BltIsClipped(const SGPVObject* const hSrcVObject, const INT32 iX, const 
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferShadowClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect *clipregion)
 {
-	UINT8	 *DestPtr;
+	UINT8  *DestPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -3152,7 +3153,7 @@ void Blt8BPPDataTo16BPPBufferShadowClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTE
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -3161,7 +3162,7 @@ void Blt8BPPDataTo16BPPBufferShadowClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTE
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -3180,7 +3181,7 @@ void Blt8BPPDataTo16BPPBufferShadowClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTE
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 			}
@@ -3188,7 +3189,7 @@ BlitTransparent: // skip transparent pixels
 			{
 BlitNonTransLoop: // blit non-transparent pixels
 				SrcPtr += PxCount;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 
 				do
@@ -3255,7 +3256,7 @@ UINT16 *DestPtr;
 
 
 /**********************************************************************************************
- BltIsClippedOrOffScreen
+BltIsClippedOrOffScreen
 
 	Determines whether a given blit will need clipping or not. Returns TRUE/FALSE.
 
@@ -3385,9 +3386,9 @@ void Blt8BPPDataTo16BPPBufferOutline(UINT16* const buf, UINT32 const uiDestPitch
 void Blt8BPPDataTo16BPPBufferOutlineClip(UINT16* const pBuffer, const UINT32 uiDestPitchBYTES, const SGPVObject* const hSrcVObject, const INT32 iX, const INT32 iY, const UINT16 usIndex, const INT16 s16BPPColor, const SGPRect* const clipregion)
 {
 	UINT32 Unblitted;
-	UINT8	 *DestPtr;
+	UINT8  *DestPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -3463,7 +3464,7 @@ void Blt8BPPDataTo16BPPBufferOutlineClip(UINT16* const pBuffer, const UINT32 uiD
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -3472,7 +3473,7 @@ void Blt8BPPDataTo16BPPBufferOutlineClip(UINT16* const pBuffer, const UINT32 uiD
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -3491,14 +3492,14 @@ void Blt8BPPDataTo16BPPBufferOutlineClip(UINT16* const pBuffer, const UINT32 uiD
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 			}
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -3538,9 +3539,9 @@ BlitNonTransLoop: // blit non-transparent pixels
 void Blt8BPPDataTo16BPPBufferOutlineZClip(UINT16* const pBuffer, const UINT32 uiDestPitchBYTES, UINT16* const pZBuffer, const UINT16 usZValue, const HVOBJECT hSrcVObject, const INT32 iX, const INT32 iY, const UINT16 usIndex, const INT16 s16BPPColor, const SGPRect* const clipregion)
 {
 	UINT32 Unblitted;
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -3618,7 +3619,7 @@ void Blt8BPPDataTo16BPPBufferOutlineZClip(UINT16* const pBuffer, const UINT32 ui
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -3627,7 +3628,7 @@ void Blt8BPPDataTo16BPPBufferOutlineZClip(UINT16* const pBuffer, const UINT32 ui
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -3646,7 +3647,7 @@ void Blt8BPPDataTo16BPPBufferOutlineZClip(UINT16* const pBuffer, const UINT32 ui
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -3654,7 +3655,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -3701,9 +3702,9 @@ BlitNonTransLoop: // blit non-transparent pixels
 void Blt8BPPDataTo16BPPBufferOutlineZPixelateObscuredClip(UINT16* const pBuffer, const UINT32 uiDestPitchBYTES, UINT16* const pZBuffer, const UINT16 usZValue, const HVOBJECT hSrcVObject, const INT32 iX, const INT32 iY, const UINT16 usIndex, const INT16 s16BPPColor, const SGPRect* const clipregion)
 {
 	UINT32 Unblitted;
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 	UINT32 uiLineFlag;
 
@@ -3786,7 +3787,7 @@ void Blt8BPPDataTo16BPPBufferOutlineZPixelateObscuredClip(UINT16* const pBuffer,
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -3795,7 +3796,7 @@ void Blt8BPPDataTo16BPPBufferOutlineZPixelateObscuredClip(UINT16* const pBuffer,
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -3814,7 +3815,7 @@ void Blt8BPPDataTo16BPPBufferOutlineZPixelateObscuredClip(UINT16* const pBuffer,
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -3822,7 +3823,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;
@@ -3872,7 +3873,7 @@ BlitNonTransLoop: // blit non-transparent pixels
 
 void Blt8BPPDataTo16BPPBufferOutlineShadow(UINT16* const pBuffer, const UINT32 uiDestPitchBYTES, const SGPVObject* const hSrcVObject, const INT32 iX, const INT32 iY, const UINT16 usIndex)
 {
-	UINT8	 *DestPtr;
+	UINT8  *DestPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -3929,9 +3930,12 @@ void Blt8BPPDataTo16BPPBufferOutlineShadow(UINT16* const pBuffer, const UINT32 u
 
 void Blt8BPPDataTo16BPPBufferOutlineShadowClip(UINT16* const pBuffer, const UINT32 uiDestPitchBYTES, const SGPVObject* const hSrcVObject, const INT32 iX, const INT32 iY, const UINT16 usIndex, const SGPRect* const clipregion)
 {
-	UINT8	 *DestPtr;
+#if 1 // XXX TODO
+	UNIMPLEMENTED
+#else
+	UINT8  *DestPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -3984,10 +3988,6 @@ void Blt8BPPDataTo16BPPBufferOutlineShadowClip(UINT16* const pBuffer, const UINT
 	DestPtr = (UINT8 *)pBuffer + (uiDestPitchBYTES*(iTempY+TopSkip)) + ((iTempX+LeftSkip)*2);
 	LineSkip=(uiDestPitchBYTES-(BlitLength*2));
 
-#if 1 // XXX TODO
-	(void)SrcPtr;
-	UNIMPLEMENTED
-#else
 	UINT32 Unblitted;
 	__asm {
 
@@ -3998,10 +3998,10 @@ void Blt8BPPDataTo16BPPBufferOutlineShadowClip(UINT16* const pBuffer, const UINT
 		mov		ebx, TopSkip
 		xor		ecx, ecx
 
-		or		ebx, ebx							// check for nothing clipped on top
+		or		ebx, ebx		// check for nothing clipped on top
 		jz		LeftSkipSetup
 
-TopSkipLoop:										// Skips the number of lines clipped at the top
+TopSkipLoop:						// Skips the number of lines clipped at the top
 
 		mov		cl, [esi]
 		inc		esi
@@ -4029,7 +4029,7 @@ TSEndLine:
 LeftSkipSetup:
 
 		mov		Unblitted, 0
-		mov		ebx, LeftSkip					// check for nothing clipped on the left
+		mov		ebx, LeftSkip		// check for nothing clipped on the left
 		or		ebx, ebx
 		jz		BlitLineSetup
 
@@ -4042,22 +4042,22 @@ LeftSkipLoop:
 		js		LSTrans
 
 		cmp		ecx, ebx
-		je		LSSkip2								// if equal, skip whole, and start blit with new run
-		jb		LSSkip1								// if less, skip whole thing
+		je		LSSkip2			// if equal, skip whole, and start blit with new run
+		jb		LSSkip1			// if less, skip whole thing
 
-		add		esi, ebx							// skip partial run, jump into normal loop for rest
+		add		esi, ebx		// skip partial run, jump into normal loop for rest
 		sub		ecx, ebx
 		mov		ebx, BlitLength
 		mov		Unblitted, 0
 		jmp		BlitNonTransLoop
 
 LSSkip2:
-		add		esi, ecx							// skip whole run, and start blit with new run
+		add		esi, ecx		// skip whole run, and start blit with new run
 		jmp		BlitLineSetup
 
 
 LSSkip1:
-		add		esi, ecx							// skip whole run, continue skipping
+		add		esi, ecx		// skip whole run, continue skipping
 		sub		ebx, ecx
 		jmp		LeftSkipLoop
 
@@ -4065,28 +4065,28 @@ LSSkip1:
 LSTrans:
 		and		ecx, 07fH
 		cmp		ecx, ebx
-		je		BlitLineSetup					// if equal, skip whole, and start blit with new run
-		jb		LSTrans1							// if less, skip whole thing
+		je		BlitLineSetup		// if equal, skip whole, and start blit with new run
+		jb		LSTrans1		// if less, skip whole thing
 
-		sub		ecx, ebx							// skip partial run, jump into normal loop for rest
+		sub		ecx, ebx		// skip partial run, jump into normal loop for rest
 		mov		ebx, BlitLength
 		jmp		BlitTransparent
 
 
 LSTrans1:
-		sub		ebx, ecx							// skip whole run, continue skipping
+		sub		ebx, ecx		// skip whole run, continue skipping
 		jmp		LeftSkipLoop
 
 
 
 
-BlitLineSetup:									// Does any actual blitting (trans/non) for the line
+BlitLineSetup:						// Does any actual blitting (trans/non) for the line
 		mov		ebx, BlitLength
 		mov		Unblitted, 0
 
 BlitDispatch:
 
-		or		ebx, ebx							// Check to see if we're done blitting
+		or		ebx, ebx		// Check to see if we're done blitting
 		jz		RightSkipLoop
 
 		mov		cl, [esi]
@@ -4206,7 +4206,7 @@ BlitDone:
 
 void Blt8BPPDataTo16BPPBufferOutlineZ(UINT16* const pBuffer, const UINT32 uiDestPitchBYTES, UINT16* const pZBuffer, const UINT16 usZValue, const HVOBJECT hSrcVObject, const INT32 iX, const INT32 iY, const UINT16 usIndex, const INT16 s16BPPColor)
 {
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -4368,7 +4368,7 @@ BlitDone:
 
 void Blt8BPPDataTo16BPPBufferOutlineZPixelateObscured(UINT16* const pBuffer, const UINT32 uiDestPitchBYTES, UINT16* const pZBuffer, const UINT16 usZValue, const HVOBJECT hSrcVObject, const INT32 iX, const INT32 iY, const UINT16 usIndex, const INT16 s16BPPColor)
 {
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
 	UINT32 uiLineFlag;
 
@@ -4558,7 +4558,7 @@ BlitDone:
 // This is the same as above, but DONOT WRITE to Z!
 void Blt8BPPDataTo16BPPBufferOutlineZNB(UINT16* const pBuffer, const UINT32 uiDestPitchBYTES, UINT16* const pZBuffer, const UINT16 usZValue, const HVOBJECT hSrcVObject, const INT32 iX, const INT32 iY, const UINT16 usIndex)
 {
-	UINT8	 *DestPtr, *ZPtr;
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -4621,7 +4621,7 @@ void Blt8BPPDataTo16BPPBufferOutlineZNB(UINT16* const pBuffer, const UINT32 uiDe
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferIntensityZ
+Blt8BPPDataTo16BPPBufferIntensityZ
 
 	Creates a shadow using a brush, but modifies the destination buffer only if the current
 	Z level is equal to higher than what's in the Z buffer at that pixel location. It
@@ -4630,7 +4630,10 @@ void Blt8BPPDataTo16BPPBufferOutlineZNB(UINT16* const pBuffer, const UINT32 uiDe
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferIntensityZ( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex )
 {
-	UINT8	 *DestPtr, *ZPtr;
+#if 1 // XXX TODO
+	UNIMPLEMENTED
+#else
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -4655,11 +4658,6 @@ void Blt8BPPDataTo16BPPBufferIntensityZ( UINT16 *pBuffer, UINT32 uiDestPitchBYTE
 	ZPtr = (UINT8 *)pZBuffer + (uiDestPitchBYTES*iTempY) + (iTempX*2);
 	LineSkip=(uiDestPitchBYTES-(usWidth*2));
 
-#if 1 // XXX TODO
-	(void)SrcPtr;
-	(void)usHeight;
-	UNIMPLEMENTED
-#else
 	__asm {
 
 		mov		esi, SrcPtr
@@ -4728,7 +4726,7 @@ BlitDone:
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferIntensityZClip
+Blt8BPPDataTo16BPPBufferIntensityZClip
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -4739,9 +4737,12 @@ BlitDone:
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferIntensityZClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect *clipregion)
 {
-	UINT8	 *DestPtr, *ZPtr;
+#if 1 // XXX TODO
+	UNIMPLEMENTED
+#else
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -4795,10 +4796,6 @@ void Blt8BPPDataTo16BPPBufferIntensityZClip( UINT16 *pBuffer, UINT32 uiDestPitch
 	ZPtr = (UINT8 *)pZBuffer + (uiDestPitchBYTES*(iTempY+TopSkip)) + ((iTempX+LeftSkip)*2);
 	LineSkip=(uiDestPitchBYTES-(BlitLength*2));
 
-#if 1 // XXX TODO
-	(void)SrcPtr;
-	UNIMPLEMENTED
-#else
 	UINT32 Unblitted;
 	INT32  LSCount;
 	__asm {
@@ -4810,10 +4807,10 @@ void Blt8BPPDataTo16BPPBufferIntensityZClip( UINT16 *pBuffer, UINT32 uiDestPitch
 		mov		ebx, ZPtr
 		xor		ecx, ecx
 
-		cmp		TopSkip, 0							// check for nothing clipped on top
+		cmp		TopSkip, 0		// check for nothing clipped on top
 		je		LeftSkipSetup
 
-TopSkipLoop:										// Skips the number of lines clipped at the top
+TopSkipLoop:						// Skips the number of lines clipped at the top
 
 		mov		cl, [esi]
 		inc		esi
@@ -4845,10 +4842,10 @@ LeftSkipLoop:
 		js		LSTrans
 
 		cmp		ecx, LSCount
-		je		LSSkip2								// if equal, skip whole, and start blit with new run
-		jb		LSSkip1								// if less, skip whole thing
+		je		LSSkip2			// if equal, skip whole, and start blit with new run
+		jb		LSSkip1			// if less, skip whole thing
 
-		add		esi, LSCount							// skip partial run, jump into normal loop for rest
+		add		esi, LSCount		// skip partial run, jump into normal loop for rest
 		sub		ecx, LSCount
 		mov		eax, BlitLength
 		mov		LSCount, eax
@@ -4856,12 +4853,12 @@ LeftSkipLoop:
 		jmp		BlitNonTransLoop
 
 LSSkip2:
-		add		esi, ecx							// skip whole run, and start blit with new run
+		add		esi, ecx		// skip whole run, and start blit with new run
 		jmp		BlitLineSetup
 
 
 LSSkip1:
-		add		esi, ecx							// skip whole run, continue skipping
+		add		esi, ecx		// skip whole run, continue skipping
 		sub		LSCount, ecx
 		jmp		LeftSkipLoop
 
@@ -4869,10 +4866,10 @@ LSSkip1:
 LSTrans:
 		and		ecx, 07fH
 		cmp		ecx, LSCount
-		je		BlitLineSetup					// if equal, skip whole, and start blit with new run
-		jb		LSTrans1							// if less, skip whole thing
+		je		BlitLineSetup		// if equal, skip whole, and start blit with new run
+		jb		LSTrans1		// if less, skip whole thing
 
-		sub		ecx, LSCount							// skip partial run, jump into normal loop for rest
+		sub		ecx, LSCount		// skip partial run, jump into normal loop for rest
 		mov		eax, BlitLength
 		mov		LSCount, eax
 		mov		Unblitted, 0
@@ -4880,18 +4877,18 @@ LSTrans:
 
 
 LSTrans1:
-		sub		LSCount, ecx							// skip whole run, continue skipping
+		sub		LSCount, ecx		// skip whole run, continue skipping
 		jmp		LeftSkipLoop
 
 
-BlitLineSetup:									// Does any actual blitting (trans/non) for the line
+BlitLineSetup:						// Does any actual blitting (trans/non) for the line
 		mov		eax, BlitLength
 		mov		LSCount, eax
 		mov		Unblitted, 0
 
 BlitDispatch:
 
-		cmp		LSCount, 0							// Check to see if we're done blitting
+		cmp		LSCount, 0		// Check to see if we're done blitting
 		je		RightSkipLoop
 
 		mov		cl, [esi]
@@ -4899,7 +4896,7 @@ BlitDispatch:
 		or		cl, cl
 		js		BlitTransparent
 
-BlitNonTransLoop:								// blit non-transparent pixels
+BlitNonTransLoop:					// blit non-transparent pixels
 
 		cmp		ecx, LSCount
 		jbe		BNTrans1
@@ -4937,7 +4934,7 @@ BlitNTL2:
 		add		esi, Unblitted
 		jmp		BlitDispatch
 
-BlitTransparent:											// skip transparent pixels
+BlitTransparent:					// skip transparent pixels
 
 		and		ecx, 07fH
 		cmp		ecx, LSCount
@@ -4955,7 +4952,7 @@ BTrans1:
 		jmp		BlitDispatch
 
 
-RightSkipLoop:												// skip along until we hit and end-of-line marker
+RightSkipLoop:						// skip along until we hit and end-of-line marker
 
 
 RSLoop1:
@@ -4979,7 +4976,7 @@ BlitDone:
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferIntensityZNB
+Blt8BPPDataTo16BPPBufferIntensityZNB
 
 	Creates a shadow using a brush, but modifies the destination buffer only if the current
 	Z level is equal to higher than what's in the Z buffer at that pixel location. It does
@@ -4988,7 +4985,10 @@ BlitDone:
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferIntensityZNB( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex )
 {
-	UINT8	 *DestPtr, *ZPtr;
+#if 1 // XXX TODO
+	UNIMPLEMENTED
+#else
+	UINT8  *DestPtr, *ZPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -5013,11 +5013,6 @@ void Blt8BPPDataTo16BPPBufferIntensityZNB( UINT16 *pBuffer, UINT32 uiDestPitchBY
 	ZPtr = (UINT8 *)pZBuffer + (uiDestPitchBYTES*iTempY) + (iTempX*2);
 	LineSkip=(uiDestPitchBYTES-(usWidth*2));
 
-#if 1 // XXX TODO
-	(void)SrcPtr;
-	(void)usHeight;
-	UNIMPLEMENTED
-#else
 	__asm {
 
 		mov		esi, SrcPtr
@@ -5084,7 +5079,7 @@ BlitDone:
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferIntensityClip
+Blt8BPPDataTo16BPPBufferIntensityClip
 
 	Modifies the destination buffer. Darkens the destination pixels by 25%, using the source
 	image as a mask. Any Non-zero index pixels are used to darken destination pixels. Blitter
@@ -5093,9 +5088,12 @@ BlitDone:
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferIntensityClip( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect *clipregion)
 {
-	UINT8	 *DestPtr;
+#if 1 // XXX TODO
+	UNIMPLEMENTED
+#else
+	UINT8  *DestPtr;
 	UINT32 LineSkip;
-	INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight;
 	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
@@ -5148,10 +5146,6 @@ void Blt8BPPDataTo16BPPBufferIntensityClip( UINT16 *pBuffer, UINT32 uiDestPitchB
 	DestPtr = (UINT8 *)pBuffer + (uiDestPitchBYTES*(iTempY+TopSkip)) + ((iTempX+LeftSkip)*2);
 	LineSkip=(uiDestPitchBYTES-(BlitLength*2));
 
-#if 1 // XXX TODO
-	(void)SrcPtr;
-	UNIMPLEMENTED
-#else
 	UINT32 Unblitted;
 	__asm {
 
@@ -5162,10 +5156,10 @@ void Blt8BPPDataTo16BPPBufferIntensityClip( UINT16 *pBuffer, UINT32 uiDestPitchB
 		mov		ebx, TopSkip
 		xor		ecx, ecx
 
-		or		ebx, ebx							// check for nothing clipped on top
+		or		ebx, ebx		// check for nothing clipped on top
 		jz		LeftSkipSetup
 
-TopSkipLoop:										// Skips the number of lines clipped at the top
+TopSkipLoop:						// Skips the number of lines clipped at the top
 
 		mov		cl, [esi]
 		inc		esi
@@ -5186,7 +5180,7 @@ TSEndLine:
 LeftSkipSetup:
 
 		mov		Unblitted, 0
-		mov		ebx, LeftSkip					// check for nothing clipped on the left
+		mov		ebx, LeftSkip		// check for nothing clipped on the left
 		or		ebx, ebx
 		jz		BlitLineSetup
 
@@ -5199,22 +5193,22 @@ LeftSkipLoop:
 		js		LSTrans
 
 		cmp		ecx, ebx
-		je		LSSkip2								// if equal, skip whole, and start blit with new run
-		jb		LSSkip1								// if less, skip whole thing
+		je		LSSkip2			// if equal, skip whole, and start blit with new run
+		jb		LSSkip1			// if less, skip whole thing
 
-		add		esi, ebx							// skip partial run, jump into normal loop for rest
+		add		esi, ebx		// skip partial run, jump into normal loop for rest
 		sub		ecx, ebx
 		mov		ebx, BlitLength
 		mov		Unblitted, 0
 		jmp		BlitNonTransLoop
 
 LSSkip2:
-		add		esi, ecx							// skip whole run, and start blit with new run
+		add		esi, ecx		// skip whole run, and start blit with new run
 		jmp		BlitLineSetup
 
 
 LSSkip1:
-		add		esi, ecx							// skip whole run, continue skipping
+		add		esi, ecx		// skip whole run, continue skipping
 		sub		ebx, ecx
 		jmp		LeftSkipLoop
 
@@ -5222,28 +5216,28 @@ LSSkip1:
 LSTrans:
 		and		ecx, 07fH
 		cmp		ecx, ebx
-		je		BlitLineSetup					// if equal, skip whole, and start blit with new run
-		jb		LSTrans1							// if less, skip whole thing
+		je		BlitLineSetup		// if equal, skip whole, and start blit with new run
+		jb		LSTrans1		// if less, skip whole thing
 
-		sub		ecx, ebx							// skip partial run, jump into normal loop for rest
+		sub		ecx, ebx		// skip partial run, jump into normal loop for rest
 		mov		ebx, BlitLength
 		jmp		BlitTransparent
 
 
 LSTrans1:
-		sub		ebx, ecx							// skip whole run, continue skipping
+		sub		ebx, ecx		// skip whole run, continue skipping
 		jmp		LeftSkipLoop
 
 
 
 
-BlitLineSetup:									// Does any actual blitting (trans/non) for the line
+BlitLineSetup:						// Does any actual blitting (trans/non) for the line
 		mov		ebx, BlitLength
 		mov		Unblitted, 0
 
 BlitDispatch:
 
-		or		ebx, ebx							// Check to see if we're done blitting
+		or		ebx, ebx		// Check to see if we're done blitting
 		jz		RightSkipLoop
 
 		mov		cl, [esi]
@@ -5362,7 +5356,7 @@ BlitDone:
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferIntensity
+Blt8BPPDataTo16BPPBufferIntensity
 
 	Modifies the destination buffer. Darkens the destination pixels by 25%, using the source
 	image as a mask. Any Non-zero index pixels are used to darken destination pixels.
@@ -5370,7 +5364,10 @@ BlitDone:
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferIntensity( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex)
 {
-	UINT8	 *DestPtr;
+#if 1 // XXX TODO
+	UNIMPLEMENTED
+#else
+	UINT8  *DestPtr;
 	UINT32 LineSkip;
 
 	// Assertions
@@ -5394,11 +5391,6 @@ void Blt8BPPDataTo16BPPBufferIntensity( UINT16 *pBuffer, UINT32 uiDestPitchBYTES
 	DestPtr = (UINT8 *)pBuffer + (uiDestPitchBYTES*iTempY) + (iTempX*2);
 	LineSkip=(uiDestPitchBYTES-(usWidth*2));
 
-#if 1 // XXX TODO
-	(void)SrcPtr;
-	(void)usHeight;
-	UNIMPLEMENTED
-#else
 	__asm {
 
 		mov		esi, SrcPtr
@@ -5501,7 +5493,7 @@ BlitDone:
 
 
 /**********************************************************************************************
- Blt8BPPDataTo16BPPBufferTransZClipPixelateObscured
+Blt8BPPDataTo16BPPBufferTransZClipPixelateObscured
 
 	Blits an image into the destination buffer, using an ETRLE brush as a source, and a 16-bit
 	buffer as a destination. As it is blitting, it checks the Z value of the ZBuffer, and if the
@@ -5514,12 +5506,12 @@ BlitDone:
 **********************************************************************************************/
 void Blt8BPPDataTo16BPPBufferTransZClipPixelateObscured( UINT16 *pBuffer, UINT32 uiDestPitchBYTES, UINT16 *pZBuffer, UINT16 usZValue, HVOBJECT hSrcVObject, INT32 iX, INT32 iY, UINT16 usIndex, SGPRect *clipregion)
 {
-UINT32 uiLineFlag;
-UINT32 Unblitted;
-UINT8	 *DestPtr, *ZPtr;
-UINT32 LineSkip;
-INT32	 LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
-INT32  ClipX1, ClipY1, ClipX2, ClipY2;
+	UINT32 uiLineFlag;
+	UINT32 Unblitted;
+	UINT8  *DestPtr, *ZPtr;
+	UINT32 LineSkip;
+	INT32  LeftSkip, RightSkip, TopSkip, BottomSkip, BlitLength, BlitHeight, LSCount;
+	INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 
 	// Assertions
 	Assert( hSrcVObject != NULL );
@@ -5598,7 +5590,7 @@ INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 			if (PxCount & 0x80)
 			{
 				PxCount &= 0x7F;
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					PxCount -= LSCount;
 					LSCount = BlitLength;
@@ -5607,7 +5599,7 @@ INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 			}
 			else
 			{
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					SrcPtr += LSCount;
 					PxCount -= LSCount;
@@ -5626,7 +5618,7 @@ INT32  ClipX1, ClipY1, ClipX2, ClipY2;
 			{
 BlitTransparent: // skip transparent pixels
 				PxCount &= 0x7F;
-				if (PxCount > LSCount) PxCount = LSCount;
+				if (PxCount > static_cast<UINT32>(LSCount)) PxCount = LSCount;
 				LSCount -= PxCount;
 				DestPtr += 2 * PxCount;
 				ZPtr    += 2 * PxCount;
@@ -5634,7 +5626,7 @@ BlitTransparent: // skip transparent pixels
 			else
 			{
 BlitNonTransLoop: // blit non-transparent pixels
-				if (PxCount > LSCount)
+				if (PxCount > static_cast<UINT32>(LSCount))
 				{
 					Unblitted = PxCount - LSCount;
 					PxCount = LSCount;

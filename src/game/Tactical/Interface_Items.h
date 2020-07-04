@@ -8,20 +8,23 @@
 
 #include "UILayout.h"
 
+#include <string_theory/string>
+
+
 struct ItemModel;
 
 
 // DEFINES FOR ITEM SLOT SIZES IN PIXELS
-#define		BIG_INV_SLOT_WIDTH				61
-#define		BIG_INV_SLOT_HEIGHT				22
-#define		SM_INV_SLOT_WIDTH					30
-#define		SM_INV_SLOT_HEIGHT				23
-#define		VEST_INV_SLOT_WIDTH				43
-#define		VEST_INV_SLOT_HEIGHT			24
-#define		LEGS_INV_SLOT_WIDTH				43
-#define		LEGS_INV_SLOT_HEIGHT			24
-#define		HEAD_INV_SLOT_WIDTH				43
-#define		HEAD_INV_SLOT_HEIGHT			24
+#define BIG_INV_SLOT_WIDTH	61
+#define BIG_INV_SLOT_HEIGHT	22
+#define SM_INV_SLOT_WIDTH	30
+#define SM_INV_SLOT_HEIGHT	23
+#define VEST_INV_SLOT_WIDTH	43
+#define VEST_INV_SLOT_HEIGHT	24
+#define LEGS_INV_SLOT_WIDTH	43
+#define LEGS_INV_SLOT_HEIGHT	24
+#define HEAD_INV_SLOT_WIDTH	43
+#define HEAD_INV_SLOT_HEIGHT	24
 
 
 // Itempickup stuff
@@ -50,10 +53,10 @@ BOOLEAN HandleCompatibleAmmoUI(const SOLDIERTYPE* pSoldier, INT8 bInvPos, BOOLEA
 // THIS FUNCTION IS CALLED TO RENDER AN ITEM.
 // uiBuffer - The Dest Video Surface - can only be FRAME_BUFFER or guiSAVEBUFFER
 // pSoldier - used for determining whether burst mode needs display
-// pObject	- Usually taken from pSoldier->inv[HANDPOS]
-// sX, sY, Width, Height,  - Will Center it in the Width
+// pObject  - Usually taken from pSoldier->inv[HANDPOS]
+// sX, sY, Width, Height, - Will Center it in the Width
 // fDirtyLevel  if == DIRTYLEVEL2 will render everything
-//							if == DIRTYLEVEL1 will render bullets and status only
+//              if == DIRTYLEVEL1 will render bullets and status only
 //
 //  Last parameter used mainly for when mouse is over item
 void INVRenderItem(SGPVSurface* uiBuffer, SOLDIERTYPE const* pSoldier, OBJECTTYPE const&, INT16 sX, INT16 sY, INT16 sWidth, INT16 sHeight, DirtyLevel, UINT8 ubStatusIndex, INT16 sOutlineColor);
@@ -99,13 +102,13 @@ void InternalBeginItemPointer( SOLDIERTYPE *pSoldier, OBJECTTYPE *pObject, INT8 
 void EndItemPointer(void);
 void DrawItemFreeCursor(void);
 void DrawItemTileCursor(void);
-BOOLEAN	 HandleItemPointerClick( UINT16 usMapPos );
+BOOLEAN HandleItemPointerClick( UINT16 usMapPos );
 UINT8 GetAttachmentHintColor(const OBJECTTYPE* pObj);
 SGPVObject const& GetInterfaceGraphicForItem(const ItemModel *item);
 UINT16            GetTileGraphicForItem(const ItemModel *item);
 SGPVObject*       LoadTileGraphicForItem(const ItemModel *item);
 
-void GetHelpTextForItem(wchar_t* buf, size_t length, OBJECTTYPE const&);
+ST::string GetHelpTextForItem(const OBJECTTYPE& obj);
 
 void CancelItemPointer(void);
 

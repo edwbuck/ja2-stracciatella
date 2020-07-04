@@ -9,19 +9,19 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
-#include "slog/slog.h"
+#include "Logger.h"
 
 static void AudioGapListInit(const char* zSoundFile, AudioGapList* pGapList)
 {
-	/* This procedure will load in the appropriate .gap file, corresponding to
-	 * the .wav file in szSoundEffects indexed by uiSampleNum.  The procedure
-	 * will then allocate and load in the AUDIO_GAP information, while counting
-	 * the number of elements loaded */
+	// This procedure will load in the appropriate .gap file, corresponding to
+	// the .wav file in szSoundEffects indexed by uiSampleNum.  The procedure
+	// will then allocate and load in the AUDIO_GAP information, while counting
+	// the number of elements loaded
 
-	SLOGD(DEBUG_TAG_GAP, "File is %s", zSoundFile);
+	SLOGD("File is %s", zSoundFile);
 
 	// strip .wav and change to .gap
-  std::string sFileName(FileMan::replaceExtension(std::string(zSoundFile), ".gap"));
+	ST::string sFileName(FileMan::replaceExtension(zSoundFile, "gap"));
 
 	try
 	{
@@ -34,15 +34,15 @@ static void AudioGapListInit(const char* zSoundFile, AudioGapList* pGapList)
 		const UINT32 count = size / 8;
 		if (count > 0)
 		{
-			BYTE *data = MALLOCN(BYTE, size);
+			BYTE *data = new BYTE[size]{};
 			FileRead(f, data, size);
 
-			AUDIO_GAP* const gaps  = MALLOCN(AUDIO_GAP, count);
+			AUDIO_GAP* const gaps  = new AUDIO_GAP[count]{};
 
 			pGapList->gaps = gaps;
 			pGapList->end  = gaps + count;
 
-			const BYTE* d = data;
+			DataReader d{data};
 			for (UINT32 i = 0; i < count; ++i)
 			{
 				UINT32 start;
@@ -54,12 +54,13 @@ static void AudioGapListInit(const char* zSoundFile, AudioGapList* pGapList)
 				gaps[i].start = start;
 				gaps[i].end   = end;
 
-				SLOGD(DEBUG_TAG_GAP, "Gap Start %d and Ends %d", start, end);
+				SLOGD("Gap Start %d and Ends %d", start, end);
 			}
+			Assert(d.getConsumed() == size);
 
-      SLOGD(DEBUG_TAG_GAP, "gap list started from file %s", sFileName.c_str());
+			SLOGD("gap list started from file %s", sFileName.c_str());
 
-			MemFree(data);
+			delete[] data;
 			return;
 		}
 	}
@@ -72,23 +73,23 @@ static void AudioGapListInit(const char* zSoundFile, AudioGapList* pGapList)
 
 void AudioGapListDone(AudioGapList* pGapList)
 {
-	/* Free the array and nullify the pointers in the AudioGapList */
-	MemFree(pGapList->gaps);
+	// Free the array and nullify the pointers in the AudioGapList
+	delete[] pGapList->gaps;
 	pGapList->gaps = NULL;
 	pGapList->end  = NULL;
-	SLOGD(DEBUG_TAG_GAP, "Audio Gap List Deleted");
+	SLOGD("Audio Gap List Deleted");
 }
 
 
 BOOLEAN PollAudioGap(UINT32 uiSampleNum, AudioGapList* pGapList)
 {
-	/* This procedure will access the AudioGapList pertaining to the .wav about
-	 * to be played and returns whether there is a gap currently.  This is done
-	 * by going to the current AUDIO_GAP element in the AudioGapList, comparing
-	 * to see if the current time is between the start and end. If so, return
-	 * TRUE..if not and the start of the next element is not greater than
-	 * current time, set current to next and repeat ...if next elements start
-	 * is larger than current time, or no more elements..  return FALSE */
+	// This procedure will access the AudioGapList pertaining to the .wav about
+	// to be played and returns whether there is a gap currently.  This is done
+	// by going to the current AUDIO_GAP element in the AudioGapList, comparing
+	// to see if the current time is between the start and end. If so, return
+	// TRUE..if not and the start of the next element is not greater than
+	// current time, set current to next and repeat ...if next elements start
+	// is larger than current time, or no more elements..  return FALSE
 
 	if (!pGapList)
 	{
@@ -100,7 +101,7 @@ BOOLEAN PollAudioGap(UINT32 uiSampleNum, AudioGapList* pGapList)
 	if (i == NULL) return FALSE;
 
 	const UINT32 time = SoundGetPosition(uiSampleNum);
-	SLOGD(DEBUG_TAG_GAP, "Sound Sample Time is %d", time);
+	SLOGD("Sound Sample Time is %d", time);
 
 	// Check to see if we have fallen behind.  If so, catch up
 	const AUDIO_GAP* const end = pGapList->end;
@@ -113,7 +114,7 @@ BOOLEAN PollAudioGap(UINT32 uiSampleNum, AudioGapList* pGapList)
 	if (i->start < time && time < i->end)
 	{
 		// we are within the time frame
-		SLOGD(DEBUG_TAG_GAP, "Gap Started at %d", time);
+		SLOGD("Gap Started at %d", time);
 		return TRUE;
 	}
 	else

@@ -24,6 +24,9 @@
 #include "ContentManager.h"
 #include "GameInstance.h"
 
+#include <string_theory/string>
+
+
 struct CRDT_NODE
 {
 	INT16        sPosY;
@@ -33,63 +36,63 @@ struct CRDT_NODE
 };
 
 //flags for the credits
-#define		CRDT_FLAG__TITLE							0x00000001
-#define		CRDT_FLAG__START_SECTION			0x00000002
-#define		CRDT_FLAG__END_SECTION				0x00000004
+#define CRDT_FLAG__TITLE		0x00000001
+#define CRDT_FLAG__START_SECTION	0x00000002
+#define CRDT_FLAG__END_SECTION		0x00000004
 
 
-#define CRDT_NAME_OF_CREDIT_FILE BINARYDATADIR "/credits.edt"
+#define CRDT_NAME_OF_CREDIT_FILE	BINARYDATADIR "/credits.edt"
 
-#define CREDITS_LINESIZE 80
+#define CREDITS_LINESIZE		80
 
 
 //
 // Code tokens
 //
 //new codes:
-#define CRDT_START_CODE      L'@'
-#define CRDT_SEPARATION_CODE L','
-#define CRDT_END_CODE        L';'
+#define CRDT_START_CODE		'@'
+#define CRDT_SEPARATION_CODE		','
+#define CRDT_END_CODE			';'
 
-#define		CRDT_DELAY_BN_STRINGS_CODE			'D'
-#define		CRDT_DELAY_BN_SECTIONS_CODE			'B'
-#define		CRDT_SCROLL_SPEED								'S'
-#define		CRDT_FONT_JUSTIFICATION					'J'
-#define		CRDT_TITLE_FONT_COLOR						'C'
-#define		CRDT_ACTIVE_FONT_COLOR					'R'
+#define CRDT_DELAY_BN_STRINGS_CODE	'D'
+#define CRDT_DELAY_BN_SECTIONS_CODE	'B'
+#define CRDT_SCROLL_SPEED		'S'
+#define CRDT_FONT_JUSTIFICATION	'J'
+#define CRDT_TITLE_FONT_COLOR		'C'
+#define CRDT_ACTIVE_FONT_COLOR		'R'
 
 //Flags:
-#define		CRDT_TITLE											'T'
-#define		CRDT_START_OF_SECTION						'{'
-#define		CRDT_END_OF_SECTION							'}'
+#define CRDT_TITLE			'T'
+#define CRDT_START_OF_SECTION		'{'
+#define CRDT_END_OF_SECTION		'}'
 
 
-#define		CRDT_NAME_LOC_X										(375 + STD_SCREEN_X)
-#define		CRDT_NAME_LOC_Y										(420 + STD_SCREEN_Y)
-#define		CRDT_NAME_TITLE_LOC_Y							(435 + STD_SCREEN_Y)
-#define		CRDT_NAME_FUNNY_LOC_Y							(450 + STD_SCREEN_Y)
-#define		CRDT_NAME_LOC_WIDTH								260
-#define		CRDT_NAME_LOC_HEIGHT							( CRDT_NAME_FUNNY_LOC_Y - CRDT_NAME_LOC_Y + GetFontHeight( CRDT_NAME_FONT ) )
+#define CRDT_NAME_LOC_X		(375 + STD_SCREEN_X)
+#define CRDT_NAME_LOC_Y		(420 + STD_SCREEN_Y)
+#define CRDT_NAME_TITLE_LOC_Y		(435 + STD_SCREEN_Y)
+#define CRDT_NAME_FUNNY_LOC_Y		(450 + STD_SCREEN_Y)
+#define CRDT_NAME_LOC_WIDTH		260
+#define CRDT_NAME_LOC_HEIGHT		( CRDT_NAME_FUNNY_LOC_Y - CRDT_NAME_LOC_Y + GetFontHeight( CRDT_NAME_FONT ) )
 
-#define		CRDT_NAME_FONT										FONT12ARIAL
-
-
-#define		CRDT_WIDTH_OF_TEXT_AREA					210
-#define		CRDT_TEXT_START_LOC							(10 + STD_SCREEN_X)
+#define CRDT_NAME_FONT			FONT12ARIAL
 
 
-#define		CRDT_SCROLL_PIXEL_AMOUNT				1
-#define		CRDT_NODE_DELAY_AMOUNT					25
+#define CRDT_WIDTH_OF_TEXT_AREA	210
+#define CRDT_TEXT_START_LOC		(10 + STD_SCREEN_X)
 
-#define		CRDT_SPACE_BN_SECTIONS					50
-#define		CRDT_SPACE_BN_NODES							12
 
-#define CRDT_START_POS_Y        (SCREEN_HEIGHT - 1 - STD_SCREEN_Y)
+#define CRDT_SCROLL_PIXEL_AMOUNT	1
+#define CRDT_NODE_DELAY_AMOUNT		25
 
-#define		CRDT_EYE_WIDTH									30
-#define		CRDT_EYE_HEIGHT									12
+#define CRDT_SPACE_BN_SECTIONS		50
+#define CRDT_SPACE_BN_NODES		12
 
-#define		CRDT_EYES_CLOSED_TIME						150
+#define CRDT_START_POS_Y		(SCREEN_HEIGHT - 1 - STD_SCREEN_Y)
+
+#define CRDT_EYE_WIDTH			30
+#define CRDT_EYE_HEIGHT		12
+
+#define CRDT_EYES_CLOSED_TIME		150
 
 
 struct CreditFace
@@ -297,7 +300,7 @@ static void HandleCreditScreen(void)
 
 static void RenderCreditScreen(void)
 {
-  BltVideoObject(FRAME_BUFFER, guiCreditBackGroundImage, 0, STD_SCREEN_X, STD_SCREEN_Y);
+	BltVideoObject(FRAME_BUFFER, guiCreditBackGroundImage, 0, STD_SCREEN_X, STD_SCREEN_Y);
 	InvalidateScreen();
 }
 
@@ -327,13 +330,13 @@ static void DeleteFirstNode(void)
 	if (g_credits_tail == del) g_credits_tail = NULL;
 
 	DeleteVideoSurface(del->uiVideoSurfaceImage);
-	MemFree(del);
+	delete del;
 }
 
 
-static void AddCreditNode(UINT32 uiFlags, const wchar_t* pString)
+static void AddCreditNode(UINT32 uiFlags, const ST::string& pString)
 {
-	CRDT_NODE* const pNodeToAdd = MALLOCZ(CRDT_NODE);
+	CRDT_NODE* const pNodeToAdd = new CRDT_NODE{};
 
 	//Determine the font and the color to use
 	SGPFont  uiFontToUse;
@@ -433,10 +436,10 @@ static void DisplayCreditNode(const CRDT_NODE* const pCurrent)
 }
 
 
-static UINT32 GetNumber(const wchar_t* const string)
+static UINT32 GetNumber(const char* string)
 {
 	unsigned int v = 0;
-	swscanf(string, L"%u", &v);
+	sscanf(string, "%u", &v);
 	return v;
 }
 
@@ -446,11 +449,11 @@ static void HandleCreditFlags(UINT32 uiFlags);
 
 static BOOLEAN GetNextCreditFromTextFile(void)
 {
-	wchar_t text[CREDITS_LINESIZE];
+	ST::string text;
 	const UINT32 pos = CREDITS_LINESIZE * guiCurrentCreditRecord++;
 	try
 	{
-		GCM->loadEncryptedString(CRDT_NAME_OF_CREDIT_FILE, text, pos, CREDITS_LINESIZE);
+		text = GCM->loadEncryptedString(CRDT_NAME_OF_CREDIT_FILE, pos, CREDITS_LINESIZE);
 	}
 	catch (...) // XXX fishy, should check file size beforehand
 	{
@@ -458,7 +461,7 @@ static BOOLEAN GetNextCreditFromTextFile(void)
 	}
 
 	UINT32         flags = 0;
-	const wchar_t* s     = text;
+	const char* s = text.c_str();
 	if (*s == CRDT_START_CODE)
 	{
 		for (;;)
@@ -479,7 +482,7 @@ static BOOLEAN GetNextCreditFromTextFile(void)
 						case 0:  gubCrdtJustification = LEFT_JUSTIFIED;   break;
 						case 1:  gubCrdtJustification = CENTER_JUSTIFIED; break;
 						case 2:  gubCrdtJustification = RIGHT_JUSTIFIED;  break;
-						default: SLOGE(DEBUG_TAG_ASSERTS, "error parsing credits file (sub)"); break;
+						default: SLOGA("error parsing credits file (sub)"); break;
 					}
 					break;
 
@@ -487,7 +490,7 @@ static BOOLEAN GetNextCreditFromTextFile(void)
 				case CRDT_START_OF_SECTION: flags |= CRDT_FLAG__START_SECTION; break;
 				case CRDT_END_OF_SECTION:   flags |= CRDT_FLAG__END_SECTION;   break;
 
-				default: SLOGE(DEBUG_TAG_ASSERTS, "error parsing credits file"); break;
+				default: SLOGA("error parsing credits file"); break;
 			}
 
 			/* skip till the next code or end of codes */
@@ -496,7 +499,7 @@ static BOOLEAN GetNextCreditFromTextFile(void)
 				switch (*s)
 				{
 					case CRDT_END_CODE:  ++s; goto handle_text;
-					case L'\0':               goto handle_text;
+					case '\0':               goto handle_text;
 					default:             ++s; break;
 				}
 			}
@@ -504,7 +507,7 @@ static BOOLEAN GetNextCreditFromTextFile(void)
 	}
 
 handle_text:
-	if (*s != L'\0') AddCreditNode(flags, s);
+	if (*s != '\0') AddCreditNode(flags, s);
 	HandleCreditFlags(flags);
 	return TRUE;
 }
@@ -579,7 +582,7 @@ static void HandleCreditEyeBlinking()
 
 TEST(Credits, asserts)
 {
-  EXPECT_EQ(lengthof(gCreditFaces), NUM_PEOPLE_IN_CREDITS);
+	EXPECT_EQ(lengthof(gCreditFaces), NUM_PEOPLE_IN_CREDITS);
 }
 
 #endif

@@ -30,6 +30,8 @@
 #include "WordWrap.h"
 #include "UILayout.h"
 
+#include <string_theory/format>
+
 
 //#define TESTFOREIGNFONTS
 
@@ -125,8 +127,8 @@ ScreenID MainMenuScreenHandle(void)
 	{
 		ClearMainMenu();
 		RenderMainMenu();
-    RenderGameVersion();
-    RenderCopyright();
+		RenderGameVersion();
+		RenderCopyright();
 
 		fInitialRender = FALSE;
 	}
@@ -353,12 +355,12 @@ static void RenderMainMenu(void)
 }
 
 void RenderGameVersion() {
-  SetFontAttributes(FONT10ARIAL, FONT_MCOLOR_WHITE);
-  mprintf(g_ui.m_versionPosition.iX, g_ui.m_versionPosition.iY, L"%hs", g_version_label, g_version_number);
+	SetFontAttributes(FONT10ARIAL, FONT_MCOLOR_WHITE);
+	MPrint(g_ui.m_versionPosition.iX, g_ui.m_versionPosition.iY, ST::format("{}", g_version_label));
 }
 
 void RenderCopyright() {
-  DrawTextToScreen(gzCopyrightText, 0, SCREEN_HEIGHT - 15, SCREEN_WIDTH, FONT10ARIAL, FONT_MCOLOR_WHITE, FONT_MCOLOR_BLACK, CENTER_JUSTIFIED);
+	DrawTextToScreen(gzCopyrightText, 0, SCREEN_HEIGHT - 15, SCREEN_WIDTH, FONT10ARIAL, FONT_MCOLOR_WHITE, FONT_MCOLOR_BLACK, CENTER_JUSTIFIED);
 }
 
 static void RestoreButtonBackGrounds(void)

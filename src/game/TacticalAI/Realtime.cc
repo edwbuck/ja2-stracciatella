@@ -28,7 +28,7 @@ static INT8 RTPlayerDecideAction(SOLDIERTYPE* pSoldier)
 	{
 		bAction = DecideAction( pSoldier );
 	}
-	SLOGD(DEBUG_TAG_AI, "DecideAction: selected action %d, actionData %d\n\n",
+	SLOGD("DecideAction: selected action %d, actionData %d\n\n",
 				bAction, pSoldier->usActionData);
 
 	return(bAction);
@@ -101,13 +101,13 @@ void RTHandleAI( SOLDIERTYPE * pSoldier )
 #endif
 
 	if ((pSoldier->bAction != AI_ACTION_NONE) && pSoldier->bActionInProgress)
-  {
+	{
 		// if action should remain in progress
 		if (ActionInProgress(pSoldier))
 		{
 			// let it continue
 			return;
-    }
+		}
 	}
 
 	// if man has nothing to do
@@ -242,7 +242,7 @@ void RTHandleAI( SOLDIERTYPE * pSoldier )
 			pSoldier->bAction = AI_ACTION_NONE;
 		}
 
-  }
+	}
 
 	// to get here, we MUST have an action selected, but not in progress...
 	NPCDoesAct(pSoldier);
